@@ -22,6 +22,9 @@ func main() {
 	fast := flag.Bool("fast", false, "Fast mode: bail early if browser is needed")
 	jsonOut := flag.Bool("json", false, "Output JSON instead of Markdown")
 	snapshot := flag.Bool("snapshot", false, "Output accessibility tree as JSON")
+	snapshotFilter := flag.String("filter", "", "Snapshot filter: 'interactive' to show only interactive elements")
+	snapshotFormat := flag.String("format", "json", "Snapshot format: 'json' or 'compact'")
+	maxTokens := flag.Int("max-tokens", 0, "Approximate token limit for snapshot output (0 = unlimited)")
 	showVersion := flag.Bool("version", false, "Show version")
 	flag.BoolVar(showVersion, "v", false, "Show version")
 
@@ -58,17 +61,26 @@ func main() {
 			os.Exit(1)
 		}
 
-		tree, err := portal.BuildSnapshot(htmlContent)
+		opts := portal.SnapshotOptions{
+			FilterInteractive: *snapshotFilter == "interactive",
+			MaxTokens:         *maxTokens,
+		}
+
+		tree, err := portal.BuildSnapshotWithOptions(htmlContent, opts)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error building snapshot: %v\n", err)
 			os.Exit(1)
 		}
 
-		enc := json.NewEncoder(os.Stdout)
-		enc.SetIndent("", "  ")
-		if err := enc.Encode(tree); err != nil {
-			fmt.Fprintf(os.Stderr, "Error encoding JSON: %v\n", err)
-			os.Exit(1)
+		if *snapshotFormat == "compact" {
+			fmt.Println(tree.ToCompact())
+		} else {
+			enc := json.NewEncoder(os.Stdout)
+			enc.SetIndent("", "  ")
+			if err := enc.Encode(tree); err != nil {
+				fmt.Fprintf(os.Stderr, "Error encoding JSON: %v\n", err)
+				os.Exit(1)
+			}
 		}
 		return
 	}

@@ -1,6 +1,7 @@
 package portal
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -453,7 +454,208 @@ func TestBuildSnapshot_InteractiveElements(t *testing.T) {
 	}
 }
 
+func TestBuildSnapshot_TagName(t *testing.T) {
+	html := `<nav><a href="/">Home</a></nav>`
+
+	snap, err := BuildSnapshot(html)
+	if err != nil {
+		t.Fatalf("BuildSnapshot failed: %v", err)
+	}
+
+	nav := findNodeByRole(snap, "navigation")
+	if nav == nil {
+		t.Fatal("expected to find navigation")
+	}
+	if nav.Tag != "nav" {
+		t.Errorf("expected tag 'nav', got %q", nav.Tag)
+	}
+
+	link := findNodeByRole(snap, "link")
+	if link == nil {
+		t.Fatal("expected to find link")
+	}
+	if link.Tag != "a" {
+		t.Errorf("expected tag 'a', got %q", link.Tag)
+	}
+}
+
+func TestBuildSnapshot_DepthTracking(t *testing.T) {
+	html := `<main><nav><a href="/">Home</a></nav></main>`
+
+	snap, err := BuildSnapshot(html)
+	if err != nil {
+		t.Fatalf("BuildSnapshot failed: %v", err)
+	}
+
+	main := findNodeByRole(snap, "main")
+	if main == nil {
+		t.Fatal("expected to find main")
+	}
+	mainDepth := main.Depth
+
+	nav := findNodeByRole(snap, "navigation")
+	if nav == nil {
+		t.Fatal("expected to find navigation")
+	}
+	if nav.Depth != mainDepth+1 {
+		t.Errorf("expected nav depth %d, got %d", mainDepth+1, nav.Depth)
+	}
+
+	link := findNodeByRole(snap, "link")
+	if link == nil {
+		t.Fatal("expected to find link")
+	}
+	if link.Depth != mainDepth+2 {
+		t.Errorf("expected link depth %d, got %d", mainDepth+2, link.Depth)
+	}
+}
+
+func TestBuildSnapshot_Selector(t *testing.T) {
+	tests := []struct {
+		name         string
+		html         string
+		role         string
+		wantSelector string
+	}{
+		{
+			name:         "element with id",
+			html:         `<nav id="main-nav"><a href="/">Home</a></nav>`,
+			role:         "navigation",
+			wantSelector: "#main-nav",
+		},
+		{
+			name:         "element with class",
+			html:         `<nav class="primary-nav"><a href="/">Home</a></nav>`,
+			role:         "navigation",
+			wantSelector: "nav.primary-nav",
+		},
+		{
+			name:         "element without id or class",
+			html:         `<nav><a href="/">Home</a></nav>`,
+			role:         "navigation",
+			wantSelector: "nav:nth-of-type(1)",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			snap, err := BuildSnapshot(tt.html)
+			if err != nil {
+				t.Fatalf("BuildSnapshot failed: %v", err)
+			}
+
+			node := findNodeByRole(snap, tt.role)
+			if node == nil {
+				t.Fatalf("expected to find %s", tt.role)
+			}
+			if node.Selector != tt.wantSelector {
+				t.Errorf("expected selector %q, got %q", tt.wantSelector, node.Selector)
+			}
+		})
+	}
+}
+
+func TestBuildSnapshotWithOptions_FilterInteractive(t *testing.T) {
+	html := `
+<main>
+  <h1>Title</h1>
+  <p>Non-interactive paragraph</p>
+  <button>Click me</button>
+  <a href="/about">About</a>
+</main>`
+
+	opts := SnapshotOptions{FilterInteractive: true}
+	snap, err := BuildSnapshotWithOptions(html, opts)
+	if err != nil {
+		t.Fatalf("BuildSnapshotWithOptions failed: %v", err)
+	}
+
+	// Should find button and link
+	btn := findNodeByRole(snap, "button")
+	if btn == nil {
+		t.Error("expected to find interactive button")
+	}
+	link := findNodeByRole(snap, "link")
+	if link == nil {
+		t.Error("expected to find interactive link")
+	}
+
+	// Should NOT find standalone paragraph
+	para := findNodeByRole(snap, "paragraph")
+	if para != nil {
+		t.Error("expected paragraph to be filtered out")
+	}
+
+	// main should exist because it contains interactive children
+	main := findNodeByRole(snap, "main")
+	if main == nil {
+		t.Error("expected main to exist (contains interactive children)")
+	}
+}
+
+func TestBuildSnapshot_CompactFormat(t *testing.T) {
+	html := `<nav><a href="/about">About</a></nav>`
+
+	snap, err := BuildSnapshot(html)
+	if err != nil {
+		t.Fatalf("BuildSnapshot failed: %v", err)
+	}
+
+	compact := snap.ToCompact()
+	if compact == "" {
+		t.Error("expected non-empty compact output")
+	}
+
+	// Should contain key info
+	if !containsSubstring(compact, "navigation") {
+		t.Error("expected compact output to contain 'navigation'")
+	}
+	if !containsSubstring(compact, "link") {
+		t.Error("expected compact output to contain 'link'")
+	}
+	if !containsSubstring(compact, "About") {
+		t.Error("expected compact output to contain 'About'")
+	}
+	if !containsSubstring(compact, "<a>") || !containsSubstring(compact, "<nav>") {
+		t.Error("expected compact output to contain tag names")
+	}
+}
+
+func TestBuildSnapshotWithOptions_MaxTokens(t *testing.T) {
+	// Create HTML with lots of content
+	var sb strings.Builder
+	sb.WriteString("<main>")
+	for i := 0; i < 100; i++ {
+		sb.WriteString("<p>Paragraph content number " + string(rune('0'+i%10)) + "</p>")
+	}
+	sb.WriteString("</main>")
+
+	// Without limit
+	fullSnap, err := BuildSnapshot(sb.String())
+	if err != nil {
+		t.Fatalf("BuildSnapshot failed: %v", err)
+	}
+
+	// With limit
+	opts := SnapshotOptions{MaxTokens: 500}
+	limitedSnap, err := BuildSnapshotWithOptions(sb.String(), opts)
+	if err != nil {
+		t.Fatalf("BuildSnapshotWithOptions failed: %v", err)
+	}
+
+	fullParas := findAllByRole(fullSnap, "paragraph")
+	limitedParas := findAllByRole(limitedSnap, "paragraph")
+
+	if len(limitedParas) >= len(fullParas) {
+		t.Errorf("expected limited output to have fewer paragraphs: %d vs %d", len(limitedParas), len(fullParas))
+	}
+}
+
 // Helper functions
+
+func containsSubstring(s, substr string) bool {
+	return strings.Contains(s, substr)
+}
 
 func findNodeByRole(node *SnapshotNode, role string) *SnapshotNode {
 	if node.Role == role {

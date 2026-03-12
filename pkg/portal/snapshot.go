@@ -1,17 +1,27 @@
 package portal
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
 	"golang.org/x/net/html"
 )
 
+// SnapshotOptions configures snapshot generation
+type SnapshotOptions struct {
+	FilterInteractive bool // Only include interactive elements
+	MaxTokens         int  // Approximate token limit (0 = unlimited)
+}
+
 // SnapshotNode represents a node in the accessibility tree
 type SnapshotNode struct {
 	Role        string         `json:"role"`
 	Name        string         `json:"name,omitempty"`
+	Tag         string         `json:"tag,omitempty"`
 	Ref         string         `json:"ref,omitempty"`
+	Selector    string         `json:"selector,omitempty"`
+	Depth       int            `json:"depth,omitempty"`
 	Interactive bool           `json:"interactive,omitempty"`
 	Level       int            `json:"level,omitempty"`
 	Value       string         `json:"value,omitempty"`
@@ -23,66 +33,141 @@ type SnapshotNode struct {
 
 // BuildSnapshot parses HTML and returns an accessibility tree
 func BuildSnapshot(htmlStr string) (*SnapshotNode, error) {
+	return BuildSnapshotWithOptions(htmlStr, SnapshotOptions{})
+}
+
+// BuildSnapshotWithOptions parses HTML with configurable options
+func BuildSnapshotWithOptions(htmlStr string, opts SnapshotOptions) (*SnapshotNode, error) {
 	doc, err := html.Parse(strings.NewReader(htmlStr))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse HTML: %w", err)
 	}
 
-	refCounter := 0
+	ctx := &snapshotContext{
+		refCounter:        0,
+		filterInteractive: opts.FilterInteractive,
+		tagCounts:         make(map[string]int),
+	}
+
 	root := &SnapshotNode{Role: "document", Children: []SnapshotNode{}}
 
-	var traverse func(*html.Node)
-	traverse = func(n *html.Node) {
+	var traverse func(*html.Node, int)
+	traverse = func(n *html.Node, depth int) {
 		if n.Type == html.ElementNode {
-			node := buildNode(n, &refCounter)
+			node := ctx.buildNode(n, depth)
 			if node != nil {
-				// Traverse children
 				for c := n.FirstChild; c != nil; c = c.NextSibling {
-					childBefore := len(node.Children)
-					traverseInto(c, node, &refCounter)
-					_ = childBefore
+					ctx.traverseInto(c, node, depth+1)
 				}
-				root.Children = append(root.Children, *node)
+				// Filter: only add if interactive or has interactive children
+				if ctx.filterInteractive {
+					if node.Interactive || hasInteractiveChildren(node) {
+						root.Children = append(root.Children, *node)
+					}
+				} else {
+					root.Children = append(root.Children, *node)
+				}
 				return
 			}
 		}
-		// Continue traversing
 		for c := n.FirstChild; c != nil; c = c.NextSibling {
-			traverse(c)
+			traverse(c, depth)
 		}
 	}
 
-	traverse(doc)
+	traverse(doc, 0)
+
+	// Apply max tokens if specified
+	if opts.MaxTokens > 0 {
+		root = truncateToTokens(root, opts.MaxTokens)
+	}
+
 	return root, nil
 }
 
-func traverseInto(n *html.Node, parent *SnapshotNode, refCounter *int) {
-	if n.Type == html.ElementNode {
-		node := buildNode(n, refCounter)
-		if node != nil {
-			for c := n.FirstChild; c != nil; c = c.NextSibling {
-				traverseInto(c, node, refCounter)
-			}
-			parent.Children = append(parent.Children, *node)
-			return
-		}
+// ToCompact returns a compact text representation of the tree
+func (n *SnapshotNode) ToCompact() string {
+	var lines []string
+	n.toCompactLines(&lines, 0)
+	return strings.Join(lines, "\n")
+}
+
+func (n *SnapshotNode) toCompactLines(lines *[]string, indent int) {
+	prefix := strings.Repeat("  ", indent)
+
+	// Build line: [ref] role "name" (tag) [interactive]
+	var parts []string
+	if n.Ref != "" {
+		parts = append(parts, n.Ref)
 	}
-	// Continue to children
-	for c := n.FirstChild; c != nil; c = c.NextSibling {
-		traverseInto(c, parent, refCounter)
+	parts = append(parts, n.Role)
+	if n.Name != "" {
+		parts = append(parts, fmt.Sprintf("%q", n.Name))
+	}
+	if n.Tag != "" {
+		parts = append(parts, fmt.Sprintf("<%s>", n.Tag))
+	}
+	if n.Interactive {
+		parts = append(parts, "[interactive]")
+	}
+	if n.Href != "" {
+		parts = append(parts, fmt.Sprintf("href=%s", n.Href))
+	}
+	if n.Level > 0 {
+		parts = append(parts, fmt.Sprintf("level=%d", n.Level))
+	}
+
+	*lines = append(*lines, prefix+strings.Join(parts, " "))
+
+	for _, child := range n.Children {
+		child.toCompactLines(lines, indent+1)
 	}
 }
 
-func buildNode(n *html.Node, refCounter *int) *SnapshotNode {
+type snapshotContext struct {
+	refCounter        int
+	filterInteractive bool
+	tagCounts         map[string]int // for selector generation
+}
+
+func (ctx *snapshotContext) traverseInto(n *html.Node, parent *SnapshotNode, depth int) {
+	if n.Type == html.ElementNode {
+		node := ctx.buildNode(n, depth)
+		if node != nil {
+			for c := n.FirstChild; c != nil; c = c.NextSibling {
+				ctx.traverseInto(c, node, depth+1)
+			}
+			// Filter: only add if interactive or has interactive children
+			if ctx.filterInteractive {
+				if node.Interactive || hasInteractiveChildren(node) {
+					parent.Children = append(parent.Children, *node)
+				}
+			} else {
+				parent.Children = append(parent.Children, *node)
+			}
+			return
+		}
+	}
+	for c := n.FirstChild; c != nil; c = c.NextSibling {
+		ctx.traverseInto(c, parent, depth)
+	}
+}
+
+func (ctx *snapshotContext) buildNode(n *html.Node, depth int) *SnapshotNode {
 	role := getRole(n)
 	if role == "" {
 		return nil
 	}
 
-	*refCounter++
+	ctx.refCounter++
+	tag := strings.ToLower(n.Data)
+
 	node := &SnapshotNode{
 		Role:        role,
-		Ref:         fmt.Sprintf("e%d", *refCounter),
+		Tag:         tag,
+		Ref:         fmt.Sprintf("e%d", ctx.refCounter),
+		Selector:    ctx.buildSelector(n),
+		Depth:       depth,
 		Name:        computeAccessibleName(n),
 		Interactive: isInteractive(n),
 		Children:    []SnapshotNode{},
@@ -106,6 +191,83 @@ func buildNode(n *html.Node, refCounter *int) *SnapshotNode {
 	}
 
 	return node
+}
+
+func (ctx *snapshotContext) buildSelector(n *html.Node) string {
+	tag := strings.ToLower(n.Data)
+
+	// Priority 1: ID selector
+	if id := snapshotGetAttr(n, "id"); id != "" {
+		return "#" + id
+	}
+
+	// Priority 2: Unique class selector
+	if class := snapshotGetAttr(n, "class"); class != "" {
+		classes := strings.Fields(class)
+		if len(classes) > 0 {
+			// Use first meaningful class
+			for _, c := range classes {
+				if !strings.HasPrefix(c, "js-") && len(c) > 1 {
+					return tag + "." + c
+				}
+			}
+			return tag + "." + classes[0]
+		}
+	}
+
+	// Priority 3: Tag with nth-of-type
+	ctx.tagCounts[tag]++
+	return fmt.Sprintf("%s:nth-of-type(%d)", tag, ctx.tagCounts[tag])
+}
+
+func hasInteractiveChildren(n *SnapshotNode) bool {
+	for _, child := range n.Children {
+		if child.Interactive || hasInteractiveChildren(&child) {
+			return true
+		}
+	}
+	return false
+}
+
+func truncateToTokens(root *SnapshotNode, maxTokens int) *SnapshotNode {
+	// Rough estimate: 4 chars per token
+	maxChars := maxTokens * 4
+
+	// Serialize to check size
+	data, _ := json.Marshal(root)
+	if len(data) <= maxChars {
+		return root
+	}
+
+	// Truncate by removing children from deepest levels
+	result := *root
+	result.Children = truncateChildren(root.Children, maxChars, len(data))
+	return &result
+}
+
+func truncateChildren(children []SnapshotNode, maxChars, currentSize int) []SnapshotNode {
+	if currentSize <= maxChars || len(children) == 0 {
+		return children
+	}
+
+	// Remove children from the end
+	result := make([]SnapshotNode, 0, len(children))
+	for i, child := range children {
+		childData, _ := json.Marshal(child)
+		childSize := len(childData)
+
+		if currentSize-childSize > maxChars && i > len(children)/2 {
+			currentSize -= childSize
+			continue
+		}
+
+		// Recursively truncate this child's children
+		truncated := child
+		truncated.Children = truncateChildren(child.Children, maxChars/2, childSize)
+		result = append(result, truncated)
+	}
+
+	return result
 }
 
 func getRole(n *html.Node) string {

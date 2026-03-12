@@ -42,18 +42,12 @@ seaportal --snapshot https://pinchtab.com
     {
       "role": "navigation",
       "name": "Main",
+      "tag": "nav",
       "ref": "e1",
+      "selector": "#main-nav",
+      "depth": 0,
       "children": [
-        {"role": "link", "name": "Home", "ref": "e2", "href": "/", "interactive": true},
-        {"role": "link", "name": "Docs", "ref": "e3", "href": "/docs", "interactive": true}
-      ]
-    },
-    {
-      "role": "main",
-      "ref": "e4",
-      "children": [
-        {"role": "heading", "name": "Welcome", "ref": "e5", "level": 1},
-        {"role": "button", "name": "Get Started", "ref": "e6", "interactive": true}
+        {"role": "link", "name": "Home", "tag": "a", "ref": "e2", "selector": "a.nav-link", "depth": 1, "href": "/", "interactive": true}
       ]
     }
   ]
@@ -63,10 +57,39 @@ seaportal --snapshot https://pinchtab.com
 Each node includes:
 - **role** — Accessibility role (heading, link, button, textbox, etc.)
 - **name** — Accessible name (from aria-label, title, alt, or text)
+- **tag** — HTML tag name (div, a, button, etc.)
 - **ref** — Element reference (e1, e2...) for targeting
+- **selector** — CSS selector for the element
+- **depth** — Nesting depth in the tree
 - **interactive** — Whether the element can be clicked/typed
 - **level** — Heading level (1-6) for headings
 - **href** — Link target for links
+
+### Snapshot Options
+
+```bash
+# Filter to interactive elements only
+seaportal --snapshot --filter=interactive https://example.com
+
+# Compact text output (instead of JSON)
+seaportal --snapshot --format=compact https://example.com
+
+# Limit output size (approximate token count)
+seaportal --snapshot --max-tokens=2000 https://example.com
+
+# Combine options
+seaportal --snapshot --filter=interactive --format=compact https://example.com
+```
+
+**Compact format** outputs a readable text tree:
+```
+document
+  e1 navigation "Main" <nav> [interactive]
+    e2 link "Home" <a> [interactive] href=/
+    e3 link "Docs" <a> [interactive] href=/docs
+  e4 main <main>
+    e5 heading "Welcome" <h1> level=1
+```
 
 ## As a Library
 
@@ -84,6 +107,16 @@ result := portal.FromURLWithOptions("https://pinchtab.com", portal.Options{
 
 // Build accessibility snapshot
 snapshot, err := portal.BuildSnapshot(htmlString)
+
+// Snapshot with options (filter, max tokens)
+opts := portal.SnapshotOptions{
+    FilterInteractive: true,
+    MaxTokens:         2000,
+}
+snapshot, err := portal.BuildSnapshotWithOptions(htmlString, opts)
+
+// Compact text output
+fmt.Println(snapshot.ToCompact())
 ```
 
 ## Features
