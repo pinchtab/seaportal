@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 // Server is a simple HTTP server for serving test fixtures.
@@ -64,7 +65,8 @@ func Start(port int) *Server {
 	mux.Handle("/", http.FileServer(http.Dir(testdataPath)))
 
 	httpServer := &http.Server{
-		Handler: mux,
+		Handler:           mux,
+		ReadHeaderTimeout: 10 * time.Second,
 	}
 
 	srv := &Server{
