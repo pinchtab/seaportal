@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -19,6 +21,7 @@ func main() {
 	noDedupe := flag.Bool("no-dedupe", false, "Disable deduplication (enabled by default)")
 	fast := flag.Bool("fast", false, "Fast mode: bail early if browser is needed")
 	jsonOut := flag.Bool("json", false, "Output JSON instead of Markdown")
+	snapshot := flag.Bool("snapshot", false, "Output accessibility tree as JSON")
 	showVersion := flag.Bool("version", false, "Show version")
 	flag.BoolVar(showVersion, "v", false, "Show version")
 
@@ -46,8 +49,31 @@ func main() {
 	}
 
 	targetURL := args[0]
-	dedupe := !*noDedupe
 
+	// Snapshot mode: fetch HTML and build accessibility tree
+	if *snapshot {
+		htmlContent, err := fetchHTML(targetURL)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error fetching URL: %v\n", err)
+			os.Exit(1)
+		}
+
+		tree, err := portal.BuildSnapshot(htmlContent)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error building snapshot: %v\n", err)
+			os.Exit(1)
+		}
+
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetIndent("", "  ")
+		if err := enc.Encode(tree); err != nil {
+			fmt.Fprintf(os.Stderr, "Error encoding JSON: %v\n", err)
+			os.Exit(1)
+		}
+		return
+	}
+
+	dedupe := !*noDedupe
 	opts := portal.Options{Dedupe: dedupe, FastMode: *fast}
 	result := portal.FromURLWithOptions(targetURL, opts)
 
@@ -130,4 +156,25 @@ func main() {
 	}
 	fmt.Println("\n--- Content ---")
 	fmt.Println(output.String())
+}
+
+func fetchHTML(url string) (string, error) {
+	client := &http.Client{Timeout: 30 * time.Second}
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	return string(body), nil
 }
