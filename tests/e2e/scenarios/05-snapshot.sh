@@ -136,10 +136,10 @@ start_test "--max-tokens limits output"
 
 if sp_ok --snapshot --max-tokens=100 "$FIXTURES_URL/large-page.html"; then
   # Output should be smaller than full snapshot
-  local limited_size=${#SP_OUT}
+  limited_size=${#SP_OUT}
   
   sp_ok --snapshot "$FIXTURES_URL/large-page.html"
-  local full_size=${#SP_OUT}
+  full_size=${#SP_OUT}
   
   if [ "$limited_size" -lt "$full_size" ]; then
     echo -e "    ${GREEN}✓${NC} limited output ($limited_size) < full ($full_size)"
