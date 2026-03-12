@@ -31,13 +31,14 @@ else
 fi
 
 # ─────────────────────────────────────────────────────────────────
-start_test "snapshot includes depth field"
+start_test "snapshot includes depth field on nested elements"
 
 if sp_ok --snapshot "$FIXTURES_URL/snapshot-test.html"; then
-  if echo "$SP_OUT" | jq -e '.children[].depth' >/dev/null 2>&1; then
+  # Check for depth > 0 on nested elements (depth=0 is omitted by omitempty)
+  if echo "$SP_OUT" | jq -e '.. | objects | select(.depth > 0)' >/dev/null 2>&1; then
     pass_test
   else
-    fail_test "depth field not found"
+    fail_test "depth field not found on nested elements"
   fi
 else
   fail_test "command failed"
@@ -74,10 +75,10 @@ start_test "--filter=interactive shows only interactive elements"
 
 if sp_ok --snapshot --filter=interactive "$FIXTURES_URL/snapshot-test.html"; then
   # Should have button and link (interactive)
-  if echo "$SP_OUT" | jq -e '.. | select(.role == "button")' >/dev/null 2>&1 && \
-     echo "$SP_OUT" | jq -e '.. | select(.role == "link")' >/dev/null 2>&1; then
-    # Should NOT have standalone paragraph
-    if echo "$SP_OUT" | jq -e '.. | select(.role == "paragraph" and .interactive != true)' >/dev/null 2>&1; then
+  if echo "$SP_OUT" | jq -e '.. | objects | select(.role == "button")' >/dev/null 2>&1 && \
+     echo "$SP_OUT" | jq -e '.. | objects | select(.role == "link")' >/dev/null 2>&1; then
+    # Should NOT have standalone paragraph (non-interactive elements filtered out)
+    if echo "$SP_OUT" | jq -e '.. | objects | select(.role == "paragraph")' >/dev/null 2>&1; then
       fail_test "non-interactive paragraph should be filtered"
     else
       pass_test
@@ -154,7 +155,7 @@ fi
 start_test "snapshot handles headings with levels"
 
 if sp_ok --snapshot "$FIXTURES_URL/snapshot-test.html"; then
-  if echo "$SP_OUT" | jq -e '.. | select(.role == "heading" and .level > 0)' >/dev/null 2>&1; then
+  if echo "$SP_OUT" | jq -e '.. | objects | select(.role == "heading" and .level > 0)' >/dev/null 2>&1; then
     pass_test
   else
     fail_test "heading with level not found"
@@ -167,7 +168,7 @@ fi
 start_test "snapshot handles links with href"
 
 if sp_ok --snapshot "$FIXTURES_URL/snapshot-test.html"; then
-  if echo "$SP_OUT" | jq -e '.. | select(.role == "link" and .href)' >/dev/null 2>&1; then
+  if echo "$SP_OUT" | jq -e '.. | objects | select(.role == "link" and .href)' >/dev/null 2>&1; then
     pass_test
   else
     fail_test "link with href not found"
@@ -180,7 +181,7 @@ fi
 start_test "selector uses id when available"
 
 if sp_ok --snapshot "$FIXTURES_URL/snapshot-test.html"; then
-  if echo "$SP_OUT" | jq -e '.. | select(.selector | startswith("#"))' >/dev/null 2>&1; then
+  if echo "$SP_OUT" | jq -e '.. | objects | select(.selector and (.selector | startswith("#")))' >/dev/null 2>&1; then
     pass_test
   else
     fail_test "no id-based selector found"
