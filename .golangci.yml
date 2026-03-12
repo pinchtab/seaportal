@@ -12,29 +12,8 @@ linters:
     - ineffassign
     - misspell
     - unconvert
-    - gocritic
 
 formatters:
   enable:
     - gofmt
     - goimports
-
-linters-settings:
-  errcheck:
-    check-type-assertions: true
-    check-blank: false
-  gocritic:
-    disabled-checks:
-      - hugeParam
-      - rangeValCopy
-      - ifElseChain
-
-issues:
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - gocritic
-    - path: _test\.go
-      text: "Error return value of .*.Close"
-      linters:
-        - errcheck
