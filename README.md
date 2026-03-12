@@ -19,6 +19,7 @@ seaportal https://pinchtab.com
 
 # Options
 seaportal --json https://pinchtab.com       # JSON output
+seaportal --snapshot https://pinchtab.com   # Accessibility tree
 seaportal --fast https://pinchtab.com       # Bail early if browser needed
 seaportal --no-dedupe https://pinchtab.com  # Disable deduplication
 
@@ -26,12 +27,53 @@ seaportal --no-dedupe https://pinchtab.com  # Disable deduplication
 seaportal --version
 ```
 
+## Accessibility Snapshot
+
+The `--snapshot` flag outputs a semantic accessibility tree — useful for AI agents that need to understand page structure and interact with elements:
+
+```bash
+seaportal --snapshot https://pinchtab.com
+```
+
+```json
+{
+  "role": "document",
+  "children": [
+    {
+      "role": "navigation",
+      "name": "Main",
+      "ref": "e1",
+      "children": [
+        {"role": "link", "name": "Home", "ref": "e2", "href": "/", "interactive": true},
+        {"role": "link", "name": "Docs", "ref": "e3", "href": "/docs", "interactive": true}
+      ]
+    },
+    {
+      "role": "main",
+      "ref": "e4",
+      "children": [
+        {"role": "heading", "name": "Welcome", "ref": "e5", "level": 1},
+        {"role": "button", "name": "Get Started", "ref": "e6", "interactive": true}
+      ]
+    }
+  ]
+}
+```
+
+Each node includes:
+- **role** — Accessibility role (heading, link, button, textbox, etc.)
+- **name** — Accessible name (from aria-label, title, alt, or text)
+- **ref** — Element reference (e1, e2...) for targeting
+- **interactive** — Whether the element can be clicked/typed
+- **level** — Heading level (1-6) for headings
+- **href** — Link target for links
+
 ## As a Library
 
 ```go
 import "github.com/pinchtab/seaportal/pkg/portal"
 
-// Simple extraction
+// Extract content
 result := portal.FromURL("https://pinchtab.com")
 
 // With options
@@ -40,37 +82,16 @@ result := portal.FromURLWithOptions("https://pinchtab.com", portal.Options{
     FastMode: true,
 })
 
-// From HTML string
-result := portal.FromHTML(htmlString, "https://pinchtab.com")
+// Build accessibility snapshot
+snapshot, err := portal.BuildSnapshot(htmlString)
 ```
-
-## Result
-
-```go
-type Result struct {
-    URL        string
-    Title      string
-    Content    string   // Markdown
-    Length     int
-    Confidence int      // 0-100
-    
-    // Classification
-    IsSPA      bool
-    IsBlocked  bool
-    Profile    PageProfile  // static, ssr, hydrated, spa, dynamic, blocked
-    
-    // Validation
-    Validation ValidationResult
-}
-```
-
-Use `result.Validation.NeedsBrowser` to decide if browser fallback is required.
 
 ## Features
 
 - **Fast** — Pure HTTP, typically <2s per extraction
 - **Stealthy** — Chrome TLS fingerprint, realistic headers
 - **Smart** — Readability extraction + Markdown conversion
+- **Semantic** — Accessibility tree for AI agents
 - **Honest** — Classifies pages, signals when browser is needed
 - **Clean** — Deduplicates repeated content blocks
 
