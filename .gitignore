@@ -2,6 +2,7 @@
 bin/
 !npm/bin/
 seaportal
+!cmd/seaportal
 *.exe
 *.test
 
