@@ -1,0 +1,15 @@
+# Binaries
+bin/
+!npm/bin/
+seaportal
+*.exe
+*.test
+
+# Test artifacts
+results.json
+test_urls.json
+renders/
+
+# IDE
+.idea/
+.vscode/

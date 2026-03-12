@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hydrated Page Test</title>
+    <script>window.__SSR_DATA__ = {hydrated: true};</script>
+</head>
+<body>
+    <header>
+        <h1>Hydrated Content Page</h1>
+        <nav>
+            <a href="/">Home</a>
+            <a href="/about">About</a>
+            <a href="/contact">Contact</a>
+        </nav>
+    </header>
+    
+    <main data-reactroot="">
+        <article>
+            <h2>Server-Rendered Article</h2>
+            <p>This content was rendered on the server (SSR) and will be hydrated by React.</p>
+            <p>The main content is fully available without JavaScript execution.</p>
+            
+            <h3>Key Features</h3>
+            <ul>
+                <li>SEO-friendly content</li>
+                <li>Fast initial page load</li>
+                <li>Progressive enhancement</li>
+                <li>Accessible by default</li>
+            </ul>
+            
+            <h3>Technical Details</h3>
+            <p>This page uses React hydration to attach event handlers to pre-rendered HTML.</p>
+            <code>ReactDOM.hydrate(App, document.getElementById('root'))</code>
+        </article>
+        
+        <aside>
+            <h4>Related Links</h4>
+            <ul>
+                <li><a href="/docs/react">React Documentation</a></li>
+                <li><a href="/docs/ssr">SSR Guide</a></li>
+            </ul>
+        </aside>
+    </main>
+    
+    <footer>
+        <p>&copy; 2024 Test Site</p>
+    </footer>
+    
+    <script>
+        // Hydration script - but content is already visible
+        if (window.__SSR_DATA__) {
+            console.log('Hydrating...');
+        }
+    </script>
+</body>
+</html>

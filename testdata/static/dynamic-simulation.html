@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Content Simulation</title>
+</head>
+<body>
+    <h1>Dynamic Content Simulation</h1>
+    
+    <div id="static-content">
+        <h2>Static Section</h2>
+        <p>This content is always available and never changes.</p>
+        <p>It provides context even if dynamic loading fails.</p>
+    </div>
+    
+    <div id="user-info" data-user-id="placeholder">
+        <h2>Personalized Section</h2>
+        <p>Welcome, <span id="username">Guest</span>!</p>
+        <p>Your account type: <span id="account-type">Free</span></p>
+    </div>
+    
+    <div id="recommendations">
+        <h2>Recommendations</h2>
+        <div class="skeleton-loader">
+            <!-- Dynamic content placeholder -->
+            <p>Loading recommendations...</p>
+        </div>
+    </div>
+    
+    <div id="content-feed">
+        <h2>Content Feed</h2>
+        <article>
+            <h3>Article 1: Getting Started</h3>
+            <p>This article is server-rendered for SEO.</p>
+        </article>
+        <article>
+            <h3>Article 2: Advanced Topics</h3>
+            <p>More server-rendered content for search engines.</p>
+        </article>
+        <div id="infinite-scroll-trigger">
+            <!-- More items load on scroll -->
+        </div>
+    </div>
+    
+    <script>
+        // Simulate dynamic content loading
+        setTimeout(() => {
+            document.getElementById('username').textContent = 'John';
+            document.getElementById('account-type').textContent = 'Premium';
+        }, 100);
+    </script>
+</body>
+</html>

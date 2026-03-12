@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Market Dashboard - Live Prices</title>
+    <script>window.__MARKET_DATA_TIMESTAMP__ = Date.now();</script>
+</head>
+<body>
+    <header>
+        <h1>Market Watch Live</h1>
+        <p class="timestamp">Last updated: <span id="update-time">11:47:32 AM EST</span></p>
+    </header>
+    
+    <main>
+        <section class="market-overview">
+            <h2>Major Indices</h2>
+            
+            <table class="index-table">
+                <thead>
+                    <tr>
+                        <th>Index</th>
+                        <th>Value</th>
+                        <th>Change</th>
+                        <th>% Change</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="positive">
+                        <td>S&amp;P 500</td>
+                        <td>5,127.45</td>
+                        <td>+23.67</td>
+                        <td>+0.46%</td>
+                    </tr>
+                    <tr class="positive">
+                        <td>NASDAQ</td>
+                        <td>16,284.32</td>
+                        <td>+89.12</td>
+                        <td>+0.55%</td>
+                    </tr>
+                    <tr class="negative">
+                        <td>DOW JONES</td>
+                        <td>38,924.18</td>
+                        <td>-45.23</td>
+                        <td>-0.12%</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+        
+        <section class="trending-stocks">
+            <h2>Most Active Stocks</h2>
+            
+            <article class="stock-card positive">
+                <h3>NVDA - NVIDIA Corp</h3>
+                <p class="price">$891.24</p>
+                <p class="change">+$12.45 (+1.42%)</p>
+                <p class="volume">Vol: 45.2M</p>
+            </article>
+            
+            <article class="stock-card positive">
+                <h3>AAPL - Apple Inc</h3>
+                <p class="price">$182.67</p>
+                <p class="change">+$1.23 (+0.68%)</p>
+                <p class="volume">Vol: 52.8M</p>
+            </article>
+            
+            <article class="stock-card negative">
+                <h3>TSLA - Tesla Inc</h3>
+                <p class="price">$175.89</p>
+                <p class="change">-$3.45 (-1.92%)</p>
+                <p class="volume">Vol: 98.4M</p>
+            </article>
+            
+            <article class="stock-card positive">
+                <h3>MSFT - Microsoft Corp</h3>
+                <p class="price">$415.32</p>
+                <p class="change">+$2.78 (+0.67%)</p>
+                <p class="volume">Vol: 18.9M</p>
+            </article>
+        </section>
+        
+        <section class="market-news">
+            <h2>Breaking Market News</h2>
+            
+            <article>
+                <h3>Fed Signals Patience on Rate Cuts</h3>
+                <p>Federal Reserve officials indicated they need more confidence inflation is sustainably declining before cutting interest rates.</p>
+                <time datetime="2026-03-11T10:30:00">10:30 AM</time>
+            </article>
+            
+            <article>
+                <h3>Tech Stocks Rally on AI Optimism</h3>
+                <p>Technology shares advanced as investors bet on continued growth in artificial intelligence spending by major corporations.</p>
+                <time datetime="2026-03-11T09:15:00">9:15 AM</time>
+            </article>
+        </section>
+    </main>
+    
+    <footer>
+        <p>Data provided for informational purposes only. Prices delayed by 15 minutes.</p>
+        <p>© 2026 Market Watch Live</p>
+    </footer>
+    
+    <script>
+        // Live update simulation - content changes every second
+        setInterval(function() {
+            document.getElementById('update-time').textContent = new Date().toLocaleTimeString();
+        }, 1000);
+    </script>
+</body>
+</html>

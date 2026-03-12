@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+    <title>Attention Required! | Cloudflare</title>
+    <meta charset="UTF-8">
+    <meta name="robots" content="noindex,nofollow">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; text-align: center; }
+        .cf-turnstile { margin: 20px auto; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="cf-wrapper">
+            <h1>Verify you are human</h1>
+            <p>Complete the security check to access <strong>example.com</strong></p>
+            <div class="cf-turnstile" data-sitekey="0x4AAAAAAAB..." data-callback="turnstileCallback"></div>
+            <noscript>
+                <p><strong>Please enable JavaScript in your browser.</strong></p>
+                <p>This website requires JavaScript to verify human visitors.</p>
+            </noscript>
+            <div id="cf-footer">
+                <p>Performance &amp; security by Cloudflare</p>
+                <p>Ray ID: xyz789abc123def456-LAX</p>
+            </div>
+        </div>
+    </div>
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    <script>
+        function turnstileCallback(token) {
+            document.getElementById('cf-turnstile-response').value = token;
+            document.getElementById('challenge-form').submit();
+        }
+    </script>
+</body>
+</html>

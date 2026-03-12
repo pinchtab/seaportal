@@ -1,0 +1,34 @@
+version: 2
+
+builds:
+  - main: ./cmd/seaportal
+    ldflags:
+      - -s -w -X main.version={{.Version}}
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  # Output bare binaries directly (no archives)
+  - format: binary
+    name_template: "seaportal-{{ .Os }}-{{ .Arch }}"
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^ci:'
+      - '^chore:'
+
+release:
+  github:
+    owner: pinchtab
+    name: seaportal

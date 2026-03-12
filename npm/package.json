@@ -1,0 +1,35 @@
+{
+  "name": "seaportal",
+  "version": "0.1.0",
+  "description": "Extract clean Markdown from URLs with SPA detection",
+  "bin": {
+    "seaportal": "bin/seaportal"
+  },
+  "repository": "github:pinchtab/seaportal",
+  "homepage": "https://github.com/pinchtab/seaportal#readme",
+  "bugs": "https://github.com/pinchtab/seaportal/issues",
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "postinstall": "node scripts/postinstall.js"
+  },
+  "files": [
+    "bin",
+    "scripts/postinstall.js",
+    "LICENSE"
+  ],
+  "keywords": [
+    "markdown",
+    "extract",
+    "scraper",
+    "readability",
+    "spa-detection",
+    "html-to-markdown",
+    "web-extraction",
+    "ai-agent"
+  ],
+  "author": "Luigi Agosti",
+  "license": "MIT",
+  "engines": {
+    "node": ">=16"
+  }
+}

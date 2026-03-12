@@ -1,0 +1,161 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# dev — SeaPortal developer toolkit
+# Usage: dev [command]    Run a command directly
+#        dev              Interactive picker
+
+cd "$(dirname "$0")"
+
+BOLD=$'\033[1m'
+ACCENT=$'\033[38;2;251;191;36m'
+MUTED=$'\033[38;2;90;100;128m'
+SUCCESS=$'\033[38;2;0;229;204m'
+ERROR=$'\033[38;2;230;57;70m'
+NC=$'\033[0m'
+
+# ── Commands ─────────────────────────────────────────────────────────
+COMMANDS=(
+  "build:🚀:Build binary"
+  "run:🏃:Build & run with test URL"
+  "check:🧪:All checks (format, vet, lint)"
+  "test:🔬:Run tests"
+  "e2e:🐳:E2E tests (Docker)"
+)
+
+# ── Helpers ──────────────────────────────────────────────────────────
+
+show_help() {
+  echo ""
+  echo "  ${ACCENT}${BOLD}🌊 SeaPortal Dev${NC}"
+  echo ""
+  for cmd in "${COMMANDS[@]}"; do
+    IFS=':' read -r name emoji desc <<< "$cmd"
+    printf "  ${SUCCESS}%s${NC} ${BOLD}%-12s${NC} ${MUTED}%s${NC}\n" "$emoji" "$name" "$desc"
+  done
+  echo ""
+  echo "  ${MUTED}Usage: ./dev [command]${NC}"
+  echo ""
+}
+
+run_command() {
+  local target="$1"
+
+  echo ""
+
+  case "$target" in
+    "build")
+      echo "  ${ACCENT}${BOLD}🚀 Building seaportal${NC}"
+      echo ""
+      go build -o seaportal ./cmd/seaportal
+      echo "  ${SUCCESS}✓${NC} Built: ./seaportal"
+      ;;
+    "run")
+      echo "  ${ACCENT}${BOLD}🏃 Build & run${NC}"
+      echo ""
+      go build -o seaportal ./cmd/seaportal
+      ./seaportal --json https://pinchtab.com | head -30
+      ;;
+    "check")
+      echo "  ${ACCENT}${BOLD}🧪 Running checks${NC}"
+      echo ""
+      exec bash scripts/check.sh
+      ;;
+    "test")
+      echo "  ${ACCENT}${BOLD}🔬 Running tests${NC}"
+      echo ""
+      exec bash scripts/test.sh
+      ;;
+    "e2e")
+      echo "  ${ACCENT}${BOLD}🐳 E2E tests (Docker)${NC}"
+      echo ""
+      
+      # Check for docker compose
+      COMPOSE_CMD=""
+      if docker compose version &>/dev/null; then
+        COMPOSE_CMD="docker compose"
+      elif command -v docker-compose &>/dev/null; then
+        COMPOSE_CMD="docker-compose"
+      else
+        echo "  ${ERROR}✗ Docker Compose not found${NC}"
+        echo ""
+        echo "  Install with: brew install docker-compose"
+        echo "  Or enable Docker Compose plugin in Docker Desktop"
+        exit 1
+      fi
+      
+      echo "Building binary for Linux..."
+      CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o tests/e2e/runner/seaportal ./cmd/seaportal
+      echo ""
+      exec $COMPOSE_CMD -f tests/e2e/docker-compose.yml up --build --abort-on-container-exit --exit-code-from runner
+      ;;
+    *)
+      echo "  ${ERROR}Unknown command: $target${NC}"
+      show_help
+      exit 1
+      ;;
+  esac
+}
+
+pick_with_gum() {
+  local options=()
+  for cmd in "${COMMANDS[@]}"; do
+    IFS=':' read -r name emoji desc <<< "$cmd"
+    options+=("$(printf '%s %-12s %s' "$emoji" "$name" "$desc")")
+  done
+
+  local choice
+  choice=$(printf '%s\n' "${options[@]}" | gum choose \
+    --header "🌊 SeaPortal Dev" \
+    --header.foreground "#fbbf24" \
+    --cursor.foreground "#00e5cc" \
+    --selected.foreground "#00e5cc" \
+    --item.foreground "#8892b0")
+
+  local picked
+  picked=$(echo "$choice" | awk '{print $2}')
+  printf '\033[2J\033[H'
+  run_command "$picked"
+}
+
+pick_with_select() {
+  echo ""
+  echo "  ${ACCENT}${BOLD}🌊 SeaPortal Dev${NC}"
+  echo ""
+
+  local names=()
+  local i=1
+  for cmd in "${COMMANDS[@]}"; do
+    IFS=':' read -r name emoji desc <<< "$cmd"
+    printf "  ${MUTED}[%d]${NC} ${SUCCESS}%s${NC} ${BOLD}%-12s${NC} ${MUTED}%s${NC}\n" "$i" "$emoji" "$name" "$desc"
+    names+=("$name")
+    i=$((i + 1))
+  done
+
+  echo ""
+  echo -ne "  ${BOLD}Pick [1-${#COMMANDS[@]}]:${NC} "
+  read -r choice
+
+  if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le ${#COMMANDS[@]} ]; then
+    run_command "${names[$((choice - 1))]}"
+  else
+    run_command "$choice"
+  fi
+}
+
+# ── Main ─────────────────────────────────────────────────────────────
+
+if [ $# -gt 0 ]; then
+  case "$1" in
+    -h|--help|help) show_help; exit 0 ;;
+    *) run_command "$1" ;;
+  esac
+  exit 0
+fi
+
+# No args → interactive picker
+if command -v gum &>/dev/null; then
+  pick_with_gum
+else
+  pick_with_select
+fi

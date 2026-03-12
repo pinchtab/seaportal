@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Analytics Pro</title>
+    <script>
+        window.__SESSION_ID__ = 'usr_' + Math.random().toString(36).substr(2, 9);
+        window.__USER_PREFS__ = { theme: 'light', timezone: 'UTC' };
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <h1>Analytics Pro</h1>
+            <span class="user-menu">Welcome, User</span>
+        </nav>
+    </header>
+    
+    <main>
+        <section class="dashboard-overview">
+            <h2>Your Dashboard</h2>
+            <p>Session-specific content loaded at: <time datetime="2024-01-15T10:30:00Z">January 15, 2024</time></p>
+        </section>
+        
+        <section class="metrics-grid">
+            <h2>Key Metrics</h2>
+            
+            <article class="metric-card">
+                <h3>Total Page Views</h3>
+                <p class="metric-value">142,857</p>
+                <p class="metric-change positive">+12.3% from last week</p>
+            </article>
+            
+            <article class="metric-card">
+                <h3>Unique Visitors</h3>
+                <p class="metric-value">28,491</p>
+                <p class="metric-change positive">+8.7% from last week</p>
+            </article>
+            
+            <article class="metric-card">
+                <h3>Bounce Rate</h3>
+                <p class="metric-value">34.2%</p>
+                <p class="metric-change negative">+2.1% from last week</p>
+            </article>
+            
+            <article class="metric-card">
+                <h3>Avg. Session Duration</h3>
+                <p class="metric-value">4m 23s</p>
+                <p class="metric-change positive">+15s from last week</p>
+            </article>
+        </section>
+        
+        <section class="recent-activity">
+            <h2>Recent Activity</h2>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>Page</th>
+                        <th>Views</th>
+                        <th>Avg. Time</th>
+                        <th>Exit Rate</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>/home</td>
+                        <td>45,231</td>
+                        <td>2m 15s</td>
+                        <td>22%</td>
+                    </tr>
+                    <tr>
+                        <td>/products</td>
+                        <td>32,105</td>
+                        <td>3m 42s</td>
+                        <td>18%</td>
+                    </tr>
+                    <tr>
+                        <td>/checkout</td>
+                        <td>12,847</td>
+                        <td>5m 08s</td>
+                        <td>45%</td>
+                    </tr>
+                    <tr>
+                        <td>/blog</td>
+                        <td>8,932</td>
+                        <td>6m 21s</td>
+                        <td>12%</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+        
+        <section class="insights">
+            <h2>AI-Generated Insights</h2>
+            
+            <article class="insight">
+                <h3>Traffic Spike Detected</h3>
+                <p>Your /products page saw a 45% increase in traffic on January 14th, likely due to the newsletter campaign launched that morning.</p>
+            </article>
+            
+            <article class="insight">
+                <h3>Mobile Conversion Opportunity</h3>
+                <p>Mobile users have a 23% lower conversion rate than desktop. Consider optimizing your checkout flow for smaller screens.</p>
+            </article>
+            
+            <article class="insight">
+                <h3>Peak Hours Analysis</h3>
+                <p>Your highest engagement occurs between 10 AM and 2 PM UTC. Schedule important announcements during this window.</p>
+            </article>
+        </section>
+        
+        <section class="reports">
+            <h2>Scheduled Reports</h2>
+            <ul>
+                <li><strong>Weekly Summary</strong> — Every Monday at 9 AM</li>
+                <li><strong>Monthly Deep Dive</strong> — First of each month</li>
+                <li><strong>Real-time Alerts</strong> — Enabled for traffic anomalies</li>
+            </ul>
+        </section>
+    </main>
+    
+    <footer>
+        <p>© 2024 Analytics Pro. Data refreshed every 15 minutes.</p>
+    </footer>
+</body>
+</html>

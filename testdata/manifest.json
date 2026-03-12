@@ -1,0 +1,19 @@
+{
+  "fixtures": {
+    "testdata/ssr/docs-python-org-3-tutorial-index-html.html": {
+      "sourceUrl": "https://docs.python.org/3/tutorial/index.html",
+      "category": "ssr",
+      "snapshotAt": "2026-03-10T23:31:32+01:00"
+    },
+    "testdata/ssr/www-rust-lang-org-learn.html": {
+      "sourceUrl": "https://www.rust-lang.org/learn",
+      "category": "ssr",
+      "snapshotAt": "2026-03-10T23:31:33+01:00"
+    },
+    "testdata/static/httpbin-org-html.html": {
+      "sourceUrl": "https://httpbin.org/html",
+      "category": "static",
+      "snapshotAt": "2026-03-10T23:31:27+01:00"
+    }
+  }
+}

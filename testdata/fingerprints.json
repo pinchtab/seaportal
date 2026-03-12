@@ -1,0 +1,84 @@
+{
+  "timestamp": "2026-03-10T23:47:23+01:00",
+  "categories": {
+    "blocked": {
+      "aggregateHash": "2858d51f75030271",
+      "fixtureCount": 4,
+      "fixtures": {
+        "http://localhost:65358/blocked/access-denied.html": "12053a6bb4562363c2e63e225fc438e6",
+        "http://localhost:65358/blocked/captcha.html": "0f81ed8ef2599676c8dee0393538331c",
+        "http://localhost:65358/blocked/cloudflare-challenge.html": "7d0e56054ce8b16642182a26192017c9",
+        "http://localhost:65358/blocked/rate-limit.html": "1b9197004abd9f7ea1a27e2893cf6071"
+      },
+      "lastUpdated": "2026-03-10T23:47:23+01:00"
+    },
+    "dynamic": {
+      "aggregateHash": "24a47d6df23e2701",
+      "fixtureCount": 14,
+      "fixtures": {
+        "http://localhost:65358/dynamic/ab-test-variant.html": "6812680ebcdfb28f546ac5d7fa92f72c",
+        "http://localhost:65358/dynamic/personalized-feed.html": "fe34dc41a952bb71c423ad64417d604f",
+        "https://news.google.com": "e89fb33637ebb613d24b70710c3a3592",
+        "https://news.ycombinator.com": "6bc8dbdbc01ba6d0619c4a5b40218ae2",
+        "https://notion.so": "446a6c7144d0c7b6682575e4f2908475",
+        "https://slack.com": "4f21d1f8c7e816d67eb473d6fede98ac",
+        "https://stackoverflow.com/questions/1732348/regex-match-open-tags-except-xhtml-self-contained-tags": "2c33354bb452c29736a1c4392da84ef3",
+        "https://stackoverflow.com/questions/tagged/go": "97ccd4f8c8a88e0f1172c6ecdcde3beb",
+        "https://www.bbc.com/news": "ed6a8f00e803a52c09b1c7ea87393f4e",
+        "https://www.dropbox.com": "7fb1206e0f0a0d041e31bbe65300318c",
+        "https://www.hubspot.com": "fdbd031e5906238443bce9117d5772bc",
+        "https://www.reddit.com/r/golang/": "e71525a27c6cfe49181aa70167435fbf",
+        "https://www.reddit.com/r/golang/comments/18e6p3o/go_123_release_notes/": "fa5231d8d2db8a67aafc4187c6f47cc3",
+        "https://www.salesforce.com": "91417a37b12b5ba94d15aaf995460fe0"
+      },
+      "lastUpdated": "2026-03-10T23:47:23+01:00"
+    },
+    "hydrated": {
+      "aggregateHash": "958d03ec42ca540b",
+      "fixtureCount": 7,
+      "fixtures": {
+        "http://localhost:65358/hydrated/dashboard.html": "2ddded83f0c73aefc4ef9545e1d68685",
+        "http://localhost:65358/hydrated/product-page.html": "ef266409fc508bb76dcf882ee896e45a",
+        "https://en.wikipedia.org/wiki/Go_(programming_language)": "6157655b51720da81d01c99477b43621",
+        "https://en.wikipedia.org/wiki/Rust_(programming_language)": "187ebe6fd3ea6687cac7c9df812e8b91",
+        "https://github.com": "5ef458d1069e529ce7d60ddb7a6ec6b8",
+        "https://www.figma.com": "70b26c02cad673ce6d4fa1027d444b7d",
+        "https://www.netflix.com": "844ec188ac2c522cf00862f2acbed5e4"
+      },
+      "lastUpdated": "2026-03-10T23:47:23+01:00"
+    },
+    "spa": {
+      "aggregateHash": "e5145667cf43851b",
+      "fixtureCount": 3,
+      "fixtures": {
+        "https://twitter.com": "917ecc15ff9eaa000ed4d5fe90ae2cfc",
+        "https://www.airbnb.com": "eec61923ba0c06fd637346e905311e2c",
+        "https://www.instagram.com": "e3b0c44298fc1c149afbf4c8996fb924"
+      },
+      "lastUpdated": "2026-03-10T23:47:23+01:00"
+    },
+    "ssr": {
+      "aggregateHash": "3cf6b610eb43805f",
+      "fixtureCount": 6,
+      "fixtures": {
+        "http://localhost:65358/ssr/blog-post.html": "ecd3ab6dde7c89f00fa664932b5399f1",
+        "http://localhost:65358/ssr/documentation.html": "0552b52f3566d828908e97822ff36d0b",
+        "https://blog.golang.org/go1.21": "a15d442ebbc9d8c1d08469143f80d230",
+        "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide": "c231958b19403cdcbb86d96f5c90a33c",
+        "https://go.dev/doc/effective_go": "145b9c96a5f95d620e916a7bdef86f3e",
+        "https://react.dev": "e7cadc6e6eb6355c108d04c03caec30b"
+      },
+      "lastUpdated": "2026-03-10T23:47:23+01:00"
+    },
+    "static": {
+      "aggregateHash": "56238325d30cbad5",
+      "fixtureCount": 3,
+      "fixtures": {
+        "http://localhost:65358/static/simple.html": "cfa1de60707d80cf826a2a863abac01e",
+        "https://info.cern.ch": "2d19bcaa67944606efeec345b5150144",
+        "https://www.w3.org/History/19921103-hypertext/hypertext/WWW/TheProject.html": "8d824982cd4638c9ee54bbd116536588"
+      },
+      "lastUpdated": "2026-03-10T23:47:23+01:00"
+    }
+  }
+}

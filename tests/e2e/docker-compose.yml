@@ -1,0 +1,23 @@
+services:
+  fixtures:
+    image: nginx:alpine
+    volumes:
+      - ./fixtures:/usr/share/nginx/html:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:80/"]
+      interval: 2s
+      timeout: 5s
+      retries: 5
+
+  runner:
+    build:
+      context: ./runner
+    depends_on:
+      fixtures:
+        condition: service_healthy
+    environment:
+      - FIXTURES_URL=http://fixtures:80
+    volumes:
+      - ./scenarios:/scenarios:ro
+      - ./results:/results
+    command: ["/scenarios/run-all.sh"]

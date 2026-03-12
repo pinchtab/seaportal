@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SeaPortal API Reference</title>
+</head>
+<body>
+    <nav>
+        <a href="/">Home</a>
+        <a href="/docs">Docs</a>
+        <a href="/api">API</a>
+        <a href="/examples">Examples</a>
+    </nav>
+    
+    <main>
+        <h1>SeaPortal API Reference</h1>
+        <p>This document describes the SeaPortal extraction library API.</p>
+        
+        <h2>Installation</h2>
+        <pre><code>go get github.com/seaportal/seaportal</code></pre>
+        
+        <h2>Quick Start</h2>
+        <p>Import the library and extract content from any URL:</p>
+        <pre><code>import "github.com/seaportal/seaportal/pkg/extract"
+
+result, err := extract.ExtractURL("https://example.com")
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Println(result.Content)</code></pre>
+        
+        <h2>Functions</h2>
+        
+        <h3>ExtractURL</h3>
+        <p><code>func ExtractURL(url string) (*Result, error)</code></p>
+        <p>Extracts clean content from the given URL. Returns a Result containing the markdown content, metadata, and classification.</p>
+        
+        <h4>Parameters</h4>
+        <ul>
+            <li><code>url</code> - The URL to extract content from</li>
+        </ul>
+        
+        <h4>Returns</h4>
+        <ul>
+            <li><code>*Result</code> - The extraction result</li>
+            <li><code>error</code> - Any error encountered</li>
+        </ul>
+        
+        <h3>ExtractHTML</h3>
+        <p><code>func ExtractHTML(html string, baseURL string) (*Result, error)</code></p>
+        <p>Extracts content from raw HTML. Useful when you already have the HTML and don't need to fetch it.</p>
+        
+        <h3>Classify</h3>
+        <p><code>func Classify(result Result) PageProfile</code></p>
+        <p>Classifies a page based on extraction result. Returns the page type (static, SSR, hydrated, SPA, dynamic, blocked).</p>
+        
+        <h2>Types</h2>
+        
+        <h3>Result</h3>
+        <pre><code>type Result struct {
+    Content     string   // Extracted markdown
+    Title       string   // Page title
+    Confidence  int      // Extraction confidence (0-100)
+    Length      int      // Content length in bytes
+    IsSPA       bool     // True if SPA detected
+    IsBlocked   bool     // True if bot detection triggered
+    SPASignals  []string // SPA indicators found
+}</code></pre>
+        
+        <h3>PageProfile</h3>
+        <pre><code>type PageProfile struct {
+    Class       PageClass         // static, ssr, hydrated, spa, dynamic, blocked
+    Outcome     ExtractionOutcome // extract, extract-with-warning, fail-fast, needs-browser
+    Trustworthy bool              // Whether extraction is reliable
+}</code></pre>
+        
+        <h2>Configuration</h2>
+        <p>SeaPortal can be configured via environment variables or programmatically.</p>
+        
+        <h3>Environment Variables</h3>
+        <table>
+            <tr><th>Variable</th><th>Description</th><th>Default</th></tr>
+            <tr><td>SEAPORTAL_TIMEOUT</td><td>HTTP timeout</td><td>30s</td></tr>
+            <tr><td>SEAPORTAL_CACHE_DIR</td><td>Cache directory</td><td>~/.seaportal/cache</td></tr>
+            <tr><td>SEAPORTAL_USER_AGENT</td><td>Custom user agent</td><td>SeaPortal/1.0</td></tr>
+        </table>
+        
+        <h2>Examples</h2>
+        <p>See the <a href="/examples">examples directory</a> for complete working examples.</p>
+    </main>
+    
+    <footer>
+        <p>SeaPortal Documentation v1.0</p>
+    </footer>
+</body>
+</html>

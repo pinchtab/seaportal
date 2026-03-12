@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics Dashboard</title>
+    <script>window.__INITIAL_STATE__ = {user: 'demo', hydrated: true};</script>
+</head>
+<body>
+    <div id="app" data-reactroot="">
+        <header>
+            <h1>Analytics Dashboard</h1>
+            <nav>
+                <a href="/dashboard">Overview</a>
+                <a href="/reports">Reports</a>
+                <a href="/settings">Settings</a>
+            </nav>
+        </header>
+        
+        <main>
+            <section class="overview">
+                <h2>Weekly Overview</h2>
+                <p>Your key metrics at a glance. Data updates every hour.</p>
+                
+                <div class="metrics">
+                    <article class="metric-card">
+                        <h3>Total Visitors</h3>
+                        <p class="value">12,847</p>
+                        <p class="change positive">+15% from last week</p>
+                    </article>
+                    
+                    <article class="metric-card">
+                        <h3>Page Views</h3>
+                        <p class="value">48,392</p>
+                        <p class="change positive">+8% from last week</p>
+                    </article>
+                    
+                    <article class="metric-card">
+                        <h3>Bounce Rate</h3>
+                        <p class="value">32.5%</p>
+                        <p class="change negative">+2% from last week</p>
+                    </article>
+                    
+                    <article class="metric-card">
+                        <h3>Avg. Session</h3>
+                        <p class="value">4m 23s</p>
+                        <p class="change">No change</p>
+                    </article>
+                </div>
+            </section>
+            
+            <section class="top-pages">
+                <h2>Top Pages This Week</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Page</th>
+                            <th>Views</th>
+                            <th>Unique</th>
+                            <th>Avg. Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>/home</td>
+                            <td>8,421</td>
+                            <td>6,234</td>
+                            <td>2m 15s</td>
+                        </tr>
+                        <tr>
+                            <td>/products</td>
+                            <td>5,832</td>
+                            <td>4,128</td>
+                            <td>3m 42s</td>
+                        </tr>
+                        <tr>
+                            <td>/blog</td>
+                            <td>4,291</td>
+                            <td>3,567</td>
+                            <td>5m 18s</td>
+                        </tr>
+                        <tr>
+                            <td>/about</td>
+                            <td>2,847</td>
+                            <td>2,341</td>
+                            <td>1m 52s</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+            
+            <section class="traffic-sources">
+                <h2>Traffic Sources</h2>
+                <ul>
+                    <li><strong>Organic Search:</strong> 45%</li>
+                    <li><strong>Direct:</strong> 28%</li>
+                    <li><strong>Social:</strong> 15%</li>
+                    <li><strong>Referral:</strong> 8%</li>
+                    <li><strong>Email:</strong> 4%</li>
+                </ul>
+            </section>
+        </main>
+        
+        <footer>
+            <p>Last updated: January 20, 2024 at 3:00 PM</p>
+        </footer>
+    </div>
+    
+    <script>
+        // React hydration - content already rendered server-side
+        if (window.__INITIAL_STATE__) {
+            console.log('Hydrating with initial state...');
+        }
+    </script>
+</body>
+</html>
