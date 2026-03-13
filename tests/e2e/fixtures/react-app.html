@@ -4,6 +4,11 @@
   <meta charset="UTF-8">
   <title>React App</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    .hidden { display: none; }
+    .tab-active { font-weight: bold; border-bottom: 2px solid #333; }
+    .card { border: 1px solid #ddd; padding: 12px; margin: 8px 0; border-radius: 4px; }
+  </style>
 </head>
 <body>
   <noscript>You need to enable JavaScript to run this app.</noscript>
@@ -12,7 +17,7 @@
     function h(tag, props, ...children) {
       const el = document.createElement(tag);
       if (props) Object.entries(props).forEach(([k, v]) => {
-        if (k === 'onClick') el.addEventListener('click', v);
+        if (k.startsWith('on')) el.addEventListener(k.slice(2).toLowerCase(), v);
         else if (k === 'className') el.className = v;
         else el.setAttribute(k, v);
       });
@@ -22,10 +27,86 @@
       return el;
     }
 
-    let count = 0;
+    // App state
+    const state = {
+      count: 0,
+      activeTab: 'about',
+      asyncLoaded: false,
+      asyncData: null
+    };
+
+    // Simulated async data fetch
+    setTimeout(() => {
+      state.asyncData = {
+        articles: [
+          { title: 'Understanding Neural Networks', summary: 'A deep dive into how artificial neural networks process information and learn patterns from data.' },
+          { title: 'The Future of Renewable Energy', summary: 'Solar and wind power are reshaping the global energy landscape, with costs dropping by 90% in the last decade.' },
+          { title: 'Ocean Conservation Efforts', summary: 'Marine biologists are developing new strategies to protect coral reefs and reduce plastic pollution in our oceans.' }
+        ],
+        stats: { users: 12847, articles: 342, comments: 8921 }
+      };
+      state.asyncLoaded = true;
+      render();
+    }, 500);
+
+    const tabs = {
+      about: {
+        title: 'About Us',
+        content: 'SeaPortal is an open-source tool for extracting clean, readable content from any web page. Built with Go, it handles everything from simple blogs to complex single-page applications. Our mission is to make web content accessible to AI agents and automation tools.'
+      },
+      features: {
+        title: 'Features',
+        items: [
+          'Automatic SPA detection and handling',
+          'Accessibility tree extraction with element refs',
+          'Smart content deduplication',
+          'Compact output format for token efficiency',
+          'Interactive element filtering'
+        ]
+      },
+      contact: {
+        title: 'Get in Touch',
+        content: 'Have questions or feedback? We would love to hear from you. Reach out through our GitHub repository or join our community Discord server. Our team typically responds within 24 hours.'
+      }
+    };
+
     function render() {
       const root = document.getElementById('root');
       root.innerHTML = '';
+
+      const tabButtons = Object.keys(tabs).map(key =>
+        h('button', {
+          className: state.activeTab === key ? 'tab-active' : '',
+          onClick: () => { state.activeTab = key; render(); }
+        }, tabs[key].title)
+      );
+
+      const activeContent = tabs[state.activeTab];
+      let tabContent;
+      if (state.activeTab === 'features') {
+        tabContent = h('div', null,
+          h('ul', null, ...activeContent.items.map(item => h('li', null, item)))
+        );
+      } else {
+        tabContent = h('p', null, activeContent.content);
+      }
+
+      const asyncSection = state.asyncLoaded
+        ? h('section', { 'aria-label': 'Latest Articles' },
+            h('h2', null, 'Latest Articles'),
+            ...state.asyncData.articles.map(a =>
+              h('div', { className: 'card' },
+                h('h3', null, a.title),
+                h('p', null, a.summary)
+              )
+            ),
+            h('div', { className: 'card' },
+              h('h3', null, 'Community Stats'),
+              h('p', null, `${state.asyncData.stats.users.toLocaleString()} users, ${state.asyncData.stats.articles} articles, ${state.asyncData.stats.comments.toLocaleString()} comments`)
+            )
+          )
+        : h('p', null, 'Loading articles...');
+
       root.appendChild(
         h('div', { className: 'app' },
           h('header', null,
@@ -36,17 +117,23 @@
             )
           ),
           h('main', null,
-            h('h1', null, 'Welcome'),
-            h('p', null, 'This is a client-rendered React-like app.'),
+            h('h1', null, 'Welcome to SeaPortal'),
+            h('p', null, 'The intelligent web content extraction tool designed for the age of AI agents and automation.'),
+            h('div', { 'role': 'tablist' }, ...tabButtons),
+            h('div', { 'role': 'tabpanel' }, tabContent),
+            asyncSection,
             h('div', null,
-              h('button', { onClick: () => { count++; render(); } }, 'Count: ' + count),
+              h('button', { onClick: () => { state.count++; render(); } }, 'Likes: ' + state.count),
               h('form', null,
-                h('input', { type: 'text', placeholder: 'Search...' }),
-                h('button', { type: 'submit' }, 'Go')
+                h('input', { type: 'text', placeholder: 'Search articles...' }),
+                h('button', { type: 'submit' }, 'Search')
               )
             )
           ),
-          h('footer', null, h('p', null, '© 2026 Test App'))
+          h('footer', null,
+            h('p', null, 'Built with passion by the SeaPortal team. Open source under the MIT License.'),
+            h('p', null, 'Copyright 2026 Pinchtab. All rights reserved.')
+          )
         )
       );
     }
