@@ -8,6 +8,62 @@ import (
 	"github.com/chromedp/chromedp"
 )
 
+// triggerAnimationEndScript fires animationend events to unlock animation-gated content
+const triggerAnimationEndScript = `
+(function() {
+  // Find all elements with CSS animations and fire animationend
+  var animated = document.querySelectorAll('[class*="animation"], [class*="animate"], [style*="animation"]');
+  animated.forEach(function(el) {
+    var styles = getComputedStyle(el);
+    var animName = styles.animationName;
+    if (animName && animName !== 'none') {
+      el.dispatchEvent(new AnimationEvent('animationend', { animationName: animName, bubbles: true }));
+    }
+  });
+  
+  // Also check elements with animation classes we know about
+  document.querySelectorAll('.spotlight-container, [class*="reveal"], [class*="fade"]').forEach(function(el) {
+    var styles = getComputedStyle(el);
+    var animName = styles.animationName;
+    if (animName && animName !== 'none') {
+      el.dispatchEvent(new AnimationEvent('animationend', { animationName: animName, bubbles: true }));
+    }
+  });
+  
+  return true;
+})()
+`
+
+// forceVisibilityScript reveals hidden content before extraction.
+// This handles CSS-animated content, lazy placeholders, and display:none sections.
+const forceVisibilityScript = `
+(function() {
+  // Inject CSS to force all elements visible
+  var style = document.createElement('style');
+  style.textContent = '* { visibility: visible !important; opacity: 1 !important; height: auto !important; overflow: visible !important; }';
+  document.head.appendChild(style);
+  
+  // Remove animation-related classes that might hide content
+  document.querySelectorAll('[class*="pending"], [class*="loading"], [class*="hidden"]').forEach(function(el) {
+    el.style.visibility = 'visible';
+    el.style.opacity = '1';
+    el.style.height = 'auto';
+    el.style.overflow = 'visible';
+  });
+  
+  return true;
+})()
+`
+
+// waitForAnimationsScript waits for CSS animations to complete (sync version)
+const waitForAnimationsScript = `
+(function() {
+  var animations = document.getAnimations ? document.getAnimations() : [];
+  // Just check if there are running animations - we'll wait via Sleep
+  return animations.length;
+})()
+`
+
 // flattenShadowDOMScript is JS that serializes the full DOM including Shadow DOM content.
 const flattenShadowDOMScript = `
 (function() {
@@ -131,6 +187,29 @@ func FromURLExperimental(targetURL string, opts ExperimentalOptions) Experimenta
 		chromedp.Sleep(opts.WaitFor),
 		chromedp.ActionFunc(func(ctx context.Context) error {
 			return waitForDOMStable(ctx, 500*time.Millisecond, 5)
+		}),
+		// Wait for CSS animations to complete
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			var animCount int
+			if err := chromedp.Evaluate(waitForAnimationsScript, &animCount).Do(ctx); err != nil {
+				return nil // ignore errors, proceed anyway
+			}
+			if animCount > 0 {
+				time.Sleep(1 * time.Second) // give animations time to complete
+			}
+			return nil
+		}),
+		// Trigger animationend events to unlock animation-gated content
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			var done bool
+			chromedp.Evaluate(triggerAnimationEndScript, &done).Do(ctx)
+			time.Sleep(200 * time.Millisecond) // let event handlers run
+			return nil
+		}),
+		// Force visibility on hidden content (animation placeholders, lazy sections)
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			var done bool
+			return chromedp.Evaluate(forceVisibilityScript, &done).Do(ctx)
 		}),
 		chromedp.Title(&title),
 		chromedp.ActionFunc(func(ctx context.Context) error {
