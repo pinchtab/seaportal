@@ -59,7 +59,9 @@
       benchmarksLoaded: false,
       benchmarks: null,
       securityLoaded: false,
-      securityInfo: null
+      securityInfo: null,
+      ecosystemLoaded: false,
+      ecosystem: null
     };
 
     // Simulated async data fetch — wave 1 (500ms)
@@ -380,6 +382,30 @@
           )
         : h('p', null, '');
 
+      const ecosystemSection = state.ecosystemLoaded && state.ecosystem
+        ? h('section', { 'aria-label': 'Community Ecosystem' },
+            h('h2', null, 'Community Ecosystem'),
+            h('p', null, 'SeaPortal thrives thanks to a vibrant open-source community. Here are some of the ways developers are extending and building upon the core platform.'),
+            h('h3', null, 'Community Plugins'),
+            ...state.ecosystem.plugins.map(plugin =>
+              h('div', { className: 'card' },
+                h('h4', null, plugin.name),
+                h('p', null, h('strong', null, 'Author: '), plugin.author),
+                h('p', null, h('strong', null, 'Downloads: '), plugin.downloads.toLocaleString()),
+                h('p', null, plugin.desc)
+              )
+            ),
+            h('h3', null, 'Learning Resources'),
+            ...state.ecosystem.resources.map(res =>
+              h('div', { className: 'card' },
+                h('h4', null, res.title),
+                h('p', null, h('strong', null, 'Type: '), res.type),
+                h('p', null, res.desc)
+              )
+            )
+          )
+        : h('p', null, '');
+
       root.appendChild(
         h('div', { className: 'app' },
           h('header', null,
@@ -406,6 +432,7 @@
             spotlightSection,
             benchmarksSection,
             securitySection,
+            ecosystemSection,
             h('div', null,
               h('button', { onClick: () => { state.count++; render(); } }, 'Likes: ' + state.count),
               h('form', null,
@@ -749,6 +776,90 @@
             URL.revokeObjectURL(blobUrl);
           });
       }, 5000);
+    })();
+
+    // Wave 13: requestIdleCallback-based content — only loads during browser idle periods
+    (function loadEcosystemDuringIdle() {
+      // Polyfill for environments without requestIdleCallback
+      const scheduleIdle = window.requestIdleCallback || function(cb) {
+        return setTimeout(() => cb({ didTimeout: false, timeRemaining: () => 50 }), 100);
+      };
+
+      let idleCallCount = 0;
+      const requiredIdleCalls = 3; // Require multiple idle callbacks to ensure true idle state
+
+      function buildEcosystemData() {
+        return {
+          plugins: [
+            {
+              name: 'seaportal-pandas',
+              author: 'DataWizard',
+              downloads: 45230,
+              desc: 'Direct integration between SeaPortal extraction output and pandas DataFrames. Supports streaming ingestion for large datasets and automatic type inference from extracted content structures.'
+            },
+            {
+              name: 'seaportal-notion',
+              author: 'ProductivityHackers',
+              downloads: 28914,
+              desc: 'Sync extracted web content directly to Notion databases. Automatically maps HTML structure to Notion blocks, preserving headings, lists, and embedded media.'
+            },
+            {
+              name: 'seaportal-langchain',
+              author: 'AIDevCollective',
+              downloads: 67821,
+              desc: 'LangChain document loader that uses SeaPortal for JavaScript-heavy page extraction. Includes chunking strategies optimized for RAG pipelines and vector embedding workflows.'
+            },
+            {
+              name: 'seaportal-scheduler',
+              author: 'CronMaster',
+              downloads: 19455,
+              desc: 'Declarative scheduling system for recurring extraction jobs. Define extraction targets in YAML, set cadence from minutely to monthly, and receive webhook notifications on content changes.'
+            }
+          ],
+          resources: [
+            {
+              title: 'SeaPortal Mastery Course',
+              type: 'Video Series',
+              desc: 'A comprehensive 12-hour video course covering everything from basic extraction to advanced techniques like custom wait strategies, authentication handling, and distributed extraction architectures. Includes hands-on exercises and real-world project templates.'
+            },
+            {
+              title: 'The Extraction Cookbook',
+              type: 'E-Book',
+              desc: 'Community-maintained collection of 200+ extraction recipes for popular website patterns. Each recipe includes selector strategies, timing configurations, and expected output schemas. Updated monthly with new patterns.'
+            },
+            {
+              title: 'SeaPortal Weekly Newsletter',
+              type: 'Newsletter',
+              desc: 'Curated roundup of extraction tips, community plugin releases, and industry news. Subscriber-exclusive tutorials cover emerging challenges like AI-generated content detection and dynamic anti-bot countermeasures.'
+            }
+          ]
+        };
+      }
+
+      function checkIdleAndLoad(deadline) {
+        // Only proceed if we have meaningful idle time
+        if (deadline.timeRemaining() > 10 || deadline.didTimeout) {
+          idleCallCount++;
+          
+          if (idleCallCount >= requiredIdleCalls) {
+            // Browser has been idle multiple times — safe to load ecosystem content
+            state.ecosystem = buildEcosystemData();
+            state.ecosystemLoaded = true;
+            render();
+          } else {
+            // Schedule another idle check to confirm persistent idle state
+            scheduleIdle(checkIdleAndLoad, { timeout: 2000 });
+          }
+        } else {
+          // Not enough idle time, reschedule
+          scheduleIdle(checkIdleAndLoad, { timeout: 2000 });
+        }
+      }
+
+      // Start idle detection after initial page load settles
+      setTimeout(() => {
+        scheduleIdle(checkIdleAndLoad, { timeout: 3000 });
+      }, 5500);
     })();
   </script>
 </body>
