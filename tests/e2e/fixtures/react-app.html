@@ -8,6 +8,7 @@
     .hidden { display: none; }
     .tab-active { font-weight: bold; border-bottom: 2px solid #333; }
     .card { border: 1px solid #ddd; padding: 12px; margin: 8px 0; border-radius: 4px; }
+    faq-section { display: block; margin: 16px 0; }
   </style>
 </head>
 <body>
@@ -34,7 +35,8 @@
       asyncLoaded: false,
       asyncData: null,
       testimonialsLoaded: false,
-      testimonials: null
+      testimonials: null,
+      faqLoaded: false
     };
 
     // Simulated async data fetch — wave 1 (500ms)
@@ -80,6 +82,42 @@
       state.pricingLoaded = true;
       render();
     }, 2500);
+
+    // Wave 4 (3s): Shadow DOM FAQ component — content hidden from regular DOM traversal
+    class FaqSection extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({ mode: 'open' });
+      }
+      connectedCallback() {
+        const faqs = [
+          { q: 'How does SeaPortal handle JavaScript-rendered content?', a: 'SeaPortal uses a headless browser engine to fully execute JavaScript, waiting for dynamic content to load before extraction. It detects network idle and DOM stability to ensure all async content is captured.' },
+          { q: 'Can I extract content from pages behind authentication?', a: 'Yes. SeaPortal supports cookie injection and session management, allowing you to extract content from authenticated pages. Enterprise plans include built-in credential vaulting.' },
+          { q: 'What makes the accessibility tree approach unique?', a: 'Unlike raw HTML parsing, our accessibility tree extraction captures the semantic meaning of content as perceived by assistive technologies. This provides cleaner, more structured output ideal for AI processing.' }
+        ];
+        this.shadowRoot.innerHTML = `
+          <style>
+            :host { display: block; }
+            .faq-item { border-left: 3px solid #0066cc; padding: 8px 12px; margin: 12px 0; background: #f9f9f9; }
+            .question { font-weight: bold; color: #333; margin-bottom: 4px; }
+            .answer { color: #555; line-height: 1.5; }
+          </style>
+          <h2>Frequently Asked Questions</h2>
+          ${faqs.map(f => `
+            <div class="faq-item">
+              <div class="question">${f.q}</div>
+              <div class="answer">${f.a}</div>
+            </div>
+          `).join('')}
+        `;
+      }
+    }
+    customElements.define('faq-section', FaqSection);
+
+    setTimeout(() => {
+      state.faqLoaded = true;
+      render();
+    }, 3000);
 
     const tabs = {
       about: {
@@ -165,6 +203,10 @@
           )
         : h('p', null, '');
 
+      const faqSection = state.faqLoaded
+        ? document.createElement('faq-section')
+        : h('p', null, '');
+
       root.appendChild(
         h('div', { className: 'app' },
           h('header', null,
@@ -182,6 +224,7 @@
             asyncSection,
             testimonialSection,
             pricingSection,
+            faqSection,
             h('div', null,
               h('button', { onClick: () => { state.count++; render(); } }, 'Likes: ' + state.count),
               h('form', null,
