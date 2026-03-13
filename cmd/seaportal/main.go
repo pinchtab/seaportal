@@ -25,6 +25,7 @@ func main() {
 	snapshotFilter := flag.String("filter", "", "Snapshot filter: 'interactive' to show only interactive elements")
 	snapshotFormat := flag.String("format", "json", "Snapshot format: 'json' or 'compact'")
 	maxTokens := flag.Int("max-tokens", 0, "Approximate token limit for snapshot output (0 = unlimited)")
+	experimental := flag.Bool("experimental", false, "Experimental: render page in headless Chrome before extraction")
 	showVersion := flag.Bool("version", false, "Show version")
 	flag.BoolVar(showVersion, "v", false, "Show version")
 
@@ -52,6 +53,59 @@ func main() {
 	}
 
 	targetURL := args[0]
+
+	// Experimental mode: render in headless Chrome
+	if *experimental {
+		expOpts := portal.ExperimentalOptions{
+			Snapshot: *snapshot,
+		}
+
+		result := portal.FromURLExperimental(targetURL, expOpts)
+
+		if result.Error != "" {
+			fmt.Fprintf(os.Stderr, "Error: %s\n", result.Error)
+			os.Exit(1)
+		}
+
+		// Save to results/[timestamp].md
+		timestamp := time.Now().Format("20060102_150405")
+		resultsDir := "results"
+		if err := os.MkdirAll(resultsDir, 0755); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: could not create results dir: %v\n", err)
+		}
+
+		filename := filepath.Join(resultsDir, fmt.Sprintf("%s.md", timestamp))
+
+		var output strings.Builder
+		output.WriteString("---\n")
+		fmt.Fprintf(&output, "title: %q\n", result.Title)
+		fmt.Fprintf(&output, "url: %s\n", result.URL)
+		fmt.Fprintf(&output, "rendered: %v\n", result.Rendered)
+		fmt.Fprintf(&output, "timeMs: %d\n", result.TimeMs)
+		output.WriteString("mode: experimental\n")
+		output.WriteString("---\n\n")
+		output.WriteString(result.Content)
+
+		if err := os.WriteFile(filename, []byte(output.String()), 0644); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: could not save result: %v\n", err)
+		}
+
+		fmt.Printf("Saved: %s (%d bytes, %dms, rendered: %v)\n", filename, len(result.Content), result.TimeMs, result.Rendered)
+
+		// Also output snapshot if requested
+		if *snapshot && result.Snapshot != nil {
+			snapFile := filepath.Join(resultsDir, fmt.Sprintf("%s_snapshot.json", timestamp))
+			snapData, _ := json.MarshalIndent(result.Snapshot, "", "  ")
+			if err := os.WriteFile(snapFile, snapData, 0644); err != nil {
+				fmt.Fprintf(os.Stderr, "Warning: could not save snapshot: %v\n", err)
+			}
+			fmt.Printf("Snapshot: %s\n", snapFile)
+		}
+
+		fmt.Println("\n--- Content ---")
+		fmt.Println(output.String())
+		return
+	}
 
 	// Snapshot mode: fetch HTML and build accessibility tree
 	if *snapshot {
@@ -82,6 +136,59 @@ func main() {
 				os.Exit(1)
 			}
 		}
+		return
+	}
+
+	// Experimental mode: render in headless Chrome
+	if *experimental {
+		opts := portal.ExperimentalOptions{
+			Snapshot: *snapshot,
+		}
+
+		result := portal.FromURLExperimental(targetURL, opts)
+
+		if result.Error != "" {
+			fmt.Fprintf(os.Stderr, "Error: %s\n", result.Error)
+			os.Exit(1)
+		}
+
+		// Save to results/[timestamp].md
+		timestamp := time.Now().Format("20060102_150405")
+		resultsDir := "results"
+		if err := os.MkdirAll(resultsDir, 0755); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: could not create results dir: %v\n", err)
+		}
+
+		filename := filepath.Join(resultsDir, fmt.Sprintf("%s.md", timestamp))
+
+		var output strings.Builder
+		output.WriteString("---\n")
+		fmt.Fprintf(&output, "title: %q\n", result.Title)
+		fmt.Fprintf(&output, "url: %s\n", result.URL)
+		fmt.Fprintf(&output, "rendered: %v\n", result.Rendered)
+		fmt.Fprintf(&output, "timeMs: %d\n", result.TimeMs)
+		output.WriteString("mode: experimental\n")
+		output.WriteString("---\n\n")
+		output.WriteString(result.Content)
+
+		if err := os.WriteFile(filename, []byte(output.String()), 0644); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: could not save result: %v\n", err)
+		}
+
+		fmt.Printf("Saved: %s (%d bytes, %dms, rendered: %v)\n", filename, len(result.Content), result.TimeMs, result.Rendered)
+
+		// Also output snapshot if requested
+		if *snapshot && result.Snapshot != nil {
+			snapFile := filepath.Join(resultsDir, fmt.Sprintf("%s_snapshot.json", timestamp))
+			snapData, _ := json.MarshalIndent(result.Snapshot, "", "  ")
+			if err := os.WriteFile(snapFile, snapData, 0644); err != nil {
+				fmt.Fprintf(os.Stderr, "Warning: could not save snapshot: %v\n", err)
+			}
+			fmt.Printf("Snapshot: %s\n", snapFile)
+		}
+
+		fmt.Println("\n--- Content ---")
+		fmt.Println(output.String())
 		return
 	}
 
