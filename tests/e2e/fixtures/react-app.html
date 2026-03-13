@@ -9,6 +9,12 @@
     .tab-active { font-weight: bold; border-bottom: 2px solid #333; }
     .card { border: 1px solid #ddd; padding: 12px; margin: 8px 0; border-radius: 4px; }
     faq-section { display: block; margin: 16px 0; }
+    @keyframes spotlightReveal {
+      0% { opacity: 0; transform: translateY(20px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    .spotlight-container { animation: spotlightReveal 0.8s ease-out forwards; }
+    .spotlight-pending { visibility: hidden; height: 0; overflow: hidden; }
   </style>
 </head>
 <body>
@@ -47,7 +53,9 @@
       partnersLoaded: false,
       partners: null,
       caseStudiesLoaded: false,
-      caseStudies: null
+      caseStudies: null,
+      spotlightLoaded: false,
+      spotlight: null
     };
 
     // Simulated async data fetch — wave 1 (500ms)
@@ -314,6 +322,22 @@
           )
         : h('p', null, '');
 
+      const spotlightSection = state.spotlightLoaded && state.spotlight
+        ? h('section', { 'aria-label': 'Feature Spotlight' },
+            h('h2', null, 'Feature Spotlight'),
+            h('p', null, 'Deep dives into capabilities that set SeaPortal apart from conventional scraping tools.'),
+            ...state.spotlight.map(feature =>
+              h('div', { className: 'card' },
+                h('h3', null, feature.title),
+                h('p', null, feature.desc),
+                h('p', null, h('em', null, 'Technical detail: '), feature.technical)
+              )
+            )
+          )
+        : h('div', { id: 'spotlight-trigger', className: 'spotlight-pending' },
+            h('p', null, 'Loading spotlight...')
+          );
+
       root.appendChild(
         h('div', { className: 'app' },
           h('header', null,
@@ -337,6 +361,7 @@
             recommendationsSection,
             partnersSection,
             caseStudiesSection,
+            spotlightSection,
             h('div', null,
               h('button', { onClick: () => { state.count++; render(); } }, 'Likes: ' + state.count),
               h('form', null,
@@ -520,6 +545,49 @@
       request.onerror = (event) => {
         console.error('IndexedDB error:', event.target.error);
       };
+    })();
+
+    // Wave 10: CSS animation-triggered content — only loads after animationend event fires
+    (function loadSpotlightAfterAnimation() {
+      setTimeout(() => {
+        const trigger = document.getElementById('spotlight-trigger');
+        if (!trigger || state.spotlightLoaded) return;
+
+        // Create an animated container that triggers content load when animation completes
+        const animatedContainer = document.createElement('div');
+        animatedContainer.className = 'spotlight-container';
+        animatedContainer.style.minHeight = '10px';
+        animatedContainer.innerHTML = '<span style="opacity:0">initializing</span>';
+        
+        // Content only becomes available after the CSS animation completes
+        animatedContainer.addEventListener('animationend', (event) => {
+          if (event.animationName === 'spotlightReveal') {
+            state.spotlight = [
+              {
+                title: 'Semantic Boundary Detection',
+                desc: 'SeaPortal automatically identifies content boundaries using a combination of DOM structure analysis and visual layout heuristics. This eliminates the need for manual CSS selectors in most extraction scenarios.',
+                technical: 'Uses a weighted scoring algorithm that combines element depth, sibling density, text-to-markup ratio, and computed style properties to identify primary content containers with 94% accuracy on benchmark datasets.'
+              },
+              {
+                title: 'Adaptive Wait Strategies',
+                desc: 'Rather than using fixed timeouts, SeaPortal monitors network activity, DOM mutations, and JavaScript execution to determine when a page has finished loading dynamic content.',
+                technical: 'Implements a state machine that tracks pending fetch requests, WebSocket messages, setTimeout callbacks, and MutationObserver activity. Extraction begins only when all signals indicate stability for a configurable threshold period.'
+              },
+              {
+                title: 'Incremental Extraction Mode',
+                desc: 'For pages with continuously updating content like social feeds or live dashboards, incremental mode captures only the changes since the last extraction, dramatically reducing bandwidth and processing overhead.',
+                technical: 'Maintains a content-addressed hash tree of previously extracted elements. New extractions diff against this tree using a streaming comparison algorithm, emitting only novel content blocks to downstream consumers.'
+              }
+            ];
+            state.spotlightLoaded = true;
+            render();
+          }
+        }, { once: true });
+
+        // Insert the animated container to trigger the animation
+        trigger.parentNode.insertBefore(animatedContainer, trigger);
+        trigger.remove();
+      }, 4000);
     })();
   </script>
 </body>
