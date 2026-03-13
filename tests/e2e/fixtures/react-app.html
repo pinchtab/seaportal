@@ -36,7 +36,9 @@
       asyncData: null,
       testimonialsLoaded: false,
       testimonials: null,
-      faqLoaded: false
+      faqLoaded: false,
+      useCasesVisible: false,
+      useCases: null
     };
 
     // Simulated async data fetch — wave 1 (500ms)
@@ -118,6 +120,29 @@
       state.faqLoaded = true;
       render();
     }, 3000);
+
+    // Wave 5: IntersectionObserver lazy section — content only loads when scrolled into view
+    function setupLazyUseCases() {
+      const sentinel = document.getElementById('use-cases-sentinel');
+      if (!sentinel || state.useCases) return;
+
+      const observer = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting) {
+          observer.disconnect();
+          // Simulate fetching use case data
+          state.useCases = [
+            { title: 'AI Training Data', desc: 'Extract clean text from thousands of web pages to build high-quality training datasets. SeaPortal removes boilerplate and navigation, leaving only meaningful content.' },
+            { title: 'Competitive Intelligence', desc: 'Monitor competitor websites for pricing changes, new product launches, and content updates. Our smart diffing highlights what changed since your last extraction.' },
+            { title: 'Academic Research', desc: 'Gather structured data from journal abstracts, conference proceedings, and research portals. Export to CSV, JSON, or directly to your data analysis pipeline.' },
+            { title: 'E-commerce Aggregation', desc: 'Build price comparison tools by extracting product data from multiple retailers. Handle infinite scroll, lazy-loaded images, and dynamic filters automatically.' }
+          ];
+          state.useCasesVisible = true;
+          render();
+        }
+      }, { threshold: 0.1 });
+
+      observer.observe(sentinel);
+    }
 
     const tabs = {
       about: {
@@ -207,6 +232,21 @@
         ? document.createElement('faq-section')
         : h('p', null, '');
 
+      const useCasesSection = state.useCasesVisible && state.useCases
+        ? h('section', { 'aria-label': 'Use Cases' },
+            h('h2', null, 'Use Cases'),
+            h('p', null, 'See how teams around the world use SeaPortal to power their data workflows.'),
+            ...state.useCases.map(uc =>
+              h('div', { className: 'card' },
+                h('h3', null, uc.title),
+                h('p', null, uc.desc)
+              )
+            )
+          )
+        : h('div', { id: 'use-cases-sentinel', style: 'min-height: 50px;' },
+            h('p', null, 'Scroll to load use cases...')
+          );
+
       root.appendChild(
         h('div', { className: 'app' },
           h('header', null,
@@ -225,6 +265,7 @@
             testimonialSection,
             pricingSection,
             faqSection,
+            useCasesSection,
             h('div', null,
               h('button', { onClick: () => { state.count++; render(); } }, 'Likes: ' + state.count),
               h('form', null,
@@ -239,8 +280,14 @@
           )
         )
       );
+
+      // Re-setup lazy observer after each render
+      setTimeout(setupLazyUseCases, 0);
     }
     render();
+    
+    // Setup lazy loading after initial render
+    setTimeout(setupLazyUseCases, 100);
   </script>
 </body>
 </html>
