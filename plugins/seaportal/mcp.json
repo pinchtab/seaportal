@@ -1,0 +1,76 @@
+{
+  "name": "seaportal",
+  "version": "0.1.0",
+  "description": "Web content extraction for AI agents. Extract markdown/JSON from URLs, get accessibility tree snapshots with element refs.",
+  "author": "pinchtab",
+  "license": "MIT",
+  "homepage": "https://github.com/pinchtab/seaportal",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pinchtab/seaportal.git"
+  },
+  "keywords": [
+    "web-extraction",
+    "markdown",
+    "accessibility",
+    "snapshot",
+    "scraper",
+    "ai-agent",
+    "mcp"
+  ],
+  "runtime": {
+    "type": "python",
+    "version": ">=3.9"
+  },
+  "entrypoint": "cli.py",
+  "tools": [
+    {
+      "name": "extract",
+      "description": "Extract content from URL as markdown or JSON",
+      "parameters": {
+        "url": {
+          "type": "string",
+          "description": "URL to extract content from",
+          "required": true
+        },
+        "json": {
+          "type": "boolean",
+          "description": "Output as JSON with metadata"
+        },
+        "fast": {
+          "type": "boolean",
+          "description": "Bail early if browser needed"
+        }
+      }
+    },
+    {
+      "name": "snapshot",
+      "description": "Get accessibility tree snapshot from URL",
+      "parameters": {
+        "url": {
+          "type": "string",
+          "description": "URL to snapshot",
+          "required": true
+        },
+        "filter": {
+          "type": "string",
+          "enum": ["interactive"],
+          "description": "Filter to interactive elements only"
+        },
+        "format": {
+          "type": "string",
+          "enum": ["json", "compact"],
+          "description": "Output format"
+        },
+        "max-tokens": {
+          "type": "integer",
+          "description": "Approximate token limit"
+        }
+      }
+    },
+    {
+      "name": "version",
+      "description": "Get seaportal version"
+    }
+  ]
+}

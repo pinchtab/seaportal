@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>React App</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+  <noscript>You need to enable JavaScript to run this app.</noscript>
+  <div id="root"></div>
+  <script>
+    function h(tag, props, ...children) {
+      const el = document.createElement(tag);
+      if (props) Object.entries(props).forEach(([k, v]) => {
+        if (k === 'onClick') el.addEventListener('click', v);
+        else if (k === 'className') el.className = v;
+        else el.setAttribute(k, v);
+      });
+      children.flat().forEach(c =>
+        el.appendChild(typeof c === 'string' ? document.createTextNode(c) : c)
+      );
+      return el;
+    }
+
+    let count = 0;
+    function render() {
+      const root = document.getElementById('root');
+      root.innerHTML = '';
+      root.appendChild(
+        h('div', { className: 'app' },
+          h('header', null,
+            h('nav', { 'aria-label': 'Main' },
+              h('a', { href: '/' }, 'Home'),
+              h('a', { href: '/about' }, 'About'),
+              h('a', { href: '/contact' }, 'Contact')
+            )
+          ),
+          h('main', null,
+            h('h1', null, 'Welcome'),
+            h('p', null, 'This is a client-rendered React-like app.'),
+            h('div', null,
+              h('button', { onClick: () => { count++; render(); } }, 'Count: ' + count),
+              h('form', null,
+                h('input', { type: 'text', placeholder: 'Search...' }),
+                h('button', { type: 'submit' }, 'Go')
+              )
+            )
+          ),
+          h('footer', null, h('p', null, '© 2026 Test App'))
+        )
+      );
+    }
+    render();
+  </script>
+</body>
+</html>
