@@ -62,6 +62,25 @@
       render();
     }, 1500);
 
+    // Wave 3 (2.5s): computed pricing built from JS logic — invisible without execution
+    setTimeout(() => {
+      const base = 29;
+      const tiers = ['Starter', 'Professional', 'Enterprise'];
+      const multipliers = [1, 3, 8];
+      state.pricing = tiers.map((name, i) => ({
+        name,
+        price: base * multipliers[i],
+        features: [
+          `${(i + 1) * 1000} pages/month`,
+          `${i === 0 ? 'Community' : i === 1 ? 'Priority' : 'Dedicated'} support`,
+          i > 0 ? 'API access' : null,
+          i > 1 ? 'Custom integrations' : null
+        ].filter(Boolean)
+      }));
+      state.pricingLoaded = true;
+      render();
+    }, 2500);
+
     const tabs = {
       about: {
         title: 'About Us',
@@ -132,6 +151,20 @@
           )
         : h('p', null, 'Loading testimonials...');
 
+      const pricingSection = state.pricingLoaded
+        ? h('section', { 'aria-label': 'Pricing' },
+            h('h2', null, 'Pricing'),
+            h('p', null, 'Choose the plan that fits your extraction needs. All plans include a 14-day free trial.'),
+            ...state.pricing.map(tier =>
+              h('div', { className: 'card' },
+                h('h3', null, tier.name),
+                h('p', null, '$' + tier.price + '/month'),
+                h('ul', null, ...tier.features.map(f => h('li', null, f)))
+              )
+            )
+          )
+        : h('p', null, '');
+
       root.appendChild(
         h('div', { className: 'app' },
           h('header', null,
@@ -148,6 +181,7 @@
             h('div', { 'role': 'tabpanel' }, tabContent),
             asyncSection,
             testimonialSection,
+            pricingSection,
             h('div', null,
               h('button', { onClick: () => { state.count++; render(); } }, 'Likes: ' + state.count),
               h('form', null,

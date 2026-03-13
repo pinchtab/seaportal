@@ -8,6 +8,34 @@ import (
 	"github.com/chromedp/chromedp"
 )
 
+// waitForDOMStable polls the DOM length and waits until it stops changing.
+// It checks every `interval` for up to `maxChecks` rounds.
+func waitForDOMStable(ctx context.Context, interval time.Duration, maxChecks int) error {
+	var prevLen int
+	stableCount := 0
+
+	for i := 0; i < maxChecks; i++ {
+		var curLen int
+		if err := chromedp.Evaluate(`document.body.innerHTML.length`, &curLen).Do(ctx); err != nil {
+			return err
+		}
+
+		if curLen == prevLen && curLen > 0 {
+			stableCount++
+			if stableCount >= 2 {
+				return nil // DOM hasn't changed for 2 consecutive checks
+			}
+		} else {
+			stableCount = 0
+		}
+
+		prevLen = curLen
+		time.Sleep(interval)
+	}
+
+	return nil // max checks reached, proceed anyway
+}
+
 // ExperimentalOptions configures browser-based extraction
 type ExperimentalOptions struct {
 	Timeout  time.Duration // Page load timeout (default 30s)
@@ -62,10 +90,14 @@ func FromURLExperimental(targetURL string, opts ExperimentalOptions) Experimenta
 
 	var title, html, outerHTML string
 
-	// Navigate, wait for render, extract
+	// Navigate and wait for DOM to stabilize
+	// Strategy: poll DOM length until it stops changing
 	err := chromedp.Run(ctx,
 		chromedp.Navigate(targetURL),
 		chromedp.Sleep(opts.WaitFor),
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			return waitForDOMStable(ctx, 500*time.Millisecond, 5)
+		}),
 		chromedp.Title(&title),
 		chromedp.InnerHTML("body", &html, chromedp.ByQuery),
 		chromedp.OuterHTML("html", &outerHTML, chromedp.ByQuery),
