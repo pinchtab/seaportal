@@ -8,6 +8,40 @@ import (
 	"github.com/chromedp/chromedp"
 )
 
+// flattenShadowDOMScript is JS that serializes the full DOM including Shadow DOM content.
+const flattenShadowDOMScript = `
+(function() {
+  function serialize(node) {
+    if (node.nodeType === Node.TEXT_NODE) return node.textContent;
+    if (node.nodeType !== Node.ELEMENT_NODE) return '';
+    
+    var tag = node.tagName.toLowerCase();
+    var attrs = '';
+    for (var i = 0; i < node.attributes.length; i++) {
+      var a = node.attributes[i];
+      attrs += ' ' + a.name + '="' + a.value.replace(/"/g, '&quot;') + '"';
+    }
+    
+    var children = '';
+    // If element has shadow root, serialize its content
+    if (node.shadowRoot) {
+      var shadowChildren = node.shadowRoot.childNodes;
+      for (var j = 0; j < shadowChildren.length; j++) {
+        children += serialize(shadowChildren[j]);
+      }
+    }
+    // Also serialize light DOM children
+    var lightChildren = node.childNodes;
+    for (var k = 0; k < lightChildren.length; k++) {
+      children += serialize(lightChildren[k]);
+    }
+    
+    return '<' + tag + attrs + '>' + children + '</' + tag + '>';
+  }
+  return serialize(document.documentElement);
+})()
+`
+
 // waitForDOMStable polls the DOM length and waits until it stops changing.
 // It checks every `interval` for up to `maxChecks` rounds.
 func waitForDOMStable(ctx context.Context, interval time.Duration, maxChecks int) error {
@@ -99,8 +133,11 @@ func FromURLExperimental(targetURL string, opts ExperimentalOptions) Experimenta
 			return waitForDOMStable(ctx, 500*time.Millisecond, 5)
 		}),
 		chromedp.Title(&title),
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			// Extract HTML with Shadow DOM content flattened into the light DOM
+			return chromedp.Evaluate(flattenShadowDOMScript, &outerHTML).Do(ctx)
+		}),
 		chromedp.InnerHTML("body", &html, chromedp.ByQuery),
-		chromedp.OuterHTML("html", &outerHTML, chromedp.ByQuery),
 	)
 	if err != nil {
 		result.Error = fmt.Sprintf("browser render failed: %v", err)
