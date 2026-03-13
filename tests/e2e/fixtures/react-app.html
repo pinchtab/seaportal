@@ -45,7 +45,9 @@
       recommendations: null,
       userVisits: 0,
       partnersLoaded: false,
-      partners: null
+      partners: null,
+      caseStudiesLoaded: false,
+      caseStudies: null
     };
 
     // Simulated async data fetch — wave 1 (500ms)
@@ -295,6 +297,23 @@
           )
         : h('p', null, '');
 
+      const caseStudiesSection = state.caseStudiesLoaded && state.caseStudies
+        ? h('section', { 'aria-label': 'Customer Case Studies' },
+            h('h2', null, 'Customer Case Studies'),
+            h('p', null, 'Real-world success stories from organizations that transformed their data workflows with SeaPortal.'),
+            ...state.caseStudies.map(study =>
+              h('div', { className: 'card' },
+                h('h3', null, study.company),
+                h('p', null, h('strong', null, 'Industry: '), study.industry),
+                h('p', null, h('strong', null, 'Challenge: '), study.challenge),
+                h('p', null, h('strong', null, 'Solution: '), study.solution),
+                h('p', null, h('strong', null, 'Results: '), study.results),
+                h('blockquote', null, '"', study.quote, '"')
+              )
+            )
+          )
+        : h('p', null, '');
+
       root.appendChild(
         h('div', { className: 'app' },
           h('header', null,
@@ -317,6 +336,7 @@
             roadmapSection,
             recommendationsSection,
             partnersSection,
+            caseStudiesSection,
             h('div', null,
               h('button', { onClick: () => { state.count++; render(); } }, 'Likes: ' + state.count),
               h('form', null,
@@ -423,6 +443,83 @@
         subtree: true,
         attributes: true
       });
+    })();
+
+    // Wave 9: IndexedDB-sourced content — requires full DB transaction lifecycle
+    (function loadCaseStudiesFromIndexedDB() {
+      const dbName = 'SeaPortalCaseStudiesDB';
+      const storeName = 'caseStudies';
+      const dbVersion = 1;
+
+      const caseStudyData = [
+        {
+          id: 1,
+          company: 'Meridian Analytics',
+          industry: 'Financial Services',
+          challenge: 'Extracting real-time market sentiment from 200+ news sources with heavy JavaScript rendering and paywalls.',
+          solution: 'Deployed SeaPortal with custom authentication handlers and parallel extraction workers across a Kubernetes cluster.',
+          results: 'Reduced data latency from 45 minutes to under 3 minutes. Sentiment accuracy improved 34% by capturing previously missed dynamic content.',
+          quote: 'SeaPortal transformed our competitive intelligence pipeline. We now detect market-moving news before our competitors even know it exists.'
+        },
+        {
+          id: 2,
+          company: 'HealthBridge Research',
+          industry: 'Healthcare',
+          challenge: 'Building a comprehensive database of clinical trial results from hospital portals using legacy React applications with complex authentication.',
+          solution: 'Used SeaPortal accessibility tree extraction to navigate nested iframes and dynamically-loaded trial data with session persistence.',
+          results: 'Catalogued over 12,000 clinical trials across 150 institutions. Research teams saved an estimated 2,400 hours of manual data entry annually.',
+          quote: 'The accessibility tree approach was a revelation. We extracted structured data from interfaces that were designed for human eyes only.'
+        },
+        {
+          id: 3,
+          company: 'EduPath Global',
+          industry: 'Education Technology',
+          challenge: 'Aggregating course content and pricing from 80+ online learning platforms to power a course recommendation engine.',
+          solution: 'Implemented SeaPortal with intelligent scroll detection to handle infinite-loading course catalogs and real-time pricing widgets.',
+          results: 'Database now contains 450,000+ courses with weekly freshness. User engagement increased 28% with accurate, up-to-date recommendations.',
+          quote: 'Other tools gave us partial data. SeaPortal gives us everything—descriptions, prerequisites, reviews, even dynamic pricing tiers.'
+        }
+      ];
+
+      const request = indexedDB.open(dbName, dbVersion);
+
+      request.onupgradeneeded = (event) => {
+        const db = event.target.result;
+        if (!db.objectStoreNames.contains(storeName)) {
+          const store = db.createObjectStore(storeName, { keyPath: 'id' });
+          store.createIndex('industry', 'industry', { unique: false });
+          // Populate initial data during upgrade
+          caseStudyData.forEach(study => store.put(study));
+        }
+      };
+
+      request.onsuccess = (event) => {
+        const db = event.target.result;
+        
+        // Small delay to ensure data is written, then read back
+        setTimeout(() => {
+          const transaction = db.transaction(storeName, 'readonly');
+          const store = transaction.objectStore(storeName);
+          const getAllRequest = store.getAll();
+
+          getAllRequest.onsuccess = () => {
+            const studies = getAllRequest.result;
+            if (studies && studies.length > 0) {
+              state.caseStudies = studies;
+              state.caseStudiesLoaded = true;
+              render();
+            }
+          };
+
+          transaction.oncomplete = () => {
+            db.close();
+          };
+        }, 500);
+      };
+
+      request.onerror = (event) => {
+        console.error('IndexedDB error:', event.target.error);
+      };
     })();
   </script>
 </body>
