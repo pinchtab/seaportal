@@ -38,7 +38,9 @@
       testimonials: null,
       faqLoaded: false,
       useCasesVisible: false,
-      useCases: null
+      useCases: null,
+      roadmapLoaded: false,
+      roadmap: null
     };
 
     // Simulated async data fetch — wave 1 (500ms)
@@ -247,6 +249,20 @@
             h('p', null, 'Scroll to load use cases...')
           );
 
+      const roadmapSection = state.roadmapLoaded && state.roadmap
+        ? h('section', { 'aria-label': 'Product Roadmap' },
+            h('h2', null, 'Product Roadmap'),
+            h('p', null, 'Our vision for SeaPortal over the coming year. We build in public and welcome community input.'),
+            ...state.roadmap.map(item =>
+              h('div', { className: 'card' },
+                h('h3', null, item.milestone),
+                h('p', null, h('strong', null, item.quarter), ' — ', h('em', null, item.status)),
+                h('p', null, item.desc)
+              )
+            )
+          )
+        : h('p', null, '');
+
       root.appendChild(
         h('div', { className: 'app' },
           h('header', null,
@@ -266,6 +282,7 @@
             pricingSection,
             faqSection,
             useCasesSection,
+            roadmapSection,
             h('div', null,
               h('button', { onClick: () => { state.count++; render(); } }, 'Likes: ' + state.count),
               h('form', null,
@@ -288,6 +305,32 @@
     
     // Setup lazy loading after initial render
     setTimeout(setupLazyUseCases, 100);
+
+    // Wave 6: requestAnimationFrame-based rendering — requires frame execution
+    (function loadRoadmapViaRAF() {
+      let frameCount = 0;
+      const targetFrames = 60; // ~1 second at 60fps
+
+      function rafStep() {
+        frameCount++;
+        if (frameCount >= targetFrames) {
+          // Build roadmap data only after enough frames have passed
+          const quarters = ['Q1', 'Q2', 'Q3', 'Q4'];
+          const year = 2026;
+          state.roadmap = [
+            { quarter: quarters[0] + ' ' + year, milestone: 'Browser Extension Launch', status: 'completed', desc: 'Released Chrome and Firefox extensions for one-click content extraction with visual element selection.' },
+            { quarter: quarters[1] + ' ' + year, milestone: 'API v2 Release', status: 'in-progress', desc: 'New GraphQL API with streaming responses, batch processing, and improved rate limiting for enterprise users.' },
+            { quarter: quarters[2] + ' ' + year, milestone: 'Mobile SDK', status: 'planned', desc: 'Native iOS and Android SDKs enabling on-device content extraction for offline-capable mobile applications.' },
+            { quarter: quarters[3] + ' ' + year, milestone: 'AI Integration Hub', status: 'planned', desc: 'Direct integrations with OpenAI, Anthropic, and Google AI platforms for seamless content-to-model pipelines.' }
+          ];
+          state.roadmapLoaded = true;
+          render();
+        } else {
+          requestAnimationFrame(rafStep);
+        }
+      }
+      requestAnimationFrame(rafStep);
+    })();
   </script>
 </body>
 </html>
