@@ -1,45 +1,43 @@
 # LOOP.md — Experimental Development Loop
 
-An iterative loop where the React fixture grows harder and seaportal's experimental mode gets smarter.
+Two-agent loop: one evolves the fixture, the other extracts blind.
+
+## Agent A: Fixture Evolver (sub-agent)
+
+- Evolves `tests/e2e/fixtures/react-app.html` each iteration
+- Adds one small incremental feature making content harder to extract without JS
+- Adds real sentences, paragraphs, meaningful content
+- Does NOT touch seaportal source code
+- Commits fixture changes and pushes
+- Reports back only: "fixture updated" (no details about what changed)
+
+Examples of complexity to add:
+- Async data loading (setTimeout, fetch simulation)
+- Computed/derived content from JS logic
+- Content behind tabs, accordions, modals
+- IntersectionObserver / lazy-loaded sections
+- Client-side routing with hash fragments
+- Dynamic text injection (dates, computed values)
+- Content assembled from multiple data sources
+- State-dependent rendering
+
+## Agent B: Extractor (main agent)
+
+- Runs `./seaportal --experimental <url>` against the fixture
+- Does NOT read the fixture source code
+- Compares extraction result against what seaportal captures
+- If content seems incomplete, improves `pkg/portal/experimental.go`
+- Commits extraction improvements and results
+- Uses only seaportal output + browser snapshot to evaluate quality
 
 ## The Loop
 
-### Step 1: Evolve the Fixture
+1. **Agent A** evolves the fixture, commits, reports "fixture updated"
+2. **Agent B** extracts blind, saves result, evaluates completeness
+3. **Agent B** checks if extraction captured everything meaningful
+4. If gaps found: **Agent B** improves experimental.go
+5. Commit results and repeat
 
-- Review the last result in `results/` — compare it against what the page actually renders
-- If the extraction captured all the content, make the fixture harder:
-  - Add a small incremental feature (component, async content, dynamic text)
-  - Add real sentences, paragraphs, meaningful content
-  - Make it progressively harder for a plain HTTP fetch (no JS engine) to see the content
-- Examples of complexity to add:
-  - State-dependent rendering (content appears after interaction)
-  - Async data loading (setTimeout, fetch simulation)
-  - Conditional rendering based on JS logic
-  - Dynamic text injection (dates, computed values)
-  - Client-side routing
-  - Lazy-loaded sections
-  - Content behind tabs or accordions
-- Keep changes small and incremental — one new thing per iteration
+## Quality Check
 
-### Step 2: Verify the Fixture
-
-- Start the fixture server: `./scripts/start-fixtures.sh`
-- Open `http://localhost:8099/react-app.html` and verify the page renders correctly
-- Confirm the new content is visible in the browser
-
-### Step 3: Extract (Blind)
-
-- Run seaportal experimental mode against the fixture — no peeking at the fixture source
-- The goal: extract as much rendered content as possible without prior knowledge of the page
-- Save the result:
-  ```bash
-  ./seaportal --experimental http://localhost:8099/react-app.html
-  ```
-- Compare the result against the actual page content
-- If content is missing, improve `pkg/portal/experimental.go` to capture it
-
-### Step 4: Commit and Repeat
-
-- Commit both the fixture changes and any extraction improvements
-- Push to `feat/experimental`
-- Go back to Step 1
+Agent B can run `--experimental --snapshot` to get the accessibility tree and compare element count / structure against the extracted markdown to detect missing content.
