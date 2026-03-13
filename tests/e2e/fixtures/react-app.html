@@ -55,7 +55,9 @@
       caseStudiesLoaded: false,
       caseStudies: null,
       spotlightLoaded: false,
-      spotlight: null
+      spotlight: null,
+      benchmarksLoaded: false,
+      benchmarks: null
     };
 
     // Simulated async data fetch — wave 1 (500ms)
@@ -338,6 +340,22 @@
             h('p', null, 'Loading spotlight...')
           );
 
+      const benchmarksSection = state.benchmarksLoaded && state.benchmarks
+        ? h('section', { 'aria-label': 'Performance Benchmarks' },
+            h('h2', null, 'Performance Benchmarks'),
+            h('p', null, 'Real-world extraction performance measured across diverse website categories. All benchmarks conducted on standardized hardware with network latency simulation.'),
+            ...state.benchmarks.map(bench =>
+              h('div', { className: 'card' },
+                h('h3', null, bench.category),
+                h('p', null, h('strong', null, 'Sites tested: '), bench.siteCount.toLocaleString()),
+                h('p', null, h('strong', null, 'Avg extraction time: '), bench.avgTime),
+                h('p', null, h('strong', null, 'Success rate: '), bench.successRate),
+                h('p', null, bench.analysis)
+              )
+            )
+          )
+        : h('p', null, '');
+
       root.appendChild(
         h('div', { className: 'app' },
           h('header', null,
@@ -362,6 +380,7 @@
             partnersSection,
             caseStudiesSection,
             spotlightSection,
+            benchmarksSection,
             h('div', null,
               h('button', { onClick: () => { state.count++; render(); } }, 'Likes: ' + state.count),
               h('form', null,
@@ -588,6 +607,61 @@
         trigger.parentNode.insertBefore(animatedContainer, trigger);
         trigger.remove();
       }, 4000);
+    })();
+
+    // Wave 11: Web Worker computed content — requires worker thread execution and message passing
+    (function loadBenchmarksViaWebWorker() {
+      // Create worker code as a Blob — no external file needed
+      const workerCode = `
+        self.onmessage = function(e) {
+          // Simulate computationally intensive benchmark analysis
+          const categories = ['E-commerce', 'News Sites', 'Social Platforms', 'SaaS Dashboards', 'Government Portals'];
+          const results = categories.map((category, idx) => {
+            // Compute synthetic but realistic metrics
+            const baseSites = 150 + (idx * 47);
+            const baseTime = 1.2 + (idx * 0.3);
+            const baseSuccess = 98.5 - (idx * 0.8);
+            
+            const analyses = [
+              'E-commerce sites present unique challenges with infinite scroll product grids and dynamically-loaded inventory data. SeaPortal adaptive wait strategies handle even the most complex React storefronts, capturing prices, descriptions, and availability in a single pass.',
+              'Modern news outlets rely heavily on client-side rendering and lazy-loaded media. Our extraction pipeline respects content boundaries, cleanly separating article text from advertising and recommendation widgets without manual configuration.',
+              'Social platform extraction requires handling real-time content updates and complex threading. SeaPortal incremental mode captures only new posts while maintaining conversation context across extraction sessions.',
+              'SaaS dashboards often feature custom charting libraries and WebSocket-driven data. The accessibility tree approach extracts underlying values even when visual rendering would require screenshot analysis.',
+              'Government portals frequently use legacy frameworks with non-standard markup. SeaPortal heuristic engine adapts to inconsistent HTML structures, achieving high extraction rates where conventional selectors fail.'
+            ];
+            
+            return {
+              category: category,
+              siteCount: baseSites,
+              avgTime: baseTime.toFixed(1) + 's',
+              successRate: baseSuccess.toFixed(1) + '%',
+              analysis: analyses[idx]
+            };
+          });
+          
+          // Post results back to main thread
+          self.postMessage({ benchmarks: results });
+        };
+      `;
+
+      const blob = new Blob([workerCode], { type: 'application/javascript' });
+      const workerUrl = URL.createObjectURL(blob);
+      const worker = new Worker(workerUrl);
+
+      worker.onmessage = function(e) {
+        state.benchmarks = e.data.benchmarks;
+        state.benchmarksLoaded = true;
+        render();
+        
+        // Cleanup
+        worker.terminate();
+        URL.revokeObjectURL(workerUrl);
+      };
+
+      // Trigger the worker computation after other waves have started
+      setTimeout(() => {
+        worker.postMessage({ compute: true });
+      }, 4500);
     })();
   </script>
 </body>
