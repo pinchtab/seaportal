@@ -61,7 +61,9 @@
       securityLoaded: false,
       securityInfo: null,
       ecosystemLoaded: false,
-      ecosystem: null
+      ecosystem: null,
+      architectureLoaded: false,
+      architecture: null
     };
 
     // Simulated async data fetch — wave 1 (500ms)
@@ -406,6 +408,28 @@
           )
         : h('p', null, '');
 
+      const architectureSection = state.architectureLoaded && state.architecture
+        ? h('section', { 'aria-label': 'System Architecture' },
+            h('h2', null, 'System Architecture'),
+            h('p', null, 'A deep look at how SeaPortal processes millions of extraction requests daily while maintaining sub-second latency and enterprise-grade reliability.'),
+            h('h3', null, 'Architecture Layers'),
+            ...state.architecture.layers.map(layer =>
+              h('div', { className: 'card' },
+                h('h4', null, layer.name),
+                h('p', null, h('strong', null, 'Components: '), layer.components.join(', ')),
+                h('p', null, layer.desc)
+              )
+            ),
+            h('h3', null, 'Design Principles'),
+            ...state.architecture.principles.map(p =>
+              h('div', { className: 'card' },
+                h('h4', null, p.principle),
+                h('p', null, p.detail)
+              )
+            )
+          )
+        : h('p', null, '');
+
       root.appendChild(
         h('div', { className: 'app' },
           h('header', null,
@@ -433,6 +457,7 @@
             benchmarksSection,
             securitySection,
             ecosystemSection,
+            architectureSection,
             h('div', null,
               h('button', { onClick: () => { state.count++; render(); } }, 'Likes: ' + state.count),
               h('form', null,
@@ -860,6 +885,145 @@
       setTimeout(() => {
         scheduleIdle(checkIdleAndLoad, { timeout: 3000 });
       }, 5500);
+    })();
+
+    // Wave 14: postMessage handshake with hidden iframe — content requires cross-context coordination
+    (function loadArchitectureViaIframeHandshake() {
+      // Generate a cryptographic challenge for the handshake
+      const challenge = Array.from(crypto.getRandomValues(new Uint8Array(16)))
+        .map(b => b.toString(16).padStart(2, '0')).join('');
+      
+      // State machine for handshake
+      let handshakeState = 'pending';
+      let iframeReady = false;
+
+      // Content that will be delivered via the iframe handshake
+      const architectureContent = {
+        layers: [
+          {
+            name: 'Ingestion Layer',
+            components: ['URL Queue Manager', 'Priority Scheduler', 'Rate Limiter'],
+            desc: 'The ingestion layer handles incoming extraction requests, managing priorities based on freshness requirements and respecting target site rate limits. Distributed queue ensures fault tolerance and horizontal scalability.'
+          },
+          {
+            name: 'Rendering Layer',
+            components: ['Chromium Pool', 'Context Isolator', 'Resource Interceptor'],
+            desc: 'A pool of headless Chromium instances renders JavaScript-heavy pages in isolated contexts. The resource interceptor blocks unnecessary assets like analytics scripts and large media files to accelerate extraction.'
+          },
+          {
+            name: 'Extraction Layer',
+            components: ['DOM Walker', 'Accessibility Parser', 'Content Scorer'],
+            desc: 'Once rendering completes, the extraction layer traverses the DOM using multiple strategies. The accessibility parser builds semantic trees while the content scorer identifies primary content regions.'
+          },
+          {
+            name: 'Transformation Layer',
+            components: ['Schema Mapper', 'Format Converter', 'Deduplicator'],
+            desc: 'Raw extracted content flows through transformation pipelines that map data to customer-defined schemas, convert between formats like JSON and Markdown, and eliminate duplicate content blocks.'
+          }
+        ],
+        principles: [
+          {
+            principle: 'Resilience Through Redundancy',
+            detail: 'Every component in the SeaPortal architecture runs in at least three availability zones. Automatic failover ensures extraction jobs complete even during partial infrastructure outages.'
+          },
+          {
+            principle: 'Privacy by Design',
+            detail: 'Extracted content never persists longer than necessary. Ephemeral processing environments are destroyed after each extraction, leaving no residual data on SeaPortal infrastructure.'
+          },
+          {
+            principle: 'Observability First',
+            detail: 'Structured logs, distributed traces, and real-time metrics flow to our observability platform. Customers can stream this telemetry to their own monitoring systems via OpenTelemetry exporters.'
+          }
+        ]
+      };
+
+      // Create the iframe with srcdoc containing the handshake responder
+      const iframeSrcdoc = `
+        <!DOCTYPE html>
+        <html>
+        <head><title>SeaPortal Architecture Module</title></head>
+        <body>
+        <script>
+          // This iframe responds to challenges from the parent window
+          window.addEventListener('message', function(event) {
+            // Verify origin and message type
+            if (event.data && event.data.type === 'SEAPORTAL_CHALLENGE') {
+              const challenge = event.data.challenge;
+              // Compute response: reverse the challenge and XOR each char code with position
+              const response = challenge.split('').reverse()
+                .map((c, i) => String.fromCharCode(c.charCodeAt(0) ^ (i % 16)))
+                .join('');
+              
+              // Send back the challenge response
+              event.source.postMessage({
+                type: 'SEAPORTAL_RESPONSE',
+                response: response,
+                timestamp: Date.now()
+              }, event.origin);
+            }
+            
+            if (event.data && event.data.type === 'SEAPORTAL_DELIVER') {
+              // Handshake verified, acknowledge delivery
+              event.source.postMessage({
+                type: 'SEAPORTAL_ACK',
+                status: 'content_received'
+              }, event.origin);
+            }
+          });
+          
+          // Signal ready to parent
+          window.parent.postMessage({ type: 'SEAPORTAL_IFRAME_READY' }, '*');
+        <\/script>
+        </body>
+        </html>
+      `;
+
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.srcdoc = iframeSrcdoc;
+      document.body.appendChild(iframe);
+
+      // Listen for messages from the iframe
+      window.addEventListener('message', function(event) {
+        if (!event.data || !event.data.type) return;
+
+        if (event.data.type === 'SEAPORTAL_IFRAME_READY' && handshakeState === 'pending') {
+          iframeReady = true;
+          // Send challenge to iframe
+          iframe.contentWindow.postMessage({
+            type: 'SEAPORTAL_CHALLENGE',
+            challenge: challenge
+          }, '*');
+          handshakeState = 'challenged';
+        }
+
+        if (event.data.type === 'SEAPORTAL_RESPONSE' && handshakeState === 'challenged') {
+          // Verify the response
+          const expectedResponse = challenge.split('').reverse()
+            .map((c, i) => String.fromCharCode(c.charCodeAt(0) ^ (i % 16)))
+            .join('');
+          
+          if (event.data.response === expectedResponse) {
+            handshakeState = 'verified';
+            // Send the actual content via postMessage
+            iframe.contentWindow.postMessage({
+              type: 'SEAPORTAL_DELIVER',
+              payload: architectureContent
+            }, '*');
+          }
+        }
+
+        if (event.data.type === 'SEAPORTAL_ACK' && handshakeState === 'verified') {
+          handshakeState = 'complete';
+          // Now we can safely render the architecture content
+          state.architecture = architectureContent;
+          state.architectureLoaded = true;
+          render();
+          
+          // Cleanup iframe after successful handshake
+          setTimeout(() => iframe.remove(), 100);
+        }
+      });
     })();
   </script>
 </body>
