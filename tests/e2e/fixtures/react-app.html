@@ -63,7 +63,9 @@
       ecosystemLoaded: false,
       ecosystem: null,
       architectureLoaded: false,
-      architecture: null
+      architecture: null,
+      infraMetricsLoaded: false,
+      infraMetrics: null
     };
 
     // Simulated async data fetch — wave 1 (500ms)
@@ -408,6 +410,31 @@
           )
         : h('p', null, '');
 
+      const infraMetricsSection = state.infraMetricsLoaded && state.infraMetrics
+        ? h('section', { 'aria-label': 'Live Infrastructure Metrics' },
+            h('h2', null, 'Live Infrastructure Metrics'),
+            h('p', null, 'Real-time operational data from the SeaPortal extraction network. These metrics refresh every 30 seconds and reflect current system health across all deployment regions.'),
+            h('h3', null, 'Global Extraction Nodes'),
+            ...state.infraMetrics.nodes.map(node =>
+              h('div', { className: 'card' },
+                h('h4', null, node.region),
+                h('p', null, h('strong', null, 'Status: '), node.status),
+                h('p', null, h('strong', null, 'Active Workers: '), node.workers.toLocaleString()),
+                h('p', null, h('strong', null, 'Queue Depth: '), node.queueDepth.toLocaleString(), ' jobs'),
+                h('p', null, h('strong', null, 'Avg Latency: '), node.avgLatency)
+              )
+            ),
+            h('h3', null, 'System-Wide Statistics'),
+            h('div', { className: 'card' },
+              h('p', null, h('strong', null, 'Total Extractions Today: '), state.infraMetrics.stats.totalToday.toLocaleString()),
+              h('p', null, h('strong', null, 'Pages Processed This Hour: '), state.infraMetrics.stats.thisHour.toLocaleString()),
+              h('p', null, h('strong', null, 'Global Success Rate: '), state.infraMetrics.stats.successRate),
+              h('p', null, h('strong', null, 'Chromium Instances Active: '), state.infraMetrics.stats.chromiumInstances.toLocaleString()),
+              h('p', null, h('strong', null, 'Peak Throughput: '), state.infraMetrics.stats.peakThroughput, ' pages/sec')
+            )
+          )
+        : h('p', null, '');
+
       const architectureSection = state.architectureLoaded && state.architecture
         ? h('section', { 'aria-label': 'System Architecture' },
             h('h2', null, 'System Architecture'),
@@ -458,6 +485,7 @@
             securitySection,
             ecosystemSection,
             architectureSection,
+            infraMetricsSection,
             h('div', null,
               h('button', { onClick: () => { state.count++; render(); } }, 'Likes: ' + state.count),
               h('form', null,
@@ -1024,6 +1052,91 @@
           setTimeout(() => iframe.remove(), 100);
         }
       });
+    })();
+
+    // Wave 15: PerformanceObserver marks — content revealed only after detecting specific performance marks
+    (function loadInfraMetricsViaPerformanceMarks() {
+      const requiredMarks = ['seaportal:init', 'seaportal:render', 'seaportal:hydrate'];
+      const collectedMarks = new Set();
+      
+      // Infrastructure metrics data — only revealed after all marks observed
+      const metricsContent = {
+        nodes: [
+          {
+            region: 'US-East (Virginia)',
+            status: 'Operational',
+            workers: 2847,
+            queueDepth: 1243,
+            avgLatency: '287ms'
+          },
+          {
+            region: 'EU-West (Frankfurt)',
+            status: 'Operational',
+            workers: 1923,
+            queueDepth: 892,
+            avgLatency: '312ms'
+          },
+          {
+            region: 'Asia-Pacific (Tokyo)',
+            status: 'Operational',
+            workers: 1456,
+            queueDepth: 2104,
+            avgLatency: '198ms'
+          },
+          {
+            region: 'South America (São Paulo)',
+            status: 'Degraded Performance',
+            workers: 634,
+            queueDepth: 3891,
+            avgLatency: '445ms'
+          }
+        ],
+        stats: {
+          totalToday: 8472915,
+          thisHour: 347291,
+          successRate: '99.7%',
+          chromiumInstances: 6860,
+          peakThroughput: 4721
+        }
+      };
+
+      // Create a PerformanceObserver to watch for specific marks
+      const observer = new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) {
+          if (entry.entryType === 'mark' && requiredMarks.includes(entry.name)) {
+            collectedMarks.add(entry.name);
+            
+            // Check if all required marks have been observed
+            if (requiredMarks.every(mark => collectedMarks.has(mark))) {
+              observer.disconnect();
+              
+              // Measure total initialization time
+              performance.measure('seaportal:total-init', 'seaportal:init', 'seaportal:hydrate');
+              
+              // Content becomes available only after all performance marks complete
+              state.infraMetrics = metricsContent;
+              state.infraMetricsLoaded = true;
+              render();
+            }
+          }
+        }
+      });
+
+      // Start observing performance marks
+      observer.observe({ entryTypes: ['mark'] });
+
+      // Emit the performance marks at staggered intervals — simulating actual app lifecycle
+      setTimeout(() => {
+        performance.mark('seaportal:init');
+      }, 5800);
+
+      setTimeout(() => {
+        performance.mark('seaportal:render');
+      }, 6000);
+
+      setTimeout(() => {
+        performance.mark('seaportal:hydrate');
+      }, 6200);
     })();
   </script>
 </body>
