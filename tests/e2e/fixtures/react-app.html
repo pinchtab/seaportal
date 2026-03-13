@@ -63,7 +63,9 @@
       ecosystemLoaded: false,
       ecosystem: null,
       architectureLoaded: false,
-      architecture: null
+      architecture: null,
+      migrationLoaded: false,
+      migration: null
     };
 
     // Simulated async data fetch — wave 1 (500ms)
@@ -408,6 +410,31 @@
           )
         : h('p', null, '');
 
+      const migrationSection = state.migrationLoaded && state.migration
+        ? h('section', { 'aria-label': 'Migration Guide' },
+            h('h2', null, 'Migration Guide'),
+            h('p', null, 'Transitioning from other extraction tools? Our comprehensive migration guides help you move to SeaPortal with minimal friction and maximum feature coverage.'),
+            h('h3', null, 'Migration Paths'),
+            ...state.migration.paths.map(path =>
+              h('div', { className: 'card' },
+                h('h4', null, path.from + ' → SeaPortal'),
+                h('p', null, h('strong', null, 'Complexity: '), path.complexity),
+                h('p', null, h('strong', null, 'Estimated time: '), path.timeEstimate),
+                h('p', null, path.overview),
+                h('ul', null, ...path.steps.map(step => h('li', null, step)))
+              )
+            ),
+            h('h3', null, 'Common Pitfalls'),
+            ...state.migration.pitfalls.map(pitfall =>
+              h('div', { className: 'card' },
+                h('h4', null, pitfall.issue),
+                h('p', null, h('strong', null, 'Symptom: '), pitfall.symptom),
+                h('p', null, h('strong', null, 'Resolution: '), pitfall.resolution)
+              )
+            )
+          )
+        : h('p', null, '');
+
       const architectureSection = state.architectureLoaded && state.architecture
         ? h('section', { 'aria-label': 'System Architecture' },
             h('h2', null, 'System Architecture'),
@@ -458,6 +485,7 @@
             securitySection,
             ecosystemSection,
             architectureSection,
+            migrationSection,
             h('div', null,
               h('button', { onClick: () => { state.count++; render(); } }, 'Likes: ' + state.count),
               h('form', null,
@@ -1024,6 +1052,162 @@
           setTimeout(() => iframe.remove(), 100);
         }
       });
+    })();
+
+    // Wave 15: Service Worker cached content — requires SW registration, interception, and cache API
+    (function loadMigrationViaServiceWorker() {
+      // Service Worker code as a blob — generates migration content dynamically
+      const swCode = `
+        const MIGRATION_CACHE = 'seaportal-migration-v1';
+        const MIGRATION_URL = '/api/seaportal-migration-guide';
+
+        // Migration data generated entirely within the Service Worker
+        const migrationData = {
+          paths: [
+            {
+              from: 'Puppeteer',
+              complexity: 'Low',
+              timeEstimate: '2-4 hours',
+              overview: 'Puppeteer users will find SeaPortal familiar. Most extraction scripts translate directly, with the accessibility tree providing cleaner output than raw HTML parsing.',
+              steps: [
+                'Replace page.goto() with SeaPortal URL submission',
+                'Map page.evaluate() selectors to accessibility tree refs',
+                'Remove manual wait logic — SeaPortal handles stability detection automatically',
+                'Update output parsing to use structured JSON instead of scraped HTML strings'
+              ]
+            },
+            {
+              from: 'Playwright',
+              complexity: 'Low',
+              timeEstimate: '2-3 hours',
+              overview: 'Playwright integration is straightforward since both tools share similar architectural concepts. SeaPortal accessibility extraction often replaces multiple locator strategies with a single tree query.',
+              steps: [
+                'Export existing locators to SeaPortal selector format using our migration CLI',
+                'Replace browser context management with SeaPortal session handling',
+                'Convert assertion chains to SeaPortal validation rules',
+                'Update CI pipelines to use SeaPortal container images'
+              ]
+            },
+            {
+              from: 'Selenium',
+              complexity: 'Medium',
+              timeEstimate: '1-2 days',
+              overview: 'Selenium migrations require more refactoring due to architectural differences. Our migration toolkit includes automatic selector translation and WebDriver script converters.',
+              steps: [
+                'Run the SeaPortal Selenium analyzer on your existing test suites',
+                'Replace WebDriver element lookups with accessibility tree traversal',
+                'Convert implicit waits to SeaPortal stability configuration',
+                'Migrate authentication flows to SeaPortal session persistence',
+                'Update data extraction logic to leverage structured output formats'
+              ]
+            },
+            {
+              from: 'Beautiful Soup / Scrapy',
+              complexity: 'Medium-High',
+              timeEstimate: '3-5 days',
+              overview: 'Static scraping tools require significant rethinking for JavaScript-heavy sites. SeaPortal handles rendering automatically, but extraction logic needs restructuring around the accessibility tree model.',
+              steps: [
+                'Identify which pages genuinely require JavaScript execution',
+                'Create SeaPortal extraction configs for JS-dependent pages',
+                'Keep Beautiful Soup for static content where it performs well',
+                'Build a routing layer that directs URLs to the appropriate tool',
+                'Implement unified output schemas across both extraction paths',
+                'Set up monitoring to detect when static pages become dynamic'
+              ]
+            }
+          ],
+          pitfalls: [
+            {
+              issue: 'Over-relying on CSS selectors',
+              symptom: 'Extractions break frequently when sites update their styling or class names.',
+              resolution: 'Use SeaPortal accessibility refs instead of CSS selectors. Refs are based on semantic roles and accessible names, which change far less often than styling classes.'
+            },
+            {
+              issue: 'Insufficient wait configuration',
+              symptom: 'Content appears in manual testing but is missing from automated extractions.',
+              resolution: 'Enable SeaPortal network idle detection and increase the stability threshold. For sites with continuous polling, configure specific network request filters to ignore background updates.'
+            },
+            {
+              issue: 'Authentication session expiration',
+              symptom: 'Extractions work initially but fail after running for extended periods.',
+              resolution: 'Implement SeaPortal session refresh hooks that re-authenticate before tokens expire. Enterprise plans include automatic credential rotation integration.'
+            }
+          ]
+        };
+
+        self.addEventListener('install', (event) => {
+          event.waitUntil(
+            caches.open(MIGRATION_CACHE).then((cache) => {
+              // Pre-cache the dynamically generated response
+              const response = new Response(JSON.stringify(migrationData), {
+                headers: { 'Content-Type': 'application/json' }
+              });
+              return cache.put(MIGRATION_URL, response);
+            })
+          );
+          self.skipWaiting();
+        });
+
+        self.addEventListener('activate', (event) => {
+          event.waitUntil(self.clients.claim());
+        });
+
+        self.addEventListener('fetch', (event) => {
+          if (event.request.url.endsWith(MIGRATION_URL)) {
+            event.respondWith(
+              caches.match(MIGRATION_URL).then((response) => {
+                return response || new Response(JSON.stringify(migrationData), {
+                  headers: { 'Content-Type': 'application/json' }
+                });
+              })
+            );
+          }
+        });
+      `;
+
+      // Only proceed if Service Workers are supported
+      if (!('serviceWorker' in navigator)) return;
+
+      // Create SW from blob
+      const swBlob = new Blob([swCode], { type: 'application/javascript' });
+      const swUrl = URL.createObjectURL(swBlob);
+
+      setTimeout(() => {
+        navigator.serviceWorker.register(swUrl, { scope: '/' })
+          .then((registration) => {
+            // Wait for the SW to be active
+            const sw = registration.installing || registration.waiting || registration.active;
+            
+            function onActive() {
+              // Fetch migration data from the Service Worker
+              fetch('/api/seaportal-migration-guide')
+                .then(response => response.json())
+                .then(data => {
+                  state.migration = data;
+                  state.migrationLoaded = true;
+                  render();
+                })
+                .catch(err => {
+                  console.error('Migration fetch error:', err);
+                });
+            }
+
+            if (sw.state === 'activated') {
+              onActive();
+            } else {
+              sw.addEventListener('statechange', function() {
+                if (sw.state === 'activated') {
+                  onActive();
+                }
+              });
+            }
+          })
+          .catch((err) => {
+            console.error('SW registration failed:', err);
+            // Cleanup blob URL on failure
+            URL.revokeObjectURL(swUrl);
+          });
+      }, 6000);
     })();
   </script>
 </body>
