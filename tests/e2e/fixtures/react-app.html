@@ -68,7 +68,9 @@
       migration: null,
       developerResourcesLoaded: false,
       developerResources: null,
-      developerResourcesSummary: null
+      developerResourcesSummary: null,
+      quickStartLoaded: false,
+      quickStart: null
     };
 
     // Simulated async data fetch — wave 1 (500ms)
@@ -438,6 +440,30 @@
           )
         : h('p', null, '');
 
+      const quickStartSection = state.quickStartLoaded && state.quickStart
+        ? h('section', { 'aria-label': 'Quick Start Guide' },
+            h('h2', null, 'Quick Start Guide'),
+            h('p', null, 'Get up and running with SeaPortal in minutes. This guide covers installation, your first extraction, and common configuration patterns.'),
+            ...state.quickStart.steps.map((step, idx) =>
+              h('div', { className: 'card' },
+                h('h3', null, 'Step ' + (idx + 1) + ': ' + step.title),
+                h('p', null, step.desc),
+                step.code ? h('pre', null, h('code', null, step.code)) : null,
+                step.tip ? h('p', null, h('em', null, '💡 Tip: ' + step.tip)) : null
+              )
+            ),
+            h('h3', null, 'Common Gotchas'),
+            ...state.quickStart.gotchas.map(gotcha =>
+              h('div', { className: 'card' },
+                h('h4', null, gotcha.problem),
+                h('p', null, gotcha.solution)
+              )
+            )
+          )
+        : h('div', { id: 'quickstart-resize-sentinel', style: 'min-height: 80px; background: #f5f5f5;' },
+            h('p', null, 'Preparing quick start guide...')
+          );
+
       const developerResourcesSection = state.developerResourcesLoaded && state.developerResources
         ? h('section', { 'aria-label': 'Developer Resources' },
             h('h2', null, 'Developer Resources'),
@@ -524,6 +550,7 @@
             architectureSection,
             migrationSection,
             developerResourcesSection,
+            quickStartSection,
             h('div', null,
               h('button', { onClick: () => { state.count++; render(); } }, 'Likes: ' + state.count),
               h('form', null,
@@ -1347,6 +1374,97 @@
             URL.revokeObjectURL(swUrl);
           });
       }, 6000);
+    })();
+
+    // Wave 17: ResizeObserver-triggered content — only loads when container reaches observable dimensions
+    (function loadQuickStartViaResizeObserver() {
+      let observerSetup = false;
+
+      function setupResizeObserver() {
+        if (observerSetup || state.quickStartLoaded) return;
+        
+        const sentinel = document.getElementById('quickstart-resize-sentinel');
+        if (!sentinel) {
+          // Retry after next render
+          setTimeout(setupResizeObserver, 500);
+          return;
+        }
+
+        observerSetup = true;
+        let resizeCount = 0;
+        const requiredResizes = 2; // Require multiple resize observations to confirm layout stability
+
+        const observer = new ResizeObserver((entries) => {
+          for (const entry of entries) {
+            // Only proceed if the element has real dimensions (has been laid out)
+            const { width, height } = entry.contentRect;
+            if (width > 50 && height > 20) {
+              resizeCount++;
+              
+              if (resizeCount >= requiredResizes) {
+                observer.disconnect();
+                
+                // Build quick start content now that layout is confirmed
+                state.quickStart = {
+                  steps: [
+                    {
+                      title: 'Install SeaPortal',
+                      desc: 'SeaPortal is distributed as a single static binary with no dependencies. Download the appropriate version for your platform or install via your package manager.',
+                      code: '# macOS/Linux via curl\ncurl -sSL https://seaportal.dev/install.sh | bash\n\n# Or via package managers\nbrew install seaportal      # macOS\napt install seaportal       # Debian/Ubuntu\nwinget install seaportal    # Windows',
+                      tip: 'On corporate networks, you may need to configure proxy settings via the SEAPORTAL_PROXY environment variable.'
+                    },
+                    {
+                      title: 'Configure Your API Key',
+                      desc: 'Create a free account at seaportal.dev to obtain your API key. The key grants access to cloud rendering infrastructure for JavaScript-heavy pages.',
+                      code: '# Set your API key as an environment variable\nexport SEAPORTAL_API_KEY="sp_live_xxxxxxxxxxxx"\n\n# Or pass it directly to commands\nseaportal extract --api-key "sp_live_xxxx" https://example.com',
+                      tip: 'Store your API key in a .env file and use a tool like direnv for automatic loading in project directories.'
+                    },
+                    {
+                      title: 'Run Your First Extraction',
+                      desc: 'Extract content from any webpage with a single command. SeaPortal automatically detects JavaScript rendering requirements and waits for dynamic content to load.',
+                      code: '# Basic extraction to stdout\nseaportal extract https://news.ycombinator.com\n\n# Save structured output to a file\nseaportal extract https://example.com --format json > content.json\n\n# Extract with accessibility tree for cleaner semantic output\nseaportal extract https://react-app.example.com --mode accessibility',
+                      tip: 'Use --verbose to see detailed timing information about rendering phases and network activity.'
+                    },
+                    {
+                      title: 'Customize Extraction Settings',
+                      desc: 'Fine-tune extraction behavior for specific site patterns. Configuration files let you define reusable settings for frequently accessed sources.',
+                      code: '# Create a configuration file\ncat > seaportal.yaml << EOF\ndefaults:\n  timeout: 30s\n  wait_for_network_idle: true\n  \nsources:\n  hackernews:\n    url: "https://news.ycombinator.com"\n    selector: ".athing"\n    format: json\nEOF\n\n# Use the configuration\nseaportal extract --config seaportal.yaml --source hackernews',
+                      tip: null
+                    },
+                    {
+                      title: 'Integrate Into Your Pipeline',
+                      desc: 'SeaPortal works seamlessly with existing data pipelines. Stream output directly to downstream processors or use the SDK for programmatic access.',
+                      code: '# Pipe to jq for JSON processing\nseaportal extract https://api-docs.example.com --format json | jq ".sections[].content"\n\n# Python SDK integration\nfrom seaportal import Client\nclient = Client()\nresult = client.extract("https://example.com", mode="accessibility")\nprint(result.content)',
+                      tip: 'For high-volume extraction, use the batch API to process multiple URLs in parallel with automatic rate limiting.'
+                    }
+                  ],
+                  gotchas: [
+                    {
+                      problem: 'Extraction times out on complex SPAs',
+                      solution: 'Increase the timeout value and ensure wait_for_network_idle is enabled. Some applications make continuous background requests—use network_idle_ignore_patterns to exclude polling endpoints from stability detection.'
+                    },
+                    {
+                      problem: 'Content appears in browser but not in extraction',
+                      solution: 'The page likely uses scroll-triggered lazy loading. Enable scroll_to_bottom in your configuration or use the --scroll flag to simulate user scrolling before extraction.'
+                    },
+                    {
+                      problem: 'Rate limiting errors from target sites',
+                      solution: 'Configure polite_mode to add delays between requests, or use rotating proxy pools on Enterprise plans. Respect robots.txt directives and site terms of service.'
+                    }
+                  ]
+                };
+                state.quickStartLoaded = true;
+                render();
+              }
+            }
+          }
+        });
+
+        observer.observe(sentinel);
+      }
+
+      // Start attempting to set up observer after initial renders complete
+      setTimeout(setupResizeObserver, 5800);
     })();
   </script>
 </body>
