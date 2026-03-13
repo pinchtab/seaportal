@@ -43,7 +43,9 @@
       roadmap: null,
       recommendationsLoaded: false,
       recommendations: null,
-      userVisits: 0
+      userVisits: 0,
+      partnersLoaded: false,
+      partners: null
     };
 
     // Simulated async data fetch — wave 1 (500ms)
@@ -279,6 +281,20 @@
           )
         : h('p', null, '');
 
+      const partnersSection = state.partnersLoaded && state.partners
+        ? h('section', { 'aria-label': 'Integration Partners' },
+            h('h2', null, 'Integration Partners'),
+            h('p', null, 'SeaPortal connects seamlessly with your existing infrastructure. Our verified integration partners ensure reliable data flow from extraction to action.'),
+            ...state.partners.map(partner =>
+              h('div', { className: 'card' },
+                h('h3', null, partner.name),
+                h('p', null, h('strong', null, partner.category)),
+                h('p', null, partner.desc)
+              )
+            )
+          )
+        : h('p', null, '');
+
       root.appendChild(
         h('div', { className: 'app' },
           h('header', null,
@@ -300,6 +316,7 @@
             useCasesSection,
             roadmapSection,
             recommendationsSection,
+            partnersSection,
             h('div', null,
               h('button', { onClick: () => { state.count++; render(); } }, 'Likes: ' + state.count),
               h('form', null,
@@ -377,6 +394,35 @@
           render();
         }
       }, 3500);
+    })();
+
+    // Wave 8: MutationObserver-triggered content — only appears after detecting DOM stability
+    (function loadPartnerContentViaMutation() {
+      let mutationCount = 0;
+      const targetMutations = 5; // Wait for several DOM mutations before revealing
+
+      const observer = new MutationObserver((mutations) => {
+        mutationCount += mutations.length;
+        if (mutationCount >= targetMutations) {
+          observer.disconnect();
+          // Now inject partner integration data that was "waiting" for DOM stability
+          state.partners = [
+            { name: 'Vercel', category: 'Deployment', desc: 'Deploy SeaPortal as serverless functions on Vercel\'s edge network. Automatic scaling handles burst traffic during large extraction jobs, with cold start times under 50 milliseconds.' },
+            { name: 'Supabase', category: 'Database', desc: 'Store extracted content directly in Supabase PostgreSQL with automatic vector embeddings. Full-text search and real-time subscriptions enable instant content monitoring dashboards.' },
+            { name: 'Temporal', category: 'Orchestration', desc: 'Build reliable extraction workflows with Temporal\'s durable execution engine. Automatic retries, timeouts, and state persistence ensure no data is lost even during infrastructure failures.' },
+            { name: 'Grafana', category: 'Observability', desc: 'Monitor extraction metrics with pre-built Grafana dashboards. Track success rates, latency percentiles, and content volume across all your data sources in real time.' }
+          ];
+          state.partnersLoaded = true;
+          render();
+        }
+      });
+
+      // Start observing the document for any DOM changes
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+        attributes: true
+      });
     })();
   </script>
 </body>
