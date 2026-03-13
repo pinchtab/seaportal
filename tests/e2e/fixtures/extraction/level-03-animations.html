@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Level 3: Animations + Workers</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    .hidden { display: none; }
+    .card { border: 1px solid #ddd; padding: 12px; margin: 8px 0; border-radius: 4px; }
+    faq-section { display: block; margin: 16px 0; }
+    
+    @keyframes spotlightReveal {
+      0% { opacity: 0; transform: translateY(20px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    .spotlight { animation: spotlightReveal 0.5s ease-out forwards; }
+    .spotlight-placeholder { opacity: 0.5; }
+  </style>
+</head>
+<body>
+  <noscript>You need to enable JavaScript to run this app.</noscript>
+  <div id="root"></div>
+
+  <script>
+    function h(tag, props, ...children) {
+      const el = document.createElement(tag);
+      if (props) {
+        Object.entries(props).forEach(([k, v]) => {
+          if (k === 'className') el.className = v;
+          else el.setAttribute(k, v);
+        });
+      }
+      children.flat().forEach(child => {
+        if (child == null) return;
+        el.appendChild(typeof child === 'string' ? document.createTextNode(child) : child);
+      });
+      return el;
+    }
+
+    const state = {
+      articles: [],
+      roadmap: null,
+      benchmarks: null,
+      spotlight: null
+    };
+
+    // Shadow DOM FAQ
+    class FAQSection extends HTMLElement {
+      connectedCallback() {
+        const shadow = this.attachShadow({ mode: 'open' });
+        shadow.innerHTML = `
+          <div style="padding: 16px; background: #f9f9f9;">
+            <h2>FAQ</h2>
+            <p><strong>How does SeaPortal handle JS content?</strong> Uses headless Chrome with full JS execution.</p>
+            <p><strong>Authentication support?</strong> Yes, cookie injection and session management.</p>
+          </div>
+        `;
+      }
+    }
+    customElements.define('faq-section', FAQSection);
+
+    function render() {
+      const root = document.getElementById('root');
+      root.innerHTML = '';
+      
+      root.appendChild(
+        h('main', null,
+          h('section', null,
+            h('h1', null, 'SeaPortal'),
+            h('p', null, 'Intelligent web extraction for AI agents.')
+          ),
+          
+          state.articles.length > 0
+            ? h('section', null, h('h2', null, 'Articles'), ...state.articles.map(a => h('div', { className: 'card' }, h('h3', null, a.title), h('p', null, a.summary))))
+            : null,
+          
+          document.createElement('faq-section'),
+          
+          // RAF-rendered roadmap
+          state.roadmap
+            ? h('section', null,
+                h('h2', null, 'Product Roadmap'),
+                ...state.roadmap.map(item => h('div', { className: 'card' }, h('h3', null, item.title), h('p', null, item.status + ' - ' + item.desc)))
+              )
+            : h('p', null, 'Loading roadmap...'),
+          
+          // Web Worker benchmarks
+          state.benchmarks
+            ? h('section', null,
+                h('h2', null, 'Performance Benchmarks'),
+                ...state.benchmarks.map(b => h('div', { className: 'card' }, h('h3', null, b.category), h('p', null, 'Avg: ' + b.avgTime + ', Success: ' + b.successRate)))
+              )
+            : h('p', null, 'Computing benchmarks...'),
+          
+          // Animation-gated spotlight
+          h('section', { id: 'spotlight-container' },
+            state.spotlight
+              ? h('div', null, h('h2', null, 'Spotlight'), h('p', null, state.spotlight))
+              : h('div', { className: 'spotlight-placeholder spotlight' }, 'Loading spotlight...')
+          )
+        )
+      );
+    }
+
+    // Wave 2: Articles
+    setTimeout(() => {
+      state.articles = [
+        { title: 'Neural Networks', summary: 'AI pattern recognition deep dive.' },
+        { title: 'Renewable Energy', summary: 'Solar reshaping the grid.' }
+      ];
+      render();
+    }, 1000);
+
+    // Wave 6: requestAnimationFrame roadmap
+    (function loadRoadmapViaRAF() {
+      let frame = 0;
+      const items = [
+        { title: 'Browser Extension', status: 'Q1 2026 - completed', desc: 'Chrome/Firefox one-click extraction.' },
+        { title: 'API v2', status: 'Q2 2026 - in progress', desc: 'GraphQL API with streaming.' },
+        { title: 'Mobile SDK', status: 'Q3 2026 - planned', desc: 'iOS/Android native SDKs.' }
+      ];
+      
+      function tick() {
+        frame++;
+        if (frame >= 30) {
+          state.roadmap = items;
+          render();
+        } else {
+          requestAnimationFrame(tick);
+        }
+      }
+      requestAnimationFrame(tick);
+    })();
+
+    // Wave 11: Web Worker benchmarks
+    (function loadBenchmarksViaWebWorker() {
+      const workerCode = `
+        self.onmessage = function(e) {
+          const results = [
+            { category: 'E-commerce', avgTime: '1.2s', successRate: '98.5%' },
+            { category: 'News Sites', avgTime: '1.5s', successRate: '97.7%' },
+            { category: 'SaaS Dashboards', avgTime: '2.1s', successRate: '96.1%' }
+          ];
+          self.postMessage({ benchmarks: results });
+        };
+      `;
+      const blob = new Blob([workerCode], { type: 'application/javascript' });
+      const worker = new Worker(URL.createObjectURL(blob));
+      
+      worker.onmessage = function(e) {
+        state.benchmarks = e.data.benchmarks;
+        render();
+        worker.terminate();
+      };
+      
+      setTimeout(() => worker.postMessage({ compute: true }), 1500);
+    })();
+
+    // Wave 10: CSS animation-triggered spotlight
+    (function loadSpotlightAfterAnimation() {
+      setTimeout(() => {
+        const container = document.getElementById('spotlight-container');
+        if (!container) return;
+        
+        const placeholder = container.querySelector('.spotlight');
+        if (placeholder) {
+          placeholder.addEventListener('animationend', function() {
+            state.spotlight = 'SeaPortal has become essential for data pipelines. It handles JavaScript-heavy pages that other tools cannot parse.';
+            render();
+          });
+          
+          // Fallback for headless
+          setTimeout(() => {
+            if (!state.spotlight) {
+              state.spotlight = 'SeaPortal has become essential for data pipelines. It handles JavaScript-heavy pages that other tools cannot parse.';
+              render();
+            }
+          }, 1000);
+        }
+      }, 500);
+    })();
+
+    render();
+  </script>
+</body>
+</html>

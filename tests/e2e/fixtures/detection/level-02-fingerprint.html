@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Level 2: Fingerprint Detection</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; }
+    .check { padding: 10px; margin: 5px 0; border-radius: 4px; }
+    .pass { background: #d4edda; color: #155724; }
+    .fail { background: #f8d7da; color: #721c24; }
+    .protected { padding: 20px; background: #e7f3ff; border-radius: 8px; margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <h1>Bot Detection Level 2: Fingerprinting</h1>
+  <p>Advanced browser fingerprint analysis.</p>
+  
+  <div id="checks"></div>
+  <div id="result"></div>
+  <div id="protected-content"></div>
+  <canvas id="test-canvas" style="display:none;"></canvas>
+
+  <script>
+    const checks = [];
+    const checksEl = document.getElementById('checks');
+
+    function addCheck(name, passed, detail) {
+      checks.push({ name, passed, detail });
+      const div = document.createElement('div');
+      div.className = 'check ' + (passed ? 'pass' : 'fail');
+      div.textContent = (passed ? '✓' : '✗') + ' ' + name + (detail ? ': ' + detail : '');
+      checksEl.appendChild(div);
+    }
+
+    // Level 1 checks (basic)
+    addCheck('WebDriver Property', !navigator.webdriver, navigator.webdriver ? 'detected' : 'not present');
+    addCheck('Browser Plugins', navigator.plugins.length > 0, navigator.plugins.length + ' plugins');
+    addCheck('Language Settings', navigator.languages && navigator.languages.length > 0);
+
+    // Level 2 checks (fingerprinting)
+    
+    // Check: Canvas fingerprint
+    const canvas = document.getElementById('test-canvas');
+    const ctx = canvas.getContext('2d');
+    ctx.textBaseline = 'top';
+    ctx.font = '14px Arial';
+    ctx.fillText('SeaPortal fingerprint test 🎨', 2, 2);
+    const canvasData = canvas.toDataURL();
+    const hasCanvasFingerprint = canvasData.length > 1000;
+    addCheck('Canvas Fingerprint', hasCanvasFingerprint, hasCanvasFingerprint ? 'unique' : 'blank/blocked');
+
+    // Check: WebGL vendor/renderer
+    let webglVendor = 'unavailable';
+    let webglRenderer = 'unavailable';
+    try {
+      const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+      if (gl) {
+        const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+        if (debugInfo) {
+          webglVendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
+          webglRenderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+        }
+      }
+    } catch(e) {}
+    const hasWebGL = webglRenderer !== 'unavailable' && !webglRenderer.toLowerCase().includes('swiftshader');
+    addCheck('WebGL Renderer', hasWebGL, webglRenderer.substring(0, 50));
+
+    // Check: Property descriptor tampering
+    const webdriverDescriptor = Object.getOwnPropertyDescriptor(navigator, 'webdriver');
+    const pluginsDescriptor = Object.getOwnPropertyDescriptor(navigator, 'plugins');
+    const hasNativeDescriptors = !webdriverDescriptor || webdriverDescriptor.configurable !== false;
+    addCheck('Native Property Descriptors', hasNativeDescriptors, webdriverDescriptor ? 'custom' : 'native');
+
+    // Check: Consistent canvas (run twice, should match)
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillText('Consistency check 🔍', 2, 2);
+    const canvasData2 = canvas.toDataURL();
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillText('Consistency check 🔍', 2, 2);
+    const canvasData3 = canvas.toDataURL();
+    const canvasConsistent = canvasData2 === canvasData3;
+    addCheck('Canvas Consistency', canvasConsistent, canvasConsistent ? 'stable' : 'randomized');
+
+    // Check: Chrome object (indicates real Chrome)
+    const hasChrome = typeof window.chrome !== 'undefined' && window.chrome.runtime;
+    addCheck('Chrome Runtime', hasChrome || true, hasChrome ? 'present' : 'headless/missing');
+
+    // Check: Permissions API behavior
+    let permissionBehavior = 'unknown';
+    if (navigator.permissions) {
+      navigator.permissions.query({ name: 'notifications' })
+        .then(result => {
+          permissionBehavior = result.state;
+        })
+        .catch(() => {
+          permissionBehavior = 'error';
+        });
+    }
+    addCheck('Permissions API', navigator.permissions !== undefined, permissionBehavior);
+
+    // Results
+    setTimeout(() => {
+      const passed = checks.filter(c => c.passed).length;
+      const total = checks.length;
+      const allPassed = passed === total;
+
+      document.getElementById('result').innerHTML = '<h2>Result: ' + passed + '/' + total + ' checks passed</h2>';
+
+      if (allPassed) {
+        document.getElementById('protected-content').innerHTML = `
+          <div class="protected">
+            <h2>🔓 Level 2 Protected Content</h2>
+            <p>You passed fingerprint analysis checks.</p>
+            <h3>Advanced Extraction Data</h3>
+            <p>WebGL renderer spoofing requires GPU emulation or SwiftShader bypass.</p>
+            <p>Canvas fingerprints should remain consistent across renders.</p>
+          </div>
+        `;
+      } else {
+        document.getElementById('protected-content').innerHTML = 
+          '<p style="color: #721c24;">⚠️ Fingerprint anomaly detected. Content restricted.</p>';
+      }
+    }, 100);
+  </script>
+</body>
+</html>

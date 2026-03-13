@@ -230,17 +230,14 @@ func FromURLExperimental(targetURL string, opts ExperimentalOptions) Experimenta
 		Rendered: true,
 	}
 
-	// Build Chrome flags
-	chromeFlags := []chromedp.ExecAllocatorOption{
-		chromedp.Flag("headless", true),
-		chromedp.Flag("disable-gpu", true),
-		chromedp.Flag("no-sandbox", true),
-		chromedp.Flag("disable-dev-shm-usage", true),
-	}
-
-	// Add stealth flags when escape-detection is enabled
+	// Build Chrome flags - stealth mode uses new headless with WebGL support
+	var chromeFlags []chromedp.ExecAllocatorOption
 	if opts.Stealth {
-		chromeFlags = append(chromeFlags,
+		chromeFlags = []chromedp.ExecAllocatorOption{
+			chromedp.Flag("headless", "new"), // New headless mode has better WebGL support
+			chromedp.Flag("no-sandbox", true),
+			chromedp.Flag("disable-dev-shm-usage", true),
+			// Stealth-specific flags
 			chromedp.Flag("disable-blink-features", "AutomationControlled"),
 			chromedp.Flag("disable-features", "TranslateUI"),
 			chromedp.Flag("disable-infobars", true),
@@ -248,8 +245,19 @@ func FromURLExperimental(targetURL string, opts ExperimentalOptions) Experimenta
 			chromedp.Flag("disable-sync", true),
 			chromedp.Flag("disable-default-apps", true),
 			chromedp.Flag("disable-extensions", true),
+			// WebGL support in headless
+			chromedp.Flag("use-gl", "angle"),
+			chromedp.Flag("use-angle", "metal"), // Use Metal on macOS for GPU
+			chromedp.Flag("enable-webgl", true),
 			chromedp.UserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"),
-		)
+		}
+	} else {
+		chromeFlags = []chromedp.ExecAllocatorOption{
+			chromedp.Flag("headless", true),
+			chromedp.Flag("disable-gpu", true),
+			chromedp.Flag("no-sandbox", true),
+			chromedp.Flag("disable-dev-shm-usage", true),
+		}
 	}
 
 	// Create headless Chrome context

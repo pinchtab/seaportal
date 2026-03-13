@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Level 1: Basic Bot Detection</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; }
+    .check { padding: 10px; margin: 5px 0; border-radius: 4px; }
+    .pass { background: #d4edda; color: #155724; }
+    .fail { background: #f8d7da; color: #721c24; }
+    .protected { padding: 20px; background: #e7f3ff; border-radius: 8px; margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <h1>Bot Detection Level 1: Basic Checks</h1>
+  <p>Testing fundamental automation detection.</p>
+  
+  <div id="checks"></div>
+  <div id="result"></div>
+  <div id="protected-content"></div>
+
+  <script>
+    const checks = [];
+    const checksEl = document.getElementById('checks');
+    const resultEl = document.getElementById('result');
+    const protectedEl = document.getElementById('protected-content');
+
+    function addCheck(name, passed, detail) {
+      checks.push({ name, passed, detail });
+      const div = document.createElement('div');
+      div.className = 'check ' + (passed ? 'pass' : 'fail');
+      div.textContent = (passed ? '✓' : '✗') + ' ' + name + (detail ? ': ' + detail : '');
+      checksEl.appendChild(div);
+    }
+
+    // Check 1: navigator.webdriver
+    const webdriver = navigator.webdriver;
+    addCheck('WebDriver Property', !webdriver, webdriver ? 'detected' : 'not present');
+
+    // Check 2: Plugins count
+    const pluginCount = navigator.plugins.length;
+    addCheck('Browser Plugins', pluginCount > 0, pluginCount + ' plugins');
+
+    // Check 3: Languages
+    const languages = navigator.languages;
+    addCheck('Language Settings', languages && languages.length > 0, languages ? languages.join(', ') : 'none');
+
+    // Check 4: User agent automation keywords
+    const ua = navigator.userAgent.toLowerCase();
+    const automationKeywords = ['headless', 'phantom', 'selenium', 'puppeteer', 'playwright'];
+    const hasAutomationUA = automationKeywords.some(kw => ua.includes(kw));
+    addCheck('User Agent Clean', !hasAutomationUA, hasAutomationUA ? 'automation keyword found' : 'no automation keywords');
+
+    // Check 5: Screen dimensions
+    const hasScreen = window.screen && window.screen.width > 0 && window.screen.height > 0;
+    addCheck('Screen Dimensions', hasScreen, hasScreen ? window.screen.width + 'x' + window.screen.height : 'invalid');
+
+    // Results
+    const passed = checks.filter(c => c.passed).length;
+    const total = checks.length;
+    const allPassed = passed === total;
+
+    resultEl.innerHTML = '<h2>Result: ' + passed + '/' + total + ' checks passed</h2>';
+
+    if (allPassed) {
+      protectedEl.innerHTML = `
+        <div class="protected">
+          <h2>🔓 Protected Content Unlocked</h2>
+          <p>Congratulations! You passed all basic bot detection checks.</p>
+          <p>This content is only visible to browsers that appear human-like.</p>
+          <h3>Secret Information</h3>
+          <p>SeaPortal extraction tips: Use --escape-detection flag for protected sites.</p>
+        </div>
+      `;
+    } else {
+      protectedEl.innerHTML = '<p style="color: #721c24;">⚠️ Bot detected. Protected content hidden.</p>';
+    }
+  </script>
+</body>
+</html>

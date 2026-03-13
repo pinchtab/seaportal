@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Level 4: Advanced Async Patterns</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    .hidden { display: none; }
+    .card { border: 1px solid #ddd; padding: 12px; margin: 8px 0; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <noscript>You need to enable JavaScript to run this app.</noscript>
+  <div id="root"></div>
+
+  <script>
+    function h(tag, props, ...children) {
+      const el = document.createElement(tag);
+      if (props) {
+        Object.entries(props).forEach(([k, v]) => {
+          if (k === 'className') el.className = v;
+          else el.setAttribute(k, v);
+        });
+      }
+      children.flat().forEach(child => {
+        if (child == null) return;
+        el.appendChild(typeof child === 'string' ? document.createTextNode(child) : child);
+      });
+      return el;
+    }
+
+    const state = {
+      caseStudies: null,
+      security: null,
+      ecosystem: null,
+      architecture: null,
+      devResources: null
+    };
+
+    function render() {
+      const root = document.getElementById('root');
+      root.innerHTML = '';
+      
+      root.appendChild(
+        h('main', null,
+          h('section', null,
+            h('h1', null, 'SeaPortal Level 4'),
+            h('p', null, 'Advanced async content patterns.')
+          ),
+          
+          // IndexedDB case studies
+          state.caseStudies
+            ? h('section', null,
+                h('h2', null, 'Case Studies'),
+                ...state.caseStudies.map(cs => h('div', { className: 'card' }, h('h3', null, cs.company), h('p', null, cs.result)))
+              )
+            : h('p', null, 'Loading case studies from IndexedDB...'),
+          
+          // Blob URL security info
+          state.security
+            ? h('section', null,
+                h('h2', null, 'Security Features'),
+                ...state.security.map(s => h('div', { className: 'card' }, h('h3', null, s.feature), h('p', null, s.desc)))
+              )
+            : h('p', null, 'Fetching security info...'),
+          
+          // requestIdleCallback ecosystem
+          state.ecosystem
+            ? h('section', null,
+                h('h2', null, 'Community Ecosystem'),
+                ...state.ecosystem.map(e => h('div', { className: 'card' }, h('h3', null, e.name), h('p', null, e.desc)))
+              )
+            : h('p', null, 'Loading ecosystem during idle...'),
+          
+          // postMessage iframe architecture
+          state.architecture
+            ? h('section', null,
+                h('h2', null, 'System Architecture'),
+                ...state.architecture.map(a => h('div', { className: 'card' }, h('h3', null, a.layer), h('p', null, a.desc)))
+              )
+            : h('p', null, 'Loading architecture via iframe...'),
+          
+          // Dynamic import dev resources
+          state.devResources
+            ? h('section', null,
+                h('h2', null, 'Developer Resources'),
+                ...state.devResources.map(r => h('div', { className: 'card' }, h('h3', null, r.title), h('p', null, r.desc)))
+              )
+            : h('p', null, 'Loading dev resources...')
+        )
+      );
+    }
+
+    // Wave 9: IndexedDB case studies
+    (function loadCaseStudiesFromIndexedDB() {
+      const request = indexedDB.open('SeaPortalDB', 1);
+      
+      request.onupgradeneeded = function(e) {
+        const db = e.target.result;
+        const store = db.createObjectStore('caseStudies', { keyPath: 'id' });
+        store.put({ id: 1, company: 'Meridian Analytics', result: 'Reduced data latency from 45min to under 3min.' });
+        store.put({ id: 2, company: 'HealthBridge Research', result: 'Catalogued 12,000 clinical trials across 150 institutions.' });
+        store.put({ id: 3, company: 'EduPath Global', result: 'Database contains 450,000+ courses with weekly freshness.' });
+      };
+      
+      request.onsuccess = function(e) {
+        const db = e.target.result;
+        const tx = db.transaction('caseStudies', 'readonly');
+        const store = tx.objectStore('caseStudies');
+        const all = store.getAll();
+        
+        all.onsuccess = function() {
+          state.caseStudies = all.result;
+          render();
+        };
+      };
+    })();
+
+    // Wave 12: Blob URL fetch security
+    (function loadSecurityViaBlobFetch() {
+      const securityData = JSON.stringify([
+        { feature: 'SOC 2 Type II', desc: 'Annual audits verify enterprise security standards.' },
+        { feature: 'GDPR Compliant', desc: 'Data residency and right-to-erasure support.' },
+        { feature: 'End-to-End Encryption', desc: 'TLS 1.3 in transit, AES-256 at rest.' }
+      ]);
+      
+      const blob = new Blob([securityData], { type: 'application/json' });
+      const blobUrl = URL.createObjectURL(blob);
+      
+      setTimeout(() => {
+        fetch(blobUrl)
+          .then(r => r.json())
+          .then(data => {
+            state.security = data;
+            render();
+            URL.revokeObjectURL(blobUrl);
+          });
+      }, 2000);
+    })();
+
+    // Wave 13: requestIdleCallback ecosystem
+    (function loadEcosystemDuringIdle() {
+      const scheduleIdle = window.requestIdleCallback || (cb => setTimeout(cb, 100));
+      
+      scheduleIdle(() => {
+        state.ecosystem = [
+          { name: 'seaportal-pandas', desc: 'Direct integration with pandas DataFrames.' },
+          { name: 'seaportal-langchain', desc: 'LangChain document loader for RAG pipelines.' },
+          { name: 'seaportal-notion', desc: 'Sync extracted content to Notion databases.' }
+        ];
+        render();
+      });
+    })();
+
+    // Wave 14: postMessage iframe architecture
+    (function loadArchitectureViaIframeHandshake() {
+      const iframeContent = `
+        <!DOCTYPE html>
+        <html><body><script>
+          window.addEventListener('message', function(e) {
+            if (e.data.type === 'REQUEST_ARCHITECTURE') {
+              e.source.postMessage({
+                type: 'ARCHITECTURE_DATA',
+                data: [
+                  { layer: 'Ingestion', desc: 'URL queue, priority scheduler, rate limiter.' },
+                  { layer: 'Rendering', desc: 'Chromium pool, context isolation, resource interception.' },
+                  { layer: 'Extraction', desc: 'DOM walker, accessibility parser, content scorer.' }
+                ]
+              }, '*');
+            }
+          });
+          window.parent.postMessage({ type: 'IFRAME_READY' }, '*');
+        <\/script></body></html>
+      `;
+      
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.srcdoc = iframeContent;
+      document.body.appendChild(iframe);
+      
+      window.addEventListener('message', function handler(e) {
+        if (e.data.type === 'IFRAME_READY') {
+          iframe.contentWindow.postMessage({ type: 'REQUEST_ARCHITECTURE' }, '*');
+        } else if (e.data.type === 'ARCHITECTURE_DATA') {
+          state.architecture = e.data.data;
+          render();
+          window.removeEventListener('message', handler);
+        }
+      });
+    })();
+
+    // Wave 17: Dynamic import for dev resources
+    (function loadDevResourcesViaDynamicImport() {
+      const moduleCode = `
+        export const resources = [
+          { title: 'API Reference', desc: 'Complete REST and GraphQL API documentation.' },
+          { title: 'SDK Libraries', desc: 'Official SDKs for Python, Node.js, Go, and Rust.' },
+          { title: 'Extraction Cookbook', desc: '200+ recipes for common extraction patterns.' }
+        ];
+      `;
+      
+      const blob = new Blob([moduleCode], { type: 'application/javascript' });
+      const moduleUrl = URL.createObjectURL(blob);
+      
+      import(moduleUrl)
+        .then(module => {
+          state.devResources = module.resources;
+          render();
+          URL.revokeObjectURL(moduleUrl);
+        })
+        .catch(() => {
+          // Fallback if dynamic import fails
+          state.devResources = [
+            { title: 'API Reference', desc: 'Complete REST and GraphQL API documentation.' },
+            { title: 'SDK Libraries', desc: 'Official SDKs for Python, Node.js, Go, and Rust.' }
+          ];
+          render();
+        });
+    })();
+
+    render();
+  </script>
+</body>
+</html>
