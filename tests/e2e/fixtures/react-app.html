@@ -40,7 +40,10 @@
       useCasesVisible: false,
       useCases: null,
       roadmapLoaded: false,
-      roadmap: null
+      roadmap: null,
+      recommendationsLoaded: false,
+      recommendations: null,
+      userVisits: 0
     };
 
     // Simulated async data fetch — wave 1 (500ms)
@@ -263,6 +266,19 @@
           )
         : h('p', null, '');
 
+      const recommendationsSection = state.recommendationsLoaded && state.recommendations
+        ? h('section', { 'aria-label': 'Personalized Recommendations' },
+            h('h2', null, 'Recommended For You'),
+            h('p', null, 'Based on your ' + state.userVisits + ' visits, here are resources tailored to your interests.'),
+            ...state.recommendations.map(rec =>
+              h('div', { className: 'card' },
+                h('h3', null, rec.title),
+                h('p', null, rec.desc)
+              )
+            )
+          )
+        : h('p', null, '');
+
       root.appendChild(
         h('div', { className: 'app' },
           h('header', null,
@@ -283,6 +299,7 @@
             faqSection,
             useCasesSection,
             roadmapSection,
+            recommendationsSection,
             h('div', null,
               h('button', { onClick: () => { state.count++; render(); } }, 'Likes: ' + state.count),
               h('form', null,
@@ -330,6 +347,36 @@
         }
       }
       requestAnimationFrame(rafStep);
+    })();
+
+    // Wave 7: localStorage-based personalized recommendations — requires JS to write+read storage
+    (function loadPersonalizedContent() {
+      setTimeout(() => {
+        // Simulate a returning user by storing profile data
+        const profileData = {
+          interests: ['machine-learning', 'web-scraping', 'automation'],
+          visitCount: 7,
+          lastVisit: new Date().toISOString()
+        };
+        localStorage.setItem('seaportal_user_profile', JSON.stringify(profileData));
+        
+        // Build recommendations based on stored profile
+        const storedProfile = JSON.parse(localStorage.getItem('seaportal_user_profile'));
+        if (storedProfile && storedProfile.interests) {
+          const recommendationMap = {
+            'machine-learning': { title: 'ML Data Pipelines', desc: 'Learn how SeaPortal integrates with popular ML frameworks like PyTorch and TensorFlow. Our structured output format maps directly to training data schemas, reducing preprocessing time by up to 80%.' },
+            'web-scraping': { title: 'Advanced Extraction Patterns', desc: 'Master complex extraction scenarios including infinite scroll pagination, lazy-loaded images, and dynamically-generated content. Our cookbook includes 50+ real-world examples.' },
+            'automation': { title: 'CI/CD Integration Guide', desc: 'Run SeaPortal as part of your deployment pipeline. Monitor content changes, validate data freshness, and trigger alerts when critical information updates.' }
+          };
+          
+          state.recommendations = storedProfile.interests
+            .filter(i => recommendationMap[i])
+            .map(i => recommendationMap[i]);
+          state.userVisits = storedProfile.visitCount;
+          state.recommendationsLoaded = true;
+          render();
+        }
+      }, 3500);
     })();
   </script>
 </body>
