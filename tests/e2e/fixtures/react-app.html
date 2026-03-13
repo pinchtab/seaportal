@@ -32,10 +32,12 @@
       count: 0,
       activeTab: 'about',
       asyncLoaded: false,
-      asyncData: null
+      asyncData: null,
+      testimonialsLoaded: false,
+      testimonials: null
     };
 
-    // Simulated async data fetch
+    // Simulated async data fetch — wave 1 (500ms)
     setTimeout(() => {
       state.asyncData = {
         articles: [
@@ -48,6 +50,17 @@
       state.asyncLoaded = true;
       render();
     }, 500);
+
+    // Simulated async data fetch — wave 2 (1.5s)
+    setTimeout(() => {
+      state.testimonials = [
+        { name: 'Sarah Chen', role: 'ML Engineer at DeepMind', text: 'SeaPortal has become an essential part of our data pipeline. It handles JavaScript-heavy pages that other tools simply cannot parse.' },
+        { name: 'Marcus Weber', role: 'CTO at DataFlow', text: 'We switched from three different scraping tools to SeaPortal. The accessibility tree feature alone saved us hundreds of engineering hours.' },
+        { name: 'Amira Okafor', role: 'Research Scientist', text: 'The experimental rendering mode is a game changer. We can now extract structured data from React dashboards automatically.' }
+      ];
+      state.testimonialsLoaded = true;
+      render();
+    }, 1500);
 
     const tabs = {
       about: {
@@ -107,6 +120,18 @@
           )
         : h('p', null, 'Loading articles...');
 
+      const testimonialSection = state.testimonialsLoaded
+        ? h('section', { 'aria-label': 'Testimonials' },
+            h('h2', null, 'What People Are Saying'),
+            ...state.testimonials.map(t =>
+              h('blockquote', { className: 'card' },
+                h('p', null, '"' + t.text + '"'),
+                h('footer', null, h('strong', null, t.name), ' — ' + t.role)
+              )
+            )
+          )
+        : h('p', null, 'Loading testimonials...');
+
       root.appendChild(
         h('div', { className: 'app' },
           h('header', null,
@@ -122,6 +147,7 @@
             h('div', { 'role': 'tablist' }, ...tabButtons),
             h('div', { 'role': 'tabpanel' }, tabContent),
             asyncSection,
+            testimonialSection,
             h('div', null,
               h('button', { onClick: () => { state.count++; render(); } }, 'Likes: ' + state.count),
               h('form', null,
