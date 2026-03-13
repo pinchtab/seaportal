@@ -65,7 +65,10 @@
       architectureLoaded: false,
       architecture: null,
       migrationLoaded: false,
-      migration: null
+      migration: null,
+      developerResourcesLoaded: false,
+      developerResources: null,
+      developerResourcesSummary: null
     };
 
     // Simulated async data fetch — wave 1 (500ms)
@@ -435,6 +438,40 @@
           )
         : h('p', null, '');
 
+      const developerResourcesSection = state.developerResourcesLoaded && state.developerResources
+        ? h('section', { 'aria-label': 'Developer Resources' },
+            h('h2', null, 'Developer Resources'),
+            h('p', null, 'Everything you need to integrate SeaPortal into your applications. ' + 
+              state.developerResourcesSummary.totalSdks + ' official SDKs, ' + 
+              state.developerResourcesSummary.totalTools + ' CLI tools, and ' + 
+              state.developerResourcesSummary.totalEndpoints + ' API endpoints at your disposal.'),
+            h('h3', null, 'Official SDKs'),
+            ...state.developerResources.sdks.map(sdk =>
+              h('div', { className: 'card' },
+                h('h4', null, sdk.language + ' — ' + sdk.package),
+                h('p', null, h('strong', null, 'Version: '), sdk.version),
+                h('p', null, sdk.desc),
+                h('pre', null, h('code', null, sdk.example))
+              )
+            ),
+            h('h3', null, 'CLI Tools'),
+            ...state.developerResources.cliTools.map(tool =>
+              h('div', { className: 'card' },
+                h('h4', null, tool.name),
+                h('p', null, tool.desc),
+                h('pre', null, h('code', null, tool.usage))
+              )
+            ),
+            h('h3', null, 'API Reference'),
+            ...state.developerResources.apiEndpoints.map(endpoint =>
+              h('div', { className: 'card' },
+                h('h4', null, endpoint.method + ' ' + endpoint.path),
+                h('p', null, endpoint.desc)
+              )
+            )
+          )
+        : h('p', null, '');
+
       const architectureSection = state.architectureLoaded && state.architecture
         ? h('section', { 'aria-label': 'System Architecture' },
             h('h2', null, 'System Architecture'),
@@ -486,6 +523,7 @@
             ecosystemSection,
             architectureSection,
             migrationSection,
+            developerResourcesSection,
             h('div', null,
               h('button', { onClick: () => { state.count++; render(); } }, 'Likes: ' + state.count),
               h('form', null,
@@ -1054,7 +1092,108 @@
       });
     })();
 
-    // Wave 15: Service Worker cached content — requires SW registration, interception, and cache API
+    // Wave 15: Dynamic import() module — content loaded from dynamically generated ES module
+    (function loadDeveloperResourcesViaDynamicImport() {
+      setTimeout(async () => {
+        // ES module code containing developer resources
+        const moduleCode = `
+          export const developerResources = {
+            sdks: [
+              {
+                language: 'Python',
+                package: 'seaportal-py',
+                version: '2.4.1',
+                desc: 'The official Python SDK provides a Pythonic interface to SeaPortal extraction. Features async/await support, pandas DataFrame integration, and automatic retry handling with exponential backoff.',
+                example: 'from seaportal import Client; client = Client(); result = await client.extract("https://example.com")'
+              },
+              {
+                language: 'TypeScript',
+                package: '@seaportal/sdk',
+                version: '3.1.0',
+                desc: 'Full TypeScript support with complete type definitions for all extraction options and response structures. Works seamlessly with Node.js, Deno, and modern bundlers.',
+                example: 'import { SeaPortal } from "@seaportal/sdk"; const sp = new SeaPortal({ apiKey }); const doc = await sp.extract(url);'
+              },
+              {
+                language: 'Go',
+                package: 'github.com/seaportal/go-client',
+                version: '1.8.0',
+                desc: 'Lightweight Go client optimized for high-throughput extraction pipelines. Supports connection pooling, context cancellation, and streaming responses for large documents.',
+                example: 'client := seaportal.NewClient(apiKey); doc, err := client.Extract(ctx, url, seaportal.WithAccessibilityTree())'
+              },
+              {
+                language: 'Rust',
+                package: 'seaportal-rs',
+                version: '0.9.2',
+                desc: 'Community-maintained Rust crate offering zero-copy deserialization and compile-time extraction schema validation. Ideal for performance-critical data pipelines.',
+                example: 'let client = SeaPortal::new(api_key)?; let doc = client.extract(&url).await?;'
+              }
+            ],
+            cliTools: [
+              {
+                name: 'sp-extract',
+                desc: 'Command-line extraction tool for quick one-off jobs and shell scripting. Supports output to stdout, files, or piping directly to other tools like jq.',
+                usage: 'sp-extract https://example.com --format json --selector main'
+              },
+              {
+                name: 'sp-watch',
+                desc: 'Monitor URLs for content changes with configurable polling intervals. Emits structured diffs and can trigger webhooks or local scripts on detected changes.',
+                usage: 'sp-watch --url https://example.com/pricing --interval 1h --on-change ./notify.sh'
+              },
+              {
+                name: 'sp-batch',
+                desc: 'Process URL lists in parallel with automatic rate limiting and failure recovery. Ideal for large-scale extraction jobs with progress reporting.',
+                usage: 'sp-batch --input urls.txt --output results/ --parallelism 10'
+              }
+            ],
+            apiEndpoints: [
+              {
+                method: 'POST',
+                path: '/v2/extract',
+                desc: 'Primary extraction endpoint. Accepts a URL and configuration options, returns structured content in the specified format. Supports both synchronous and webhook-based async modes.'
+              },
+              {
+                method: 'GET',
+                path: '/v2/jobs/{id}',
+                desc: 'Poll job status for async extractions. Returns progress percentage, estimated completion time, and partial results when available.'
+              },
+              {
+                method: 'POST',
+                path: '/v2/batch',
+                desc: 'Submit multiple URLs for batch processing. Returns a batch ID for tracking overall progress and retrieving individual results as they complete.'
+              }
+            ]
+          };
+          
+          export function getResourceSummary() {
+            return {
+              totalSdks: developerResources.sdks.length,
+              totalTools: developerResources.cliTools.length,
+              totalEndpoints: developerResources.apiEndpoints.length
+            };
+          }
+        `;
+
+        try {
+          // Create ES module from Blob URL
+          const moduleBlob = new Blob([moduleCode], { type: 'text/javascript' });
+          const moduleUrl = URL.createObjectURL(moduleBlob);
+          
+          // Dynamic import — requires full JS execution, no static analysis possible
+          const module = await import(moduleUrl);
+          
+          state.developerResources = module.developerResources;
+          state.developerResourcesSummary = module.getResourceSummary();
+          state.developerResourcesLoaded = true;
+          
+          URL.revokeObjectURL(moduleUrl);
+          render();
+        } catch (err) {
+          console.error('Dynamic import failed:', err);
+        }
+      }, 5200);
+    })();
+
+    // Wave 16: Service Worker cached content — requires SW registration, interception, and cache API
     (function loadMigrationViaServiceWorker() {
       // Service Worker code as a blob — generates migration content dynamically
       const swCode = `
