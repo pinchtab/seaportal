@@ -145,6 +145,159 @@
         isHeadless ? 'Headless detected in UA' : ua.substring(0, 60) + '...');
     })();
     
+    // === WAVE 2: ADVANCED DETECTION ===
+    
+    // Check 9: Property Descriptor Tampering Detection
+    // Stealth plugins redefine navigator.webdriver with custom getters - detect this
+    (function checkPropertyDescriptors() {
+      const dominated = [];
+      
+      // Check navigator.webdriver descriptor
+      const webdriverDesc = Object.getOwnPropertyDescriptor(Navigator.prototype, 'webdriver');
+      if (webdriverDesc) {
+        // Native property has 'get' from prototype, tampered often has 'value' or custom getter
+        const getterStr = webdriverDesc.get ? webdriverDesc.get.toString() : '';
+        if (getterStr.includes('native code') === false && webdriverDesc.get) {
+          dominated.push('webdriver getter modified');
+        }
+      }
+      
+      // Check if navigator properties are proxy objects or have been redefined
+      const propsToCheck = ['plugins', 'languages', 'mimeTypes'];
+      for (const prop of propsToCheck) {
+        try {
+          const desc = Object.getOwnPropertyDescriptor(Navigator.prototype, prop);
+          if (desc && desc.get) {
+            const str = desc.get.toString();
+            if (!str.includes('native code')) {
+              dominated.push(`${prop} getter modified`);
+            }
+          }
+        } catch (e) {
+          dominated.push(`${prop} check threw`);
+        }
+      }
+      
+      // Check for Proxy traps on navigator
+      try {
+        const handler = navigator[Symbol.toStringTag];
+        // Native returns 'Navigator', proxied might differ
+      } catch (e) {
+        dominated.push('navigator proxy detected');
+      }
+      
+      const passed = dominated.length === 0;
+      addCheck('Property Descriptor Integrity', passed,
+        passed ? 'Native property descriptors intact' : dominated.join(', '));
+    })();
+    
+    // Check 10: Canvas Fingerprint Consistency
+    // Stealth tools add noise to canvas - detect inconsistent renders
+    (function checkCanvasConsistency() {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 200;
+        canvas.height = 50;
+        const ctx = canvas.getContext('2d');
+        
+        // Draw specific content
+        ctx.fillStyle = '#f60';
+        ctx.fillRect(10, 10, 30, 30);
+        ctx.fillStyle = '#069';
+        ctx.font = '14px Arial';
+        ctx.fillText('SeaPortal', 50, 30);
+        ctx.strokeStyle = 'rgba(102, 204, 0, 0.7)';
+        ctx.beginPath();
+        ctx.arc(150, 25, 20, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // Get data twice - should be identical without noise injection
+        const data1 = canvas.toDataURL();
+        const data2 = canvas.toDataURL();
+        
+        // Also render again and compare
+        ctx.clearRect(0, 0, 200, 50);
+        ctx.fillStyle = '#f60';
+        ctx.fillRect(10, 10, 30, 30);
+        ctx.fillStyle = '#069';
+        ctx.font = '14px Arial';
+        ctx.fillText('SeaPortal', 50, 30);
+        ctx.strokeStyle = 'rgba(102, 204, 0, 0.7)';
+        ctx.beginPath();
+        ctx.arc(150, 25, 20, 0, Math.PI * 2);
+        ctx.stroke();
+        const data3 = canvas.toDataURL();
+        
+        const consistent = (data1 === data2) && (data1 === data3);
+        addCheck('Canvas Render Consistency', consistent,
+          consistent ? 'Renders are deterministic' : 'Canvas noise injection detected');
+      } catch (e) {
+        addCheck('Canvas Render Consistency', false, 'Canvas check failed: ' + e.message);
+      }
+    })();
+    
+    // Check 11: Execution Context / Stack Trace CDP Detection
+    // CDP and automation frameworks leave traces in error stacks and function sources
+    (function checkExecutionContext() {
+      const anomalies = [];
+      
+      // Check Error.prepareStackTrace tampering (used by some automation)
+      if (Error.prepareStackTrace && Error.prepareStackTrace.toString().indexOf('native code') === -1) {
+        anomalies.push('Error.prepareStackTrace modified');
+      }
+      
+      // Generate stack trace and inspect for CDP/puppeteer patterns
+      try {
+        const err = new Error();
+        const stack = err.stack || '';
+        const cdpPatterns = [
+          '__puppeteer_evaluation_script__',
+          '__playwright_evaluation_script__',
+          '__selenium_evaluate',
+          '__webdriver_evaluate',
+          '__driver_evaluate',
+          'BROWSER_SOURCE_MAP',
+          '__cdp_binding__'
+        ];
+        for (const pattern of cdpPatterns) {
+          if (stack.includes(pattern)) {
+            anomalies.push(`Stack contains: ${pattern}`);
+          }
+        }
+      } catch (e) {}
+      
+      // Check for CDP binding functions on window
+      const cdpBindings = Object.keys(window).filter(k => 
+        k.startsWith('__') && (k.includes('binding') || k.includes('driver') || k.includes('selenium'))
+      );
+      if (cdpBindings.length > 0) {
+        anomalies.push('CDP bindings on window: ' + cdpBindings.join(', '));
+      }
+      
+      // Check Function.prototype.toString tampering
+      const fnToString = Function.prototype.toString;
+      try {
+        const fnStr = fnToString.call(fnToString);
+        if (!fnStr.includes('native code')) {
+          anomalies.push('Function.prototype.toString modified');
+        }
+      } catch (e) {
+        anomalies.push('toString check threw');
+      }
+      
+      // Check for Reflect.apply/get tampering (used in stealth proxy implementations)
+      try {
+        const reflectApplyStr = Reflect.apply.toString();
+        if (!reflectApplyStr.includes('native code')) {
+          anomalies.push('Reflect.apply modified');
+        }
+      } catch (e) {}
+      
+      const passed = anomalies.length === 0;
+      addCheck('Execution Context Integrity', passed,
+        passed ? 'No automation framework traces' : anomalies.join('; '));
+    })();
+    
     // === RENDER RESULTS ===
     function renderResults() {
       const passed = checks.filter(c => c.passed).length;
