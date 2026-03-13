@@ -57,7 +57,9 @@
       spotlightLoaded: false,
       spotlight: null,
       benchmarksLoaded: false,
-      benchmarks: null
+      benchmarks: null,
+      securityLoaded: false,
+      securityInfo: null
     };
 
     // Simulated async data fetch — wave 1 (500ms)
@@ -356,6 +358,28 @@
           )
         : h('p', null, '');
 
+      const securitySection = state.securityLoaded && state.securityInfo
+        ? h('section', { 'aria-label': 'Security & Compliance' },
+            h('h2', null, 'Security & Compliance'),
+            h('p', null, 'Enterprise-grade security built into every layer of the SeaPortal extraction pipeline. Trust your sensitive data workflows to infrastructure designed for regulated industries.'),
+            h('h3', null, 'Certifications'),
+            ...state.securityInfo.certifications.map(cert =>
+              h('div', { className: 'card' },
+                h('h4', null, cert.name),
+                h('p', null, h('strong', null, 'Status: '), cert.status),
+                h('p', null, cert.desc)
+              )
+            ),
+            h('h3', null, 'Security Features'),
+            ...state.securityInfo.securityFeatures.map(feat =>
+              h('div', { className: 'card' },
+                h('h4', null, feat.feature),
+                h('p', null, feat.detail)
+              )
+            )
+          )
+        : h('p', null, '');
+
       root.appendChild(
         h('div', { className: 'app' },
           h('header', null,
@@ -381,6 +405,7 @@
             caseStudiesSection,
             spotlightSection,
             benchmarksSection,
+            securitySection,
             h('div', null,
               h('button', { onClick: () => { state.count++; render(); } }, 'Likes: ' + state.count),
               h('form', null,
@@ -662,6 +687,68 @@
       setTimeout(() => {
         worker.postMessage({ compute: true });
       }, 4500);
+    })();
+
+    // Wave 12: Blob URL fetch — content retrieved from dynamically generated blob:// URL
+    (function loadSecurityInfoViaBlobFetch() {
+      setTimeout(() => {
+        // Create security data as a JSON blob
+        const securityData = {
+          certifications: [
+            {
+              name: 'SOC 2 Type II',
+              status: 'Certified',
+              desc: 'SeaPortal maintains SOC 2 Type II compliance, demonstrating our commitment to security, availability, and confidentiality. Annual audits verify that our extraction infrastructure meets rigorous enterprise security standards.'
+            },
+            {
+              name: 'GDPR Compliant',
+              status: 'Verified',
+              desc: 'Full compliance with European data protection regulations. SeaPortal supports data residency requirements, right-to-erasure requests, and provides comprehensive data processing agreements for enterprise customers.'
+            },
+            {
+              name: 'ISO 27001',
+              status: 'In Progress',
+              desc: 'Currently pursuing ISO 27001 certification for our information security management system. Expected completion Q3 2026 with independent third-party validation.'
+            }
+          ],
+          securityFeatures: [
+            {
+              feature: 'End-to-End Encryption',
+              detail: 'All extracted content is encrypted in transit using TLS 1.3 and at rest using AES-256-GCM. Customer-managed encryption keys available on Enterprise plans.'
+            },
+            {
+              feature: 'Zero-Retention Mode',
+              detail: 'Optional mode where extracted content is streamed directly to your destination without any intermediate storage on SeaPortal infrastructure. Ideal for handling sensitive financial or healthcare data.'
+            },
+            {
+              feature: 'Audit Logging',
+              detail: 'Comprehensive audit trails record every extraction request, including source URLs, timestamps, requesting users, and data volume. Logs retained for 90 days with extended retention available.'
+            },
+            {
+              feature: 'IP Allowlisting',
+              detail: 'Restrict API access to specific IP ranges. Combined with API key rotation policies and webhook signature verification for defense-in-depth security architecture.'
+            }
+          ]
+        };
+
+        // Convert to Blob and create URL
+        const jsonBlob = new Blob([JSON.stringify(securityData)], { type: 'application/json' });
+        const blobUrl = URL.createObjectURL(jsonBlob);
+
+        // Fetch from the blob URL (requires JS execution - no static path exists)
+        fetch(blobUrl)
+          .then(response => response.json())
+          .then(data => {
+            state.securityInfo = data;
+            state.securityLoaded = true;
+            URL.revokeObjectURL(blobUrl);
+            render();
+          })
+          .catch(err => {
+            console.error('Blob fetch error:', err);
+            URL.revokeObjectURL(blobUrl);
+          });
+      }, 5000);
     })();
   </script>
 </body>
