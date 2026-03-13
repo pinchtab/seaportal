@@ -26,6 +26,7 @@ func main() {
 	snapshotFormat := flag.String("format", "json", "Snapshot format: 'json' or 'compact'")
 	maxTokens := flag.Int("max-tokens", 0, "Approximate token limit for snapshot output (0 = unlimited)")
 	experimental := flag.Bool("experimental", false, "Experimental: render page in headless Chrome before extraction")
+	escapeDetection := flag.Bool("escape-detection", false, "Enable stealth mode to bypass bot detection")
 	showVersion := flag.Bool("version", false, "Show version")
 	flag.BoolVar(showVersion, "v", false, "Show version")
 
@@ -55,9 +56,10 @@ func main() {
 	targetURL := args[0]
 
 	// Experimental mode: render in headless Chrome
-	if *experimental {
+	if *experimental || *escapeDetection {
 		expOpts := portal.ExperimentalOptions{
 			Snapshot: *snapshot,
+			Stealth:  *escapeDetection,
 		}
 
 		result := portal.FromURLExperimental(targetURL, expOpts)

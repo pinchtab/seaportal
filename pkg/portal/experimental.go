@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/chromedp"
 )
 
@@ -29,6 +30,73 @@ const triggerAnimationEndScript = `
       el.dispatchEvent(new AnimationEvent('animationend', { animationName: animName, bubbles: true }));
     }
   });
+  
+  return true;
+})()
+`
+
+// stealthScript injects anti-detection bypasses before page loads
+const stealthScript = `
+(function() {
+  // 1. Override navigator.webdriver
+  Object.defineProperty(navigator, 'webdriver', {
+    get: () => false,
+    configurable: true
+  });
+  
+  // 2. Delete CDP markers
+  delete window.cdc_adoQpoasnfa76pfcZLmcfl_Array;
+  delete window.cdc_adoQpoasnfa76pfcZLmcfl_Promise;
+  delete window.cdc_adoQpoasnfa76pfcZLmcfl_Symbol;
+  
+  // 3. Mock plugins array
+  Object.defineProperty(navigator, 'plugins', {
+    get: () => {
+      const plugins = [
+        { name: 'Chrome PDF Plugin', filename: 'internal-pdf-viewer', description: 'Portable Document Format' },
+        { name: 'Chrome PDF Viewer', filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai', description: '' },
+        { name: 'Native Client', filename: 'internal-nacl-plugin', description: '' }
+      ];
+      plugins.length = 3;
+      return plugins;
+    },
+    configurable: true
+  });
+  
+  // 4. Mock languages
+  Object.defineProperty(navigator, 'languages', {
+    get: () => ['en-US', 'en'],
+    configurable: true
+  });
+  
+  // 5. Fix user agent if HeadlessChrome present
+  if (navigator.userAgent.includes('HeadlessChrome')) {
+    Object.defineProperty(navigator, 'userAgent', {
+      get: () => navigator.userAgent.replace('HeadlessChrome', 'Chrome'),
+      configurable: true
+    });
+  }
+  
+  // 6. Mock permissions
+  const originalQuery = navigator.permissions?.query;
+  if (originalQuery) {
+    navigator.permissions.query = (parameters) => {
+      if (parameters.name === 'notifications') {
+        return Promise.resolve({ state: 'prompt', onchange: null });
+      }
+      return originalQuery.call(navigator.permissions, parameters);
+    };
+  }
+  
+  // 7. Mock chrome.runtime
+  if (!window.chrome) window.chrome = {};
+  if (!window.chrome.runtime) {
+    window.chrome.runtime = {
+      connect: () => {},
+      sendMessage: () => {},
+      onMessage: { addListener: () => {} }
+    };
+  }
   
   return true;
 })()
@@ -131,6 +199,7 @@ type ExperimentalOptions struct {
 	Timeout  time.Duration // Page load timeout (default 30s)
 	WaitFor  time.Duration // Wait after load before extracting (default 2s)
 	Snapshot bool          // Also produce accessibility snapshot
+	Stealth  bool          // Enable stealth mode to bypass bot detection
 }
 
 // ExperimentalResult holds the browser-rendered extraction
@@ -161,14 +230,31 @@ func FromURLExperimental(targetURL string, opts ExperimentalOptions) Experimenta
 		Rendered: true,
 	}
 
+	// Build Chrome flags
+	chromeFlags := []chromedp.ExecAllocatorOption{
+		chromedp.Flag("headless", true),
+		chromedp.Flag("disable-gpu", true),
+		chromedp.Flag("no-sandbox", true),
+		chromedp.Flag("disable-dev-shm-usage", true),
+	}
+
+	// Add stealth flags when escape-detection is enabled
+	if opts.Stealth {
+		chromeFlags = append(chromeFlags,
+			chromedp.Flag("disable-blink-features", "AutomationControlled"),
+			chromedp.Flag("disable-features", "TranslateUI"),
+			chromedp.Flag("disable-infobars", true),
+			chromedp.Flag("disable-background-networking", true),
+			chromedp.Flag("disable-sync", true),
+			chromedp.Flag("disable-default-apps", true),
+			chromedp.Flag("disable-extensions", true),
+			chromedp.UserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"),
+		)
+	}
+
 	// Create headless Chrome context
 	allocCtx, allocCancel := chromedp.NewExecAllocator(context.Background(),
-		append(chromedp.DefaultExecAllocatorOptions[:],
-			chromedp.Flag("headless", true),
-			chromedp.Flag("disable-gpu", true),
-			chromedp.Flag("no-sandbox", true),
-			chromedp.Flag("disable-dev-shm-usage", true),
-		)...,
+		append(chromedp.DefaultExecAllocatorOptions[:], chromeFlags...)...,
 	)
 	defer allocCancel()
 
@@ -179,6 +265,21 @@ func FromURLExperimental(targetURL string, opts ExperimentalOptions) Experimenta
 	defer cancel()
 
 	var title, html, outerHTML string
+
+	// Inject stealth script before navigation if enabled
+	if opts.Stealth {
+		err := chromedp.Run(ctx,
+			chromedp.ActionFunc(func(ctx context.Context) error {
+				// Inject stealth script that runs on every new document
+				_, err := page.AddScriptToEvaluateOnNewDocument(stealthScript).Do(ctx)
+				return err
+			}),
+		)
+		if err != nil {
+			// Non-fatal: continue without stealth injection
+			fmt.Printf("Warning: stealth injection failed: %v\n", err)
+		}
+	}
 
 	// Navigate and wait for DOM to stabilize
 	// Strategy: poll DOM length until it stops changing

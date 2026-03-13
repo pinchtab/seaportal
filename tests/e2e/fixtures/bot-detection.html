@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Bot Detection Test</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; }
+    .status { padding: 12px; margin: 8px 0; border-radius: 4px; }
+    .pass { background: #d4edda; color: #155724; }
+    .fail { background: #f8d7da; color: #721c24; }
+    .warn { background: #fff3cd; color: #856404; }
+    h1 { color: #333; }
+    #results { margin-top: 20px; }
+    .check { display: flex; justify-content: space-between; padding: 8px 12px; border-bottom: 1px solid #eee; }
+    .check-name { font-weight: 500; }
+    .protected-content { display: none; }
+    .protected-content.unlocked { display: block; background: #e8f5e9; padding: 20px; border-radius: 8px; margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <h1>🔍 Bot Detection Suite</h1>
+  <p>This page runs detection checks and reveals protected content only to human browsers.</p>
+  
+  <div id="results">
+    <p>Running checks...</p>
+  </div>
+  
+  <div id="protected-content" class="protected-content">
+    <h2>🎉 Protected Content Unlocked</h2>
+    <p>Congratulations! Your browser passed all detection checks.</p>
+    
+    <h3>Secret API Documentation</h3>
+    <p>The SeaPortal stealth mode uses a multi-layer approach to browser fingerprint normalization. 
+    Each layer addresses a specific detection vector commonly used by anti-bot systems.</p>
+    
+    <h4>Layer 1: Navigator Properties</h4>
+    <p>Override navigator.webdriver, navigator.plugins, and navigator.languages to match 
+    typical human browser configurations. The webdriver property is the most commonly checked 
+    indicator of automation.</p>
+    
+    <h4>Layer 2: Chrome Runtime</h4>
+    <p>Inject a mock chrome.runtime object that passes existence checks without exposing 
+    automation-specific APIs. Many sites check for chrome.runtime.connect availability.</p>
+    
+    <h4>Layer 3: Timing Analysis</h4>
+    <p>Introduce micro-delays in event handling to simulate human reaction times. 
+    Bots typically respond to events with sub-millisecond precision, while humans 
+    exhibit natural variance in the 50-300ms range.</p>
+    
+    <h4>Layer 4: Canvas Fingerprint</h4>
+    <p>Apply subtle noise to canvas rendering operations to prevent fingerprint matching 
+    against known headless browser signatures. The noise is imperceptible but unique per session.</p>
+  </div>
+  
+  <script>
+    const checks = [];
+    const results = document.getElementById('results');
+    const protectedContent = document.getElementById('protected-content');
+    
+    function addCheck(name, passed, detail) {
+      checks.push({ name, passed, detail });
+    }
+    
+    // === DETECTION CHECKS ===
+    
+    // Check 1: WebDriver property
+    (function checkWebDriver() {
+      const hasWebDriver = navigator.webdriver === true;
+      addCheck('WebDriver Property', !hasWebDriver, 
+        hasWebDriver ? 'navigator.webdriver is true' : 'navigator.webdriver is false/undefined');
+    })();
+    
+    // Check 2: Chrome automation extension
+    (function checkChromeAutomation() {
+      const hasCdp = !!(window.cdc_adoQpoasnfa76pfcZLmcfl_Array || 
+                        window.cdc_adoQpoasnfa76pfcZLmcfl_Promise ||
+                        window.cdc_adoQpoasnfa76pfcZLmcfl_Symbol);
+      addCheck('Chrome DevTools Protocol', !hasCdp,
+        hasCdp ? 'CDP markers detected' : 'No CDP markers found');
+    })();
+    
+    // Check 3: Plugins array
+    (function checkPlugins() {
+      const hasPlugins = navigator.plugins && navigator.plugins.length > 0;
+      addCheck('Browser Plugins', hasPlugins,
+        hasPlugins ? `${navigator.plugins.length} plugins detected` : 'No plugins (headless indicator)');
+    })();
+    
+    // Check 4: Languages
+    (function checkLanguages() {
+      const hasLanguages = navigator.languages && navigator.languages.length > 0;
+      addCheck('Language Settings', hasLanguages,
+        hasLanguages ? navigator.languages.join(', ') : 'No languages configured');
+    })();
+    
+    // Check 5: WebGL Renderer
+    (function checkWebGL() {
+      try {
+        const canvas = document.createElement('canvas');
+        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+        if (gl) {
+          const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+          if (debugInfo) {
+            const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+            const isSwiftShader = renderer.includes('SwiftShader') || renderer.includes('llvmpipe');
+            addCheck('WebGL Renderer', !isSwiftShader,
+              isSwiftShader ? `Software renderer: ${renderer}` : renderer);
+          } else {
+            addCheck('WebGL Renderer', true, 'WebGL available (no debug info)');
+          }
+        } else {
+          addCheck('WebGL Renderer', false, 'WebGL not available');
+        }
+      } catch (e) {
+        addCheck('WebGL Renderer', false, 'WebGL check failed');
+      }
+    })();
+    
+    // Check 6: Screen dimensions
+    (function checkScreen() {
+      const hasRealScreen = window.screen.width > 0 && window.screen.height > 0 && 
+                            window.outerWidth > 0 && window.outerHeight > 0;
+      const ratio = window.devicePixelRatio || 1;
+      addCheck('Screen Dimensions', hasRealScreen,
+        `${window.screen.width}x${window.screen.height} @ ${ratio}x`);
+    })();
+    
+    // Check 7: Notification permission (headless often has 'denied')
+    (function checkNotifications() {
+      if ('Notification' in window) {
+        const perm = Notification.permission;
+        // 'default' is normal for fresh browsers, 'denied' can indicate headless
+        addCheck('Notification API', perm !== 'denied',
+          `Permission: ${perm}`);
+      } else {
+        addCheck('Notification API', false, 'Not available');
+      }
+    })();
+    
+    // Check 8: User agent consistency
+    (function checkUserAgent() {
+      const ua = navigator.userAgent;
+      const isHeadless = ua.includes('HeadlessChrome') || ua.includes('Headless');
+      addCheck('User Agent', !isHeadless,
+        isHeadless ? 'Headless detected in UA' : ua.substring(0, 60) + '...');
+    })();
+    
+    // === RENDER RESULTS ===
+    function renderResults() {
+      const passed = checks.filter(c => c.passed).length;
+      const total = checks.length;
+      const allPassed = passed === total;
+      
+      let html = `<h2>${passed}/${total} checks passed</h2>`;
+      
+      checks.forEach(check => {
+        const status = check.passed ? 'pass' : 'fail';
+        html += `
+          <div class="check ${status}">
+            <span class="check-name">${check.passed ? '✅' : '❌'} ${check.name}</span>
+            <span class="check-detail">${check.detail}</span>
+          </div>
+        `;
+      });
+      
+      results.innerHTML = html;
+      
+      // Only unlock protected content if ALL checks pass
+      if (allPassed) {
+        protectedContent.classList.add('unlocked');
+      }
+    }
+    
+    // Run after a small delay to simulate real page load
+    setTimeout(renderResults, 100);
+  </script>
+</body>
+</html>
