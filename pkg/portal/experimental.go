@@ -287,7 +287,7 @@ func FromURLExperimental(targetURL string, opts ExperimentalOptions) Experimenta
 		chromedp.Navigate(targetURL),
 		chromedp.Sleep(opts.WaitFor),
 		chromedp.ActionFunc(func(ctx context.Context) error {
-			return waitForDOMStable(ctx, 500*time.Millisecond, 5)
+			return waitForDOMStable(ctx, 500*time.Millisecond, 8) // Extended for late-loading content
 		}),
 		// Wait for CSS animations to complete
 		chromedp.ActionFunc(func(ctx context.Context) error {
