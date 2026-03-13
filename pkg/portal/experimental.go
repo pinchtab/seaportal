@@ -98,6 +98,38 @@ const stealthScript = `
     };
   }
   
+  // 8. Mock WebGL to hide SwiftShader/headless renderer
+  const originalGetContext = HTMLCanvasElement.prototype.getContext;
+  HTMLCanvasElement.prototype.getContext = function(type, attributes) {
+    const ctx = originalGetContext.call(this, type, attributes);
+    if (ctx && (type === 'webgl' || type === 'webgl2' || type === 'experimental-webgl')) {
+      const originalGetExtension = ctx.getExtension.bind(ctx);
+      const originalGetParameter = ctx.getParameter.bind(ctx);
+      
+      ctx.getExtension = function(name) {
+        if (name === 'WEBGL_debug_renderer_info') {
+          return {
+            UNMASKED_VENDOR_WEBGL: 37445,
+            UNMASKED_RENDERER_WEBGL: 37446
+          };
+        }
+        return originalGetExtension(name);
+      };
+      
+      ctx.getParameter = function(param) {
+        // Mock renderer info to look like a real GPU
+        if (param === 37446) { // UNMASKED_RENDERER_WEBGL
+          return 'ANGLE (Apple, Apple M1 Pro, OpenGL 4.1)';
+        }
+        if (param === 37445) { // UNMASKED_VENDOR_WEBGL
+          return 'Google Inc. (Apple)';
+        }
+        return originalGetParameter(param);
+      };
+    }
+    return ctx;
+  };
+  
   return true;
 })()
 `
@@ -231,16 +263,18 @@ func FromURLExperimental(targetURL string, opts ExperimentalOptions) Experimenta
 	}
 
 	// Build Chrome flags
-	chromeFlags := []chromedp.ExecAllocatorOption{
-		chromedp.Flag("headless", true),
-		chromedp.Flag("disable-gpu", true),
-		chromedp.Flag("no-sandbox", true),
-		chromedp.Flag("disable-dev-shm-usage", true),
-	}
-
-	// Add stealth flags when escape-detection is enabled
+	var chromeFlags []chromedp.ExecAllocatorOption
+	
 	if opts.Stealth {
-		chromeFlags = append(chromeFlags,
+		// Stealth mode: enable GPU/WebGL for fingerprint consistency
+		chromeFlags = []chromedp.ExecAllocatorOption{
+			chromedp.Flag("headless", true),
+			chromedp.Flag("no-sandbox", true),
+			chromedp.Flag("disable-dev-shm-usage", true),
+			// Enable WebGL with software rendering (don't disable GPU entirely)
+			chromedp.Flag("use-gl", "angle"),
+			chromedp.Flag("use-angle", "swiftshader"),
+			// Stealth flags
 			chromedp.Flag("disable-blink-features", "AutomationControlled"),
 			chromedp.Flag("disable-features", "TranslateUI"),
 			chromedp.Flag("disable-infobars", true),
@@ -249,7 +283,14 @@ func FromURLExperimental(targetURL string, opts ExperimentalOptions) Experimenta
 			chromedp.Flag("disable-default-apps", true),
 			chromedp.Flag("disable-extensions", true),
 			chromedp.UserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"),
-		)
+		}
+	} else {
+		chromeFlags = []chromedp.ExecAllocatorOption{
+			chromedp.Flag("headless", true),
+			chromedp.Flag("disable-gpu", true),
+			chromedp.Flag("no-sandbox", true),
+			chromedp.Flag("disable-dev-shm-usage", true),
+		}
 	}
 
 	// Create headless Chrome context
