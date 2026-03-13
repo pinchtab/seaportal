@@ -307,11 +307,9 @@ func FromURLExperimental(targetURL string, opts ExperimentalOptions) Experimenta
 			time.Sleep(200 * time.Millisecond) // let event handlers run
 			return nil
 		}),
-		// Force visibility on hidden content (animation placeholders, lazy sections)
-		chromedp.ActionFunc(func(ctx context.Context) error {
-			var done bool
-			return chromedp.Evaluate(forceVisibilityScript, &done).Do(ctx)
-		}),
+		// NOTE: forceVisibilityScript removed — its CSS overrides (* { height: auto !important })
+		// broke readability parser, causing 0-byte extractions. The triggerAnimationEndScript
+		// above handles animation-gated content without side effects.
 		chromedp.Title(&title),
 		chromedp.ActionFunc(func(ctx context.Context) error {
 			// Extract HTML with Shadow DOM content flattened into the light DOM
