@@ -222,7 +222,7 @@ func FromURLExperimental(targetURL string, opts ExperimentalOptions) Experimenta
 		opts.Timeout = 30 * time.Second
 	}
 	if opts.WaitFor == 0 {
-		opts.WaitFor = 2 * time.Second
+		opts.WaitFor = 5 * time.Second // Extended to catch late-loading content (blob URLs, etc.)
 	}
 
 	result := ExperimentalResult{
