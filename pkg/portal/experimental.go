@@ -5,7 +5,11 @@ import (
 	"fmt"
 	"time"
 
+	"log"
+	"net/url"
+
 	"github.com/chromedp/cdproto/input"
+	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/chromedp"
 )
@@ -35,6 +39,86 @@ const triggerAnimationEndScript = `
   return true;
 })()
 `
+
+// clickGDPRAccept finds and clicks GDPR accept buttons using CDP mouse events
+// Returns true if a button was found and clicked
+func clickGDPRAccept(ctx context.Context) bool {
+	var coords string
+	err := chromedp.Evaluate(`
+		(function() {
+			// Common accept button selectors across GDPR frameworks
+			const selectors = [
+				'.sp-cc-buttons .a-button-text',
+				'#sp-cc-accept',
+				'#onetrust-accept-btn-handler',
+				'#CybotCookiebotDialogBodyButtonAccept',
+				'#CybotCookiebotDialogBodyLevelButtonLevelOptinAllowAll',
+				'#didomi-notice-agree-button',
+				'.qc-cmp2-summary-buttons button[mode="primary"]',
+				'.osano-cm-accept-all',
+				'.cky-btn-accept',
+				'.t-acceptAllBtn',
+				'[data-action="accept"]',
+				'button[id*="accept"]',
+				'button[class*="accept"]',
+				'#accept-cookie-notification',
+				'.js-accept-cookies',
+				'[data-testid="cookie-policy-dialog-accept-button"]',
+			];
+			
+			// Also check for text-based matching
+			const acceptTexts = ['accept', 'accept all', 'accept cookies', 'allow all', 
+			                     'agree', 'i accept', 'i agree', 'got it', 'ok'];
+			
+			// Try selector-based approach first
+			for (const sel of selectors) {
+				try {
+					const els = document.querySelectorAll(sel);
+					for (const el of els) {
+						const text = el.textContent.trim().toLowerCase();
+						if (acceptTexts.some(t => text === t) || el.id.includes('accept')) {
+							const rect = el.getBoundingClientRect();
+							if (rect.width > 0 && rect.height > 0) {
+								return JSON.stringify({x: rect.x + rect.width/2, y: rect.y + rect.height/2});
+							}
+						}
+					}
+				} catch(e) {}
+			}
+			
+			// Fallback: scan all buttons/links for accept text
+			const allClickable = document.querySelectorAll('button, a, input[type="submit"], [role="button"]');
+			for (const el of allClickable) {
+				const text = (el.textContent || el.value || '').trim().toLowerCase();
+				if (acceptTexts.some(t => text === t)) {
+					const rect = el.getBoundingClientRect();
+					if (rect.width > 0 && rect.height > 0) {
+						return JSON.stringify({x: rect.x + rect.width/2, y: rect.y + rect.height/2});
+					}
+				}
+			}
+			
+			return '';
+		})()
+	`, &coords).Do(ctx)
+
+	if err != nil || coords == "" {
+		return false
+	}
+
+	var x, y float64
+	if _, err := fmt.Sscanf(coords, `{"x":%f,"y":%f}`, &x, &y); err != nil || x <= 0 || y <= 0 {
+		return false
+	}
+
+	// CDP mouse click at button coordinates
+	input.DispatchMouseEvent(input.MousePressed, x, y).
+		WithButton(input.Left).WithClickCount(1).Do(ctx)
+	input.DispatchMouseEvent(input.MouseReleased, x, y).
+		WithButton(input.Left).WithClickCount(1).Do(ctx)
+
+	return true
+}
 
 // simulateMouseMovement uses CDP Input.dispatchMouseEvent for realistic mouse simulation
 // that triggers all DOM event listeners (unlike synthetic JS events).
@@ -630,6 +714,179 @@ const stealthScript = `
 })()
 `
 
+// gdprConsentScript handles common GDPR cookie consent dialogs
+// Attempts to click "Accept" buttons or remove overlay elements
+const gdprConsentScript = `
+(function() {
+  // Common accept button selectors across various GDPR frameworks
+  const acceptSelectors = [
+    // Generic patterns
+    '[data-action="accept"]',
+    '[data-consent="accept"]',
+    'button[id*="accept"]',
+    'button[class*="accept"]',
+    'a[id*="accept"]',
+    'a[class*="accept"]',
+    
+    // OneTrust
+    '#onetrust-accept-btn-handler',
+    '.onetrust-accept-btn-handler',
+    
+    // CookieBot
+    '#CybotCookiebotDialogBodyLevelButtonLevelOptinAllowAll',
+    '#CybotCookiebotDialogBodyButtonAccept',
+    
+    // TrustArc / TrustE
+    '.trustarc-agree-btn',
+    '.pdynamicbutton .call',
+    
+    // Quantcast
+    '.qc-cmp2-summary-buttons button[mode="primary"]',
+    '.qc-cmp-button',
+    
+    // Didomi
+    '#didomi-notice-agree-button',
+    
+    // Klaro
+    '.klaro .cm-btn-success',
+    
+    // Osano
+    '.osano-cm-accept-all',
+    
+    // CookieYes
+    '.cky-btn-accept',
+    
+    // Termly
+    '.t-acceptAllBtn',
+    
+    // Amazon specific
+    '#sp-cc-accept',
+    'input[name="accept"]',
+    
+    // Generic text-based patterns
+    'button:contains("Accept")',
+    'button:contains("Accept All")',
+    'button:contains("Accept Cookies")',
+    'button:contains("Allow All")',
+    'button:contains("Allow Cookies")',
+    'button:contains("I Accept")',
+    'button:contains("I Agree")',
+    'button:contains("Got it")',
+    'button:contains("OK")',
+    'button:contains("Agree")',
+    'a:contains("Accept")',
+    'a:contains("Accept All")',
+  ];
+  
+  // Try to find and click accept button
+  function tryClickAccept() {
+    for (const selector of acceptSelectors) {
+      try {
+        // Handle :contains pseudo-selector (not native)
+        if (selector.includes(':contains(')) {
+          const match = selector.match(/^(\w+):contains\("(.+)"\)$/);
+          if (match) {
+            const [, tag, text] = match;
+            const elements = document.querySelectorAll(tag);
+            for (const el of elements) {
+              if (el.textContent.trim().toLowerCase().includes(text.toLowerCase())) {
+                if (el.offsetParent !== null) { // visible
+                  el.click();
+                  return true;
+                }
+              }
+            }
+          }
+        } else {
+          const el = document.querySelector(selector);
+          if (el && el.offsetParent !== null) {
+            el.click();
+            return true;
+          }
+        }
+      } catch(e) {}
+    }
+    return false;
+  }
+  
+  // Common overlay/modal selectors to remove if clicking fails
+  const overlaySelectors = [
+    '#onetrust-consent-sdk',
+    '#onetrust-banner-sdk',
+    '.onetrust-pc-dark-filter',
+    '#CybotCookiebotDialog',
+    '#CybotCookiebotDialogBodyUnderlay',
+    '.qc-cmp2-container',
+    '#didomi-host',
+    '.klaro',
+    '.osano-cm-window',
+    '.cky-consent-container',
+    '#sp-cc', // Amazon
+    '[class*="cookie-banner"]',
+    '[class*="cookie-consent"]',
+    '[class*="cookie-notice"]',
+    '[class*="gdpr"]',
+    '[id*="cookie-banner"]',
+    '[id*="cookie-consent"]',
+    '[id*="gdpr"]',
+    '[aria-label*="cookie"]',
+    '[aria-label*="consent"]',
+  ];
+  
+  // Remove overlay elements
+  function removeOverlays() {
+    let removed = 0;
+    for (const selector of overlaySelectors) {
+      try {
+        const els = document.querySelectorAll(selector);
+        els.forEach(el => {
+          el.remove();
+          removed++;
+        });
+      } catch(e) {}
+    }
+    
+    // Also try to remove any fixed/sticky elements that might be overlays
+    document.querySelectorAll('*').forEach(el => {
+      try {
+        const style = window.getComputedStyle(el);
+        if ((style.position === 'fixed' || style.position === 'sticky') && 
+            style.zIndex > 1000 &&
+            (el.textContent.toLowerCase().includes('cookie') || 
+             el.textContent.toLowerCase().includes('consent') ||
+             el.textContent.toLowerCase().includes('privacy'))) {
+          el.remove();
+          removed++;
+        }
+      } catch(e) {}
+    });
+    
+    // Remove any body overflow:hidden that might be blocking scroll
+    document.body.style.overflow = 'auto';
+    document.documentElement.style.overflow = 'auto';
+    
+    return removed;
+  }
+  
+  // First try to click accept
+  let clicked = tryClickAccept();
+  
+  // If no button found, try removing overlays
+  if (!clicked) {
+    removeOverlays();
+  }
+  
+  // Also try again after a short delay (some dialogs load async)
+  setTimeout(() => {
+    if (!tryClickAccept()) {
+      removeOverlays();
+    }
+  }, 500);
+  
+  return clicked ? 'clicked' : 'removed';
+})()
+`
+
 // forceVisibilityScript reveals hidden content before extraction.
 // This handles CSS-animated content, lazy placeholders, and display:none sections.
 const forceVisibilityScript = `
@@ -817,6 +1074,24 @@ func FromURLExperimental(targetURL string, opts ExperimentalOptions) Experimenta
 		}
 	}
 
+	// Pre-set common GDPR consent cookies before navigation
+	parsedURL, _ := url.Parse(targetURL)
+	if parsedURL != nil {
+		domain := parsedURL.Hostname()
+		// Set common consent cookies
+		consentCookies := map[string]string{
+			"sp-cdn":              `"L5Z9:IT"`, // Amazon: consent accepted
+			"euconsent-v2":        "accepted",  // IAB TCF v2
+			"OptanonAlertBoxClosed": time.Now().UTC().Format(time.RFC3339), // OneTrust
+			"CookieConsent":       "true",      // CookieBot
+		}
+		for name, value := range consentCookies {
+			chromedp.Run(ctx, chromedp.ActionFunc(func(ctx context.Context) error {
+				return network.SetCookie(name, value).WithDomain(domain).Do(ctx)
+			}))
+		}
+	}
+
 	// Navigate and wait for DOM to stabilize
 	// Strategy: poll DOM length until it stops changing
 	err := chromedp.Run(ctx,
@@ -828,6 +1103,54 @@ func FromURLExperimental(targetURL string, opts ExperimentalOptions) Experimenta
 			if opts.Stealth {
 				return simulateMouseMovement(ctx)
 			}
+			return nil
+		}),
+		// Handle GDPR cookie consent
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			time.Sleep(1 * time.Second)
+
+			// Step 1: Try CDP click on accept button
+			if clickGDPRAccept(ctx) {
+				log.Println("[GDPR] Clicked accept button")
+				time.Sleep(2 * time.Second)
+				return nil
+			}
+
+			// Step 2: Force-remove consent overlays from DOM
+			var removed int
+			chromedp.Evaluate(`
+				(function() {
+					let removed = 0;
+					// Remove known GDPR overlays
+					const selectors = [
+						'#sp-cc', '.sp-cc',
+						'#onetrust-consent-sdk', '#onetrust-banner-sdk', '.onetrust-pc-dark-filter',
+						'#CybotCookiebotDialog', '#CybotCookiebotDialogBodyUnderlay',
+						'#didomi-host', '.qc-cmp2-container', '.klaro', '.osano-cm-window',
+						'.cky-consent-container', '[class*="cookie-banner"]', '[class*="cookie-consent"]',
+						'[id*="cookie-banner"]', '[id*="cookie-consent"]', '[id*="gdpr"]'
+					];
+					selectors.forEach(s => {
+						document.querySelectorAll(s).forEach(el => { el.remove(); removed++; });
+					});
+					// Remove high-z-index fixed overlays about cookies
+					document.querySelectorAll('*').forEach(el => {
+						try {
+							const s = getComputedStyle(el);
+							if ((s.position === 'fixed' || s.position === 'sticky') && 
+							    parseInt(s.zIndex) > 999 &&
+							    el.textContent.toLowerCase().includes('cookie')) {
+								el.remove(); removed++;
+							}
+						} catch(e) {}
+					});
+					document.body.style.overflow = 'auto';
+					document.documentElement.style.overflow = 'auto';
+					return removed;
+				})()
+			`, &removed).Do(ctx)
+			log.Printf("[GDPR] Removed %d overlay elements", removed)
+			time.Sleep(500 * time.Millisecond)
 			return nil
 		}),
 		chromedp.Sleep(opts.WaitFor),
