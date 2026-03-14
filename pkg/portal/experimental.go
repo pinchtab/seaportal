@@ -35,6 +35,101 @@ const triggerAnimationEndScript = `
 })()
 `
 
+// mouseEntropyScript simulates human-like mouse movements to pass behavioral detection
+const mouseEntropyScript = `
+(function() {
+  // Bézier curve helper for smooth, curved paths
+  function bezierPoint(t, p0, p1, p2, p3) {
+    const u = 1 - t;
+    return u*u*u*p0 + 3*u*u*t*p1 + 3*u*t*t*p2 + t*t*t*p3;
+  }
+  
+  // Generate human-like mouse path using cubic Bézier curves
+  function generatePath(startX, startY, endX, endY, steps) {
+    const points = [];
+    
+    // Control points with randomness for natural curves
+    const cp1x = startX + (endX - startX) * 0.25 + (Math.random() - 0.5) * 100;
+    const cp1y = startY + (endY - startY) * 0.1 + (Math.random() - 0.5) * 80;
+    const cp2x = startX + (endX - startX) * 0.75 + (Math.random() - 0.5) * 100;
+    const cp2y = startY + (endY - startY) * 0.9 + (Math.random() - 0.5) * 80;
+    
+    for (let i = 0; i <= steps; i++) {
+      // Non-linear t for acceleration/deceleration (ease-in-out)
+      let t = i / steps;
+      t = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+      
+      const x = bezierPoint(t, startX, cp1x, cp2x, endX);
+      const y = bezierPoint(t, startY, cp1y, cp2y, endY);
+      
+      // Add micro-jitter to simulate hand tremor
+      const jitterX = (Math.random() - 0.5) * 2;
+      const jitterY = (Math.random() - 0.5) * 2;
+      
+      points.push({ x: x + jitterX, y: y + jitterY });
+    }
+    return points;
+  }
+  
+  // Dispatch synthetic mouse events
+  function dispatchMouse(type, x, y) {
+    const event = new MouseEvent(type, {
+      bubbles: true,
+      cancelable: true,
+      view: window,
+      clientX: x,
+      clientY: y,
+      screenX: x,
+      screenY: y
+    });
+    document.elementFromPoint(x, y)?.dispatchEvent(event) || document.body.dispatchEvent(event);
+  }
+  
+  // Simulate realistic mouse movement
+  async function simulateMovement() {
+    const viewW = window.innerWidth;
+    const viewH = window.innerHeight;
+    
+    // Start from random position
+    let x = Math.random() * viewW * 0.8 + viewW * 0.1;
+    let y = Math.random() * viewH * 0.8 + viewH * 0.1;
+    
+    // Make 2-3 movements with pauses
+    const numMoves = 2 + Math.floor(Math.random() * 2);
+    
+    for (let m = 0; m < numMoves; m++) {
+      // Random target
+      const targetX = Math.random() * viewW * 0.8 + viewW * 0.1;
+      const targetY = Math.random() * viewH * 0.8 + viewH * 0.1;
+      
+      // Generate curved path with 15-25 points
+      const steps = 15 + Math.floor(Math.random() * 10);
+      const path = generatePath(x, y, targetX, targetY, steps);
+      
+      // Move along path with variable speed
+      for (const point of path) {
+        dispatchMouse('mousemove', point.x, point.y);
+        // Variable delay: 10-30ms per step (mimics human reaction time variance)
+        await new Promise(r => setTimeout(r, 10 + Math.random() * 20));
+      }
+      
+      // Occasional hover pause (50-150ms)
+      if (Math.random() > 0.5) {
+        await new Promise(r => setTimeout(r, 50 + Math.random() * 100));
+      }
+      
+      x = targetX;
+      y = targetY;
+    }
+    
+    return true;
+  }
+  
+  // Execute and return promise
+  return simulateMovement();
+})()
+`
+
 // stealthScript injects anti-detection bypasses before page loads
 const stealthScript = `
 (function() {
@@ -293,6 +388,15 @@ func FromURLExperimental(targetURL string, opts ExperimentalOptions) Experimenta
 	// Strategy: poll DOM length until it stops changing
 	err := chromedp.Run(ctx,
 		chromedp.Navigate(targetURL),
+		// Run mouse simulation early if stealth mode (before page's detection scripts finish)
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			if opts.Stealth {
+				// Execute mouse entropy simulation (async, runs in background)
+				var done bool
+				chromedp.Evaluate(mouseEntropyScript, &done).Do(ctx)
+			}
+			return nil
+		}),
 		chromedp.Sleep(opts.WaitFor),
 		chromedp.ActionFunc(func(ctx context.Context) error {
 			return waitForDOMStable(ctx, 500*time.Millisecond, 8) // Extended for late-loading content
