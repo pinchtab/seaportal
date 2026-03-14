@@ -3,13 +3,10 @@ package portal
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
-	"log"
-	"net/url"
-
 	"github.com/chromedp/cdproto/input"
-	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/chromedp"
 )
@@ -1002,6 +999,8 @@ type ExperimentalResult struct {
 // FromURLExperimental renders a page in headless Chrome and extracts content
 func FromURLExperimental(targetURL string, opts ExperimentalOptions) ExperimentalResult {
 	start := time.Now()
+	fmt.Fprintf(os.Stderr, "[DEBUG] FromURLExperimental called with Stealth=%v\n", opts.Stealth)
+	os.WriteFile("/tmp/seaportal_debug.txt", []byte(fmt.Sprintf("Stealth=%v", opts.Stealth)), 0644)
 
 	if opts.Timeout == 0 {
 		opts.Timeout = 30 * time.Second
@@ -1074,22 +1073,29 @@ func FromURLExperimental(targetURL string, opts ExperimentalOptions) Experimenta
 		}
 	}
 
-	// Pre-set common GDPR consent cookies before navigation
-	parsedURL, _ := url.Parse(targetURL)
-	if parsedURL != nil {
-		domain := parsedURL.Hostname()
-		// Set common consent cookies
-		consentCookies := map[string]string{
-			"sp-cdn":              `"L5Z9:IT"`, // Amazon: consent accepted
-			"euconsent-v2":        "accepted",  // IAB TCF v2
-			"OptanonAlertBoxClosed": time.Now().UTC().Format(time.RFC3339), // OneTrust
-			"CookieConsent":       "true",      // CookieBot
+	// TWO-PASS GDPR HANDLING:
+	// Pass 1: Navigate without full stealth, handle cookie consent
+	// Pass 2: Navigate again with stealth for extraction (cookies now set)
+	if opts.Stealth {
+		fmt.Println("[GDPR] Pass 1: Handling cookie consent...")
+		err := chromedp.Run(ctx,
+			chromedp.Navigate(targetURL),
+			chromedp.Sleep(2*time.Second),
+			// Click accept button via CDP
+			chromedp.ActionFunc(func(ctx context.Context) error {
+				if clickGDPRAccept(ctx) {
+					fmt.Println("[GDPR] Clicked accept button")
+					time.Sleep(1 * time.Second)
+				} else {
+					fmt.Println("[GDPR] No accept button found in pass 1")
+				}
+				return nil
+			}),
+		)
+		if err != nil {
+			fmt.Printf("[GDPR] Pass 1 warning: %v\n", err)
 		}
-		for name, value := range consentCookies {
-			chromedp.Run(ctx, chromedp.ActionFunc(func(ctx context.Context) error {
-				return network.SetCookie(name, value).WithDomain(domain).Do(ctx)
-			}))
-		}
+		fmt.Println("[GDPR] Pass 2: Navigating with stealth for extraction...")
 	}
 
 	// Navigate and wait for DOM to stabilize
@@ -1105,52 +1111,22 @@ func FromURLExperimental(targetURL string, opts ExperimentalOptions) Experimenta
 			}
 			return nil
 		}),
-		// Handle GDPR cookie consent
+		// GDPR consent already handled in pass 1 (if stealth mode)
+		// Just do a quick cleanup of any remaining overlays
 		chromedp.ActionFunc(func(ctx context.Context) error {
-			time.Sleep(1 * time.Second)
-
-			// Step 1: Try CDP click on accept button
-			if clickGDPRAccept(ctx) {
-				log.Println("[GDPR] Clicked accept button")
-				time.Sleep(2 * time.Second)
-				return nil
-			}
-
-			// Step 2: Force-remove consent overlays from DOM
 			var removed int
 			chromedp.Evaluate(`
 				(function() {
 					let removed = 0;
-					// Remove known GDPR overlays
-					const selectors = [
-						'#sp-cc', '.sp-cc',
-						'#onetrust-consent-sdk', '#onetrust-banner-sdk', '.onetrust-pc-dark-filter',
-						'#CybotCookiebotDialog', '#CybotCookiebotDialogBodyUnderlay',
-						'#didomi-host', '.qc-cmp2-container', '.klaro', '.osano-cm-window',
-						'.cky-consent-container', '[class*="cookie-banner"]', '[class*="cookie-consent"]',
-						'[id*="cookie-banner"]', '[id*="cookie-consent"]', '[id*="gdpr"]'
-					];
-					selectors.forEach(s => {
+					['#sp-cc', '#onetrust-consent-sdk', '#CybotCookiebotDialog', '#didomi-host',
+					 '.qc-cmp2-container', '[class*="cookie-banner"]', '[id*="cookie-consent"]'
+					].forEach(s => {
 						document.querySelectorAll(s).forEach(el => { el.remove(); removed++; });
 					});
-					// Remove high-z-index fixed overlays about cookies
-					document.querySelectorAll('*').forEach(el => {
-						try {
-							const s = getComputedStyle(el);
-							if ((s.position === 'fixed' || s.position === 'sticky') && 
-							    parseInt(s.zIndex) > 999 &&
-							    el.textContent.toLowerCase().includes('cookie')) {
-								el.remove(); removed++;
-							}
-						} catch(e) {}
-					});
 					document.body.style.overflow = 'auto';
-					document.documentElement.style.overflow = 'auto';
 					return removed;
 				})()
 			`, &removed).Do(ctx)
-			log.Printf("[GDPR] Removed %d overlay elements", removed)
-			time.Sleep(500 * time.Millisecond)
 			return nil
 		}),
 		chromedp.Sleep(opts.WaitFor),
