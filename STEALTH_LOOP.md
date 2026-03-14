@@ -70,9 +70,9 @@ Goal: Build robust stealth capabilities by evolving against real detection techn
 
 ## Success Criteria
 
-- Extract contains: "Protected Content Unlocked"
-- Extract contains: "Layer 1: Navigator Properties"
-- All 8 base checks show as passing in extraction
+- All Wave 1-4 checks show ✅ (currently 17 total)
+- Diamond tier achieved (450+ pts → "GHOST IN THE MACHINE")
+- Extract contains tiered secrets (Bronze → Silver → Gold → Diamond)
 
 ## Commands
 
