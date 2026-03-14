@@ -370,6 +370,57 @@ const stealthScript = `
     }
   });
   
+  // ============================================
+  // 12. WORKER CONTEXT CONSISTENCY
+  // Intercept Blob creation to inject spoofs into Worker scripts
+  // ============================================
+  const workerSpoofScript = ` + "`" + `
+    // Spoof navigator properties to match main thread
+    Object.defineProperty(navigator, 'languages', {
+      get: () => Object.freeze(['en-US', 'en']),
+      configurable: true
+    });
+    Object.defineProperty(navigator, 'hardwareConcurrency', {
+      get: () => 8,
+      configurable: true
+    });
+    Object.defineProperty(navigator, 'deviceMemory', {
+      get: () => 8,
+      configurable: true
+    });
+    Object.defineProperty(navigator, 'platform', {
+      get: () => 'MacIntel',
+      configurable: true
+    });
+  ` + "`" + `;
+  
+  // Track JavaScript blobs so we can intercept their URLs
+  const jsBlobMap = new WeakMap();
+  const OriginalBlob = window.Blob;
+  
+  window.Blob = function(parts, options) {
+    const blob = new OriginalBlob(parts, options);
+    // Track JavaScript blobs for worker interception
+    if (options && options.type && options.type.includes('javascript')) {
+      jsBlobMap.set(blob, parts);
+    }
+    return blob;
+  };
+  window.Blob.prototype = OriginalBlob.prototype;
+  Object.defineProperty(window.Blob, 'name', { value: 'Blob' });
+  
+  // Intercept createObjectURL to prepend spoofs to JS blobs
+  const origCreateObjectURL = URL.createObjectURL.bind(URL);
+  URL.createObjectURL = function(obj) {
+    // If this is a tracked JavaScript blob, prepend our spoof script
+    if (obj instanceof Blob && jsBlobMap.has(obj)) {
+      const originalParts = jsBlobMap.get(obj);
+      const spoofedBlob = new OriginalBlob([workerSpoofScript + ';\n', ...originalParts], { type: 'application/javascript' });
+      return origCreateObjectURL(spoofedBlob);
+    }
+    return origCreateObjectURL(obj);
+  };
+  
   return true;
 })()
 `
