@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/chromedp/cdproto/input"
 	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/chromedp"
 )
@@ -34,6 +35,47 @@ const triggerAnimationEndScript = `
   return true;
 })()
 `
+
+// simulateMouseMovement uses CDP Input.dispatchMouseEvent for realistic mouse simulation
+// that triggers all DOM event listeners (unlike synthetic JS events).
+// Must complete within ~400ms to beat detection script's 500ms collection window.
+func simulateMouseMovement(ctx context.Context) error {
+	// Random seed from current time
+	seed := time.Now().UnixNano()
+
+	// Generate ~25-35 mouse move points with curved path and variance
+	numPoints := 25 + int(seed%10)
+
+	// Starting position
+	x := 200.0 + float64(seed%200)
+	y := 250.0 + float64((seed/1000)%150)
+
+	for i := 0; i < numPoints; i++ {
+		// Curved path: base movement + sinusoidal deviation + jitter
+		baseX := x + float64(i*12)
+		baseY := y + float64(i%8*18) - float64(i%3*6)
+
+		// Add natural curve deviation
+		curveX := baseX + float64(i%5*8)
+		curveY := baseY + float64(i%7*5)
+
+		// Add micro-jitter (hand tremor)
+		jitterX := float64((seed+int64(i*7))%5) - 2.0
+		jitterY := float64((seed+int64(i*11))%5) - 2.0
+
+		finalX := curveX + jitterX
+		finalY := curveY + jitterY
+
+		// Dispatch CDP mouse move event
+		input.DispatchMouseEvent(input.MouseMoved, finalX, finalY).Do(ctx)
+
+		// Variable delay: 8-16ms per point (~300ms total for 30 points)
+		delay := time.Duration(8+(seed+int64(i))%8) * time.Millisecond
+		time.Sleep(delay)
+	}
+
+	return nil
+}
 
 // mouseEntropyScript simulates human-like mouse movements to pass behavioral detection
 const mouseEntropyScript = `
@@ -388,12 +430,12 @@ func FromURLExperimental(targetURL string, opts ExperimentalOptions) Experimenta
 	// Strategy: poll DOM length until it stops changing
 	err := chromedp.Run(ctx,
 		chromedp.Navigate(targetURL),
-		// Run mouse simulation early if stealth mode (before page's detection scripts finish)
+		// Quick start: 50ms lets page scripts set up event listeners
+		chromedp.Sleep(50*time.Millisecond),
+		// Run CDP-based mouse simulation within detection's 500ms window
 		chromedp.ActionFunc(func(ctx context.Context) error {
 			if opts.Stealth {
-				// Execute mouse entropy simulation (async, runs in background)
-				var done bool
-				chromedp.Evaluate(mouseEntropyScript, &done).Do(ctx)
+				return simulateMouseMovement(ctx)
 			}
 			return nil
 		}),
