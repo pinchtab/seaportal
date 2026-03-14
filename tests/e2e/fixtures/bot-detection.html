@@ -137,6 +137,38 @@
     .tier-gold { background: linear-gradient(135deg, #ffd700, #daa520); color: #000; }
     .tier-platinum { background: linear-gradient(135deg, #e5e4e2, #a0b2c6); color: #000; }
     .tier-diamond { background: linear-gradient(135deg, #b9f2ff, #4169e1); color: #000; }
+    
+    /* Code blocks */
+    pre {
+      background: #0d0d12;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 16px;
+      overflow-x: auto;
+      font-size: 0.9em;
+    }
+    code {
+      font-family: 'Fira Code', 'Courier New', monospace;
+      color: #00ff88;
+    }
+    pre code { color: #e0e0e0; }
+    
+    /* Hints */
+    .next-hint {
+      margin-top: 20px;
+      padding: 12px 16px;
+      background: rgba(255,255,255,0.05);
+      border-left: 3px solid #ff6600;
+      border-radius: 0 8px 8px 0;
+      color: #888;
+    }
+    
+    /* Multiple tiers can be unlocked */
+    .protected-content.unlocked + .protected-content.unlocked {
+      margin-top: 30px;
+      border-top: 1px solid #333;
+      padding-top: 30px;
+    }
   </style>
 </head>
 <body>
@@ -178,31 +210,98 @@
     <p>Running checks...</p>
   </div>
   
-  <div id="protected-content" class="protected-content">
-    <h2>🎉 Protected Content Unlocked</h2>
-    <p>Congratulations! Your browser passed all detection checks.</p>
+  <!-- Tiered content - each tier unlocks more secrets -->
+  <div id="tier-bronze" class="protected-content">
+    <h2>🥉 Bronze Secrets Unlocked</h2>
+    <p>You passed basic detection. Here's your first reward:</p>
     
-    <h3>Secret API Documentation</h3>
-    <p>The SeaPortal stealth mode uses a multi-layer approach to browser fingerprint normalization. 
-    Each layer addresses a specific detection vector commonly used by anti-bot systems.</p>
+    <h3>Secret #1: The WebDriver Bypass</h3>
+    <p>The simplest detection checks <code>navigator.webdriver</code>. Most automation 
+    frameworks set this to <code>true</code>. To bypass:</p>
+    <pre><code>Object.defineProperty(navigator, 'webdriver', { get: () => false });</code></pre>
+    <p>But beware — sophisticated detectors check if this property was redefined...</p>
     
-    <h4>Layer 1: Navigator Properties</h4>
-    <p>Override navigator.webdriver, navigator.plugins, and navigator.languages to match 
-    typical human browser configurations. The webdriver property is the most commonly checked 
-    indicator of automation.</p>
+    <p class="next-hint">🔒 <em>Reach Silver (100 pts) to unlock: CDP Evasion Techniques</em></p>
+  </div>
+  
+  <div id="tier-silver" class="protected-content">
+    <h2>🥈 Silver Secrets Unlocked</h2>
+    <p>You evaded advanced detection. Impressive.</p>
     
-    <h4>Layer 2: Chrome Runtime</h4>
-    <p>Inject a mock chrome.runtime object that passes existence checks without exposing 
-    automation-specific APIs. Many sites check for chrome.runtime.connect availability.</p>
+    <h3>Secret #2: CDP Marker Elimination</h3>
+    <p>Chrome DevTools Protocol injects telltale markers into the window object:</p>
+    <pre><code>// These betray automation:
+window.cdc_adoQpoasnfa76pfcZLmcfl_Array
+window.cdc_adoQpoasnfa76pfcZLmcfl_Promise</code></pre>
+    <p>Steel-browser deletes these on every frame. The marker names are randomized 
+    per Chrome version, so you need pattern matching:</p>
+    <pre><code>Object.keys(window).filter(k => k.startsWith('cdc_')).forEach(k => delete window[k]);</code></pre>
     
-    <h4>Layer 3: Timing Analysis</h4>
-    <p>Introduce micro-delays in event handling to simulate human reaction times. 
-    Bots typically respond to events with sub-millisecond precision, while humans 
-    exhibit natural variance in the 50-300ms range.</p>
+    <h3>Secret #3: Plugin Injection</h3>
+    <p>Headless Chrome has an empty <code>navigator.plugins</code> array. Real browsers 
+    have PDF viewers, Flash remnants, etc. Inject a fake PluginArray to pass:</p>
+    <pre><code>// Spoof 3 common plugins
+const fakePlugins = [{ name: 'Chrome PDF Plugin', ... }];</code></pre>
     
-    <h4>Layer 4: Canvas Fingerprint</h4>
-    <p>Apply subtle noise to canvas rendering operations to prevent fingerprint matching 
-    against known headless browser signatures. The noise is imperceptible but unique per session.</p>
+    <p class="next-hint">🔒 <em>Reach Gold (150 pts) to unlock: Behavioral Evasion Matrix</em></p>
+  </div>
+  
+  <div id="tier-gold" class="protected-content">
+    <h2>🥇 Gold Secrets Unlocked</h2>
+    <p>You've mastered fingerprint evasion. Now for the hard part.</p>
+    
+    <h3>Secret #4: The Behavioral Gap</h3>
+    <p>Property spoofing is table stakes. Modern detection watches <em>how</em> you interact:</p>
+    <ul>
+      <li><strong>Mouse entropy:</strong> Bots move in straight lines. Humans wobble.</li>
+      <li><strong>Timing jitter:</strong> Bots have μs precision. Humans have 50-300ms variance.</li>
+      <li><strong>Event sequences:</strong> Bots skip hover states. Humans meander.</li>
+    </ul>
+    
+    <h3>Secret #5: The Canvas Paradox</h3>
+    <p>Some stealth tools add noise to canvas fingerprints. But noise itself is detectable:</p>
+    <pre><code>// Render twice, compare:
+const fp1 = canvas.toDataURL();
+const fp2 = canvas.toDataURL();
+if (fp1 !== fp2) alert('Noise injection detected!');</code></pre>
+    <p>The solution: deterministic spoofing, not random noise.</p>
+    
+    <p class="next-hint">🔒 <em>Reach Diamond (250 pts) to unlock: The Master Key</em></p>
+  </div>
+  
+  <div id="tier-diamond" class="protected-content">
+    <h2>💎 Diamond Secrets Unlocked</h2>
+    <p>You've achieved near-perfect human emulation. You've earned the ultimate secret.</p>
+    
+    <h3>🔑 The Master Key: Execution Context Isolation</h3>
+    <p>All stealth techniques share one fatal flaw: they modify the JavaScript environment 
+    from within. Detectors can inspect <code>Function.prototype.toString</code> to see if 
+    native functions were replaced.</p>
+    
+    <p>The master technique: <strong>inject before any page script runs</strong>.</p>
+    
+    <pre><code>// In Playwright/Puppeteer:
+await page.addInitScript(() => {
+  // This runs before ANY page JavaScript
+  // Modifications here appear native
+  const originalDesc = Object.getOwnPropertyDescriptor(Navigator.prototype, 'webdriver');
+  Object.defineProperty(Navigator.prototype, 'webdriver', {
+    ...originalDesc,
+    get: () => false
+  });
+});</code></pre>
+    
+    <h3>🏆 Final Secret: The Timing Oracle</h3>
+    <p>The ultimate detection is timing-based. Real browsers have GC pauses, 
+    event loop contention, and rendering jank. Perfect timing = bot.</p>
+    <p><strong>Solution:</strong> Inject artificial jitter into <code>performance.now()</code> 
+    and <code>Date.now()</code>. Vary by ±0.5-2ms randomly.</p>
+    
+    <div style="text-align: center; padding: 20px; margin-top: 20px; background: rgba(255,215,0,0.1); border-radius: 8px;">
+      <p style="font-size: 1.2em;">🎮 <strong>ACHIEVEMENT UNLOCKED</strong></p>
+      <p style="color: #ffd700; font-size: 1.5em;">GHOST IN THE MACHINE</p>
+      <p>You have achieved perfect stealth.</p>
+    </div>
   </div>
   
   <script>
@@ -671,9 +770,18 @@
       
       results.innerHTML = html;
       
-      // Unlock content at Gold tier (150+ points)
+      // Unlock tiered content based on points
+      if (totalPoints >= 50) {
+        document.getElementById('tier-bronze').classList.add('unlocked');
+      }
+      if (totalPoints >= 100) {
+        document.getElementById('tier-silver').classList.add('unlocked');
+      }
       if (totalPoints >= 150) {
-        protectedContent.classList.add('unlocked');
+        document.getElementById('tier-gold').classList.add('unlocked');
+      }
+      if (totalPoints >= 250) {
+        document.getElementById('tier-diamond').classList.add('unlocked');
       }
     }
     
