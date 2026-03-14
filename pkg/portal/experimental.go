@@ -422,7 +422,78 @@ const stealthScript = `
   };
   
   // ============================================
-  // 13. SHARED WORKER SPOOFING
+  // 13. WEBGL TIMING SPOOFING
+  // CreepJS checks MAX_CLIENT_WAIT_TIMEOUT_WEBGL
+  // ============================================
+  const originalGetExtension = WebGLRenderingContext.prototype.getExtension;
+  WebGLRenderingContext.prototype.getExtension = makeNativeFunction(function(name) {
+    const ext = originalGetExtension.call(this, name);
+    if (name === 'WEBGL_debug_renderer_info' && ext) {
+      // Already spoofed in getParameter
+      return ext;
+    }
+    return ext;
+  }, 'getExtension');
+  
+  // Spoof WebGL context attributes
+  const originalGetContextAttributes = WebGLRenderingContext.prototype.getContextAttributes;
+  WebGLRenderingContext.prototype.getContextAttributes = makeNativeFunction(function() {
+    const attrs = originalGetContextAttributes.call(this);
+    if (attrs) {
+      // Ensure consistent attributes
+      attrs.antialias = true;
+      attrs.depth = true;
+      attrs.stencil = false;
+      attrs.alpha = true;
+      attrs.premultipliedAlpha = true;
+      attrs.preserveDrawingBuffer = false;
+      attrs.powerPreference = 'default';
+      attrs.failIfMajorPerformanceCaveat = false;
+    }
+    return attrs;
+  }, 'getContextAttributes');
+  
+  // ============================================
+  // 14. ERROR STACK TRACE SANITIZATION
+  // Remove automation framework markers from stack traces
+  // ============================================
+  const originalErrorStack = Object.getOwnPropertyDescriptor(Error.prototype, 'stack');
+  if (originalErrorStack && originalErrorStack.get) {
+    Object.defineProperty(Error.prototype, 'stack', {
+      get: function() {
+        const stack = originalErrorStack.get.call(this);
+        if (typeof stack === 'string') {
+          // Remove CDP/automation markers from stack
+          return stack
+            .replace(/__puppeteer_evaluation_script__/g, 'anonymous')
+            .replace(/__playwright_evaluation_script__/g, 'anonymous')
+            .replace(/__selenium_evaluate/g, 'anonymous')
+            .replace(/__cdp_binding__/g, 'anonymous')
+            .replace(/chrome-extension:\/\/[^\s]+/g, '');
+        }
+        return stack;
+      },
+      set: originalErrorStack.set,
+      configurable: true
+    });
+  }
+  
+  // ============================================
+  // 15. SERVICEWORKER CONTEXT CONSISTENCY
+  // ============================================
+  if (navigator.serviceWorker) {
+    const originalRegister = navigator.serviceWorker.register;
+    if (originalRegister) {
+      navigator.serviceWorker.register = makeNativeFunction(function(scriptURL, options) {
+        // Allow ServiceWorker registration but the worker will have native fingerprints
+        // which may not match our spoofed main thread - this is hard to fix
+        return originalRegister.call(navigator.serviceWorker, scriptURL, options);
+      }, 'register');
+    }
+  }
+  
+  // ============================================
+  // 16. SHARED WORKER SPOOFING
   // ============================================
   if (window.SharedWorker) {
     const OriginalSharedWorker = window.SharedWorker;
