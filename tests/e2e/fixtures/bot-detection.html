@@ -2,24 +2,177 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Bot Detection Test</title>
+  <title>Bot Detection Arena</title>
   <style>
-    body { font-family: system-ui, sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; }
-    .status { padding: 12px; margin: 8px 0; border-radius: 4px; }
-    .pass { background: #d4edda; color: #155724; }
-    .fail { background: #f8d7da; color: #721c24; }
-    .warn { background: #fff3cd; color: #856404; }
-    h1 { color: #333; }
+    body { font-family: system-ui, sans-serif; max-width: 900px; margin: 40px auto; padding: 20px; background: #0a0a0f; color: #e0e0e0; }
+    h1 { color: #00ff88; text-align: center; font-size: 2.5em; text-shadow: 0 0 20px rgba(0,255,136,0.5); }
+    h2 { color: #00aaff; }
+    h3 { color: #ff6600; }
+    .subtitle { text-align: center; color: #888; margin-bottom: 30px; }
+    
+    /* Scorecard */
+    .scorecard { 
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      border: 2px solid #00ff88;
+      border-radius: 16px;
+      padding: 24px;
+      margin: 20px 0;
+      box-shadow: 0 0 30px rgba(0,255,136,0.2);
+    }
+    .score-display {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    .score-item {
+      text-align: center;
+      padding: 16px 24px;
+      background: rgba(0,0,0,0.3);
+      border-radius: 12px;
+      min-width: 120px;
+    }
+    .score-value {
+      font-size: 2.5em;
+      font-weight: bold;
+      font-family: 'Courier New', monospace;
+    }
+    .score-label { color: #888; font-size: 0.9em; margin-top: 4px; }
+    .score-value.points { color: #00ff88; }
+    .score-value.rank { color: #ff6600; }
+    .score-value.checks { color: #00aaff; }
+    
+    /* Progress bar */
+    .progress-container { margin: 20px 0; }
+    .progress-bar {
+      height: 24px;
+      background: #1a1a2e;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid #333;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #ff0000 0%, #ff6600 30%, #ffff00 60%, #00ff88 100%);
+      transition: width 0.5s ease;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding-right: 8px;
+      font-weight: bold;
+      font-size: 0.85em;
+    }
+    .progress-labels {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 8px;
+      font-size: 0.8em;
+      color: #666;
+    }
+    .tier-marker { color: #00ff88; }
+    
+    /* Checks list */
     #results { margin-top: 20px; }
-    .check { display: flex; justify-content: space-between; padding: 8px 12px; border-bottom: 1px solid #eee; }
+    .check { 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center;
+      padding: 12px 16px; 
+      margin: 4px 0;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.03);
+      border-left: 4px solid transparent;
+    }
+    .check.pass { border-left-color: #00ff88; background: rgba(0,255,136,0.05); }
+    .check.fail { border-left-color: #ff4444; background: rgba(255,68,68,0.05); }
+    .check-info { display: flex; align-items: center; gap: 12px; }
     .check-name { font-weight: 500; }
+    .check-detail { color: #888; font-size: 0.85em; }
+    .check-points { 
+      font-weight: bold; 
+      font-family: 'Courier New', monospace;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.9em;
+    }
+    .check.pass .check-points { background: rgba(0,255,136,0.2); color: #00ff88; }
+    .check.fail .check-points { background: rgba(255,68,68,0.1); color: #ff4444; }
+    
+    .category { 
+      color: #00aaff; 
+      font-size: 0.75em; 
+      text-transform: uppercase; 
+      letter-spacing: 1px;
+      margin-top: 20px;
+      margin-bottom: 8px;
+      padding-left: 4px;
+    }
+    
+    /* Protected content */
     .protected-content { display: none; }
-    .protected-content.unlocked { display: block; background: #e8f5e9; padding: 20px; border-radius: 8px; margin-top: 20px; }
+    .protected-content.unlocked { 
+      display: block; 
+      background: linear-gradient(135deg, #0a2a1a 0%, #1a3a2a 100%);
+      border: 2px solid #00ff88;
+      padding: 24px; 
+      border-radius: 12px; 
+      margin-top: 30px;
+      box-shadow: 0 0 40px rgba(0,255,136,0.3);
+    }
+    .protected-content h2 { margin-top: 0; }
+    
+    /* Tiers */
+    .tier-badge {
+      display: inline-block;
+      padding: 8px 20px;
+      border-radius: 20px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin: 10px 0;
+    }
+    .tier-bronze { background: linear-gradient(135deg, #cd7f32, #8b4513); }
+    .tier-silver { background: linear-gradient(135deg, #c0c0c0, #808080); }
+    .tier-gold { background: linear-gradient(135deg, #ffd700, #daa520); color: #000; }
+    .tier-platinum { background: linear-gradient(135deg, #e5e4e2, #a0b2c6); color: #000; }
+    .tier-diamond { background: linear-gradient(135deg, #b9f2ff, #4169e1); color: #000; }
   </style>
 </head>
 <body>
-  <h1>🔍 Bot Detection Suite</h1>
-  <p>This page runs detection checks and reveals protected content only to human browsers.</p>
+  <h1>🎮 Bot Detection Arena</h1>
+  <p class="subtitle">Prove you're human. Earn points. Unlock secrets.</p>
+  
+  <div class="scorecard">
+    <div class="score-display">
+      <div class="score-item">
+        <div class="score-value points" id="total-points">0</div>
+        <div class="score-label">POINTS</div>
+      </div>
+      <div class="score-item">
+        <div class="score-value rank" id="rank">—</div>
+        <div class="score-label">RANK</div>
+      </div>
+      <div class="score-item">
+        <div class="score-value checks" id="checks-passed">0/0</div>
+        <div class="score-label">CHECKS</div>
+      </div>
+    </div>
+    
+    <div class="progress-container">
+      <div class="progress-bar">
+        <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+      </div>
+      <div class="progress-labels">
+        <span>0</span>
+        <span class="tier-marker">🥉 50</span>
+        <span class="tier-marker">🥈 100</span>
+        <span class="tier-marker">🥇 150</span>
+        <span class="tier-marker">💎 200</span>
+        <span>250+</span>
+      </div>
+    </div>
+  </div>
   
   <div id="results">
     <p>Running checks...</p>
@@ -57,17 +210,38 @@
     const results = document.getElementById('results');
     const protectedContent = document.getElementById('protected-content');
     
-    function addCheck(name, passed, detail) {
-      checks.push({ name, passed, detail });
+    // Point values: harder checks = more points
+    const POINTS = {
+      basic: 10,      // Easy checks (webdriver, UA, etc.)
+      medium: 15,     // Medium checks (plugins, languages)
+      hard: 25,       // Hard checks (canvas, WebGL)
+      expert: 40,     // Expert checks (behavioral, timing)
+      bonus: 20       // Bonus multiplier for streaks
+    };
+    
+    const TIERS = [
+      { min: 0, name: 'Bot', emoji: '🤖', class: '' },
+      { min: 50, name: 'Bronze', emoji: '🥉', class: 'tier-bronze' },
+      { min: 100, name: 'Silver', emoji: '🥈', class: 'tier-silver' },
+      { min: 150, name: 'Gold', emoji: '🥇', class: 'tier-gold' },
+      { min: 200, name: 'Platinum', emoji: '💎', class: 'tier-platinum' },
+      { min: 250, name: 'Diamond', emoji: '👑', class: 'tier-diamond' }
+    ];
+    
+    function addCheck(name, passed, detail, points = POINTS.basic, category = 'basic') {
+      checks.push({ name, passed, detail, points, category });
     }
     
     // === DETECTION CHECKS ===
+    
+    // === WAVE 1: BASIC DETECTION (10 pts each) ===
     
     // Check 1: WebDriver property
     (function checkWebDriver() {
       const hasWebDriver = navigator.webdriver === true;
       addCheck('WebDriver Property', !hasWebDriver, 
-        hasWebDriver ? 'navigator.webdriver is true' : 'navigator.webdriver is false/undefined');
+        hasWebDriver ? 'navigator.webdriver is true' : 'navigator.webdriver is false/undefined',
+        POINTS.basic, 'wave1');
     })();
     
     // Check 2: Chrome automation extension
@@ -76,21 +250,24 @@
                         window.cdc_adoQpoasnfa76pfcZLmcfl_Promise ||
                         window.cdc_adoQpoasnfa76pfcZLmcfl_Symbol);
       addCheck('Chrome DevTools Protocol', !hasCdp,
-        hasCdp ? 'CDP markers detected' : 'No CDP markers found');
+        hasCdp ? 'CDP markers detected' : 'No CDP markers found',
+        POINTS.basic, 'wave1');
     })();
     
     // Check 3: Plugins array
     (function checkPlugins() {
       const hasPlugins = navigator.plugins && navigator.plugins.length > 0;
       addCheck('Browser Plugins', hasPlugins,
-        hasPlugins ? `${navigator.plugins.length} plugins detected` : 'No plugins (headless indicator)');
+        hasPlugins ? `${navigator.plugins.length} plugins detected` : 'No plugins (headless indicator)',
+        POINTS.medium, 'wave1');
     })();
     
     // Check 4: Languages
     (function checkLanguages() {
       const hasLanguages = navigator.languages && navigator.languages.length > 0;
       addCheck('Language Settings', hasLanguages,
-        hasLanguages ? navigator.languages.join(', ') : 'No languages configured');
+        hasLanguages ? navigator.languages.join(', ') : 'No languages configured',
+        POINTS.medium, 'wave1');
     })();
     
     // Check 5: WebGL Renderer
@@ -104,15 +281,16 @@
             const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
             const isSwiftShader = renderer.includes('SwiftShader') || renderer.includes('llvmpipe');
             addCheck('WebGL Renderer', !isSwiftShader,
-              isSwiftShader ? `Software renderer: ${renderer}` : renderer);
+              isSwiftShader ? `Software renderer: ${renderer}` : renderer,
+              POINTS.hard, 'wave1');
           } else {
-            addCheck('WebGL Renderer', true, 'WebGL available (no debug info)');
+            addCheck('WebGL Renderer', true, 'WebGL available (no debug info)', POINTS.hard, 'wave1');
           }
         } else {
-          addCheck('WebGL Renderer', false, 'WebGL not available');
+          addCheck('WebGL Renderer', false, 'WebGL not available', POINTS.hard, 'wave1');
         }
       } catch (e) {
-        addCheck('WebGL Renderer', false, 'WebGL check failed');
+        addCheck('WebGL Renderer', false, 'WebGL check failed', POINTS.hard, 'wave1');
       }
     })();
     
@@ -122,18 +300,19 @@
                             window.outerWidth > 0 && window.outerHeight > 0;
       const ratio = window.devicePixelRatio || 1;
       addCheck('Screen Dimensions', hasRealScreen,
-        `${window.screen.width}x${window.screen.height} @ ${ratio}x`);
+        `${window.screen.width}x${window.screen.height} @ ${ratio}x`,
+        POINTS.basic, 'wave1');
     })();
     
     // Check 7: Notification permission (headless often has 'denied')
     (function checkNotifications() {
       if ('Notification' in window) {
         const perm = Notification.permission;
-        // 'default' is normal for fresh browsers, 'denied' can indicate headless
         addCheck('Notification API', perm !== 'denied',
-          `Permission: ${perm}`);
+          `Permission: ${perm}`,
+          POINTS.basic, 'wave1');
       } else {
-        addCheck('Notification API', false, 'Not available');
+        addCheck('Notification API', false, 'Not available', POINTS.basic, 'wave1');
       }
     })();
     
@@ -142,10 +321,11 @@
       const ua = navigator.userAgent;
       const isHeadless = ua.includes('HeadlessChrome') || ua.includes('Headless');
       addCheck('User Agent', !isHeadless,
-        isHeadless ? 'Headless detected in UA' : ua.substring(0, 60) + '...');
+        isHeadless ? 'Headless detected in UA' : ua.substring(0, 60) + '...',
+        POINTS.basic, 'wave1');
     })();
     
-    // === WAVE 2: ADVANCED DETECTION ===
+    // === WAVE 2: ADVANCED DETECTION (25 pts each) ===
     
     // Check 9: Property Descriptor Tampering Detection
     // Stealth plugins redefine navigator.webdriver with custom getters - detect this
@@ -155,7 +335,6 @@
       // Check navigator.webdriver descriptor
       const webdriverDesc = Object.getOwnPropertyDescriptor(Navigator.prototype, 'webdriver');
       if (webdriverDesc) {
-        // Native property has 'get' from prototype, tampered often has 'value' or custom getter
         const getterStr = webdriverDesc.get ? webdriverDesc.get.toString() : '';
         if (getterStr.includes('native code') === false && webdriverDesc.get) {
           dominated.push('webdriver getter modified');
@@ -178,21 +357,19 @@
         }
       }
       
-      // Check for Proxy traps on navigator
       try {
         const handler = navigator[Symbol.toStringTag];
-        // Native returns 'Navigator', proxied might differ
       } catch (e) {
         dominated.push('navigator proxy detected');
       }
       
       const passed = dominated.length === 0;
       addCheck('Property Descriptor Integrity', passed,
-        passed ? 'Native property descriptors intact' : dominated.join(', '));
+        passed ? 'Native property descriptors intact' : dominated.join(', '),
+        POINTS.hard, 'wave2');
     })();
     
     // Check 10: Canvas Fingerprint Consistency
-    // Stealth tools add noise to canvas - detect inconsistent renders
     (function checkCanvasConsistency() {
       try {
         const canvas = document.createElement('canvas');
@@ -200,7 +377,6 @@
         canvas.height = 50;
         const ctx = canvas.getContext('2d');
         
-        // Draw specific content
         ctx.fillStyle = '#f60';
         ctx.fillRect(10, 10, 30, 30);
         ctx.fillStyle = '#069';
@@ -211,11 +387,9 @@
         ctx.arc(150, 25, 20, 0, Math.PI * 2);
         ctx.stroke();
         
-        // Get data twice - should be identical without noise injection
         const data1 = canvas.toDataURL();
         const data2 = canvas.toDataURL();
         
-        // Also render again and compare
         ctx.clearRect(0, 0, 200, 50);
         ctx.fillStyle = '#f60';
         ctx.fillRect(10, 10, 30, 30);
@@ -230,23 +404,21 @@
         
         const consistent = (data1 === data2) && (data1 === data3);
         addCheck('Canvas Render Consistency', consistent,
-          consistent ? 'Renders are deterministic' : 'Canvas noise injection detected');
+          consistent ? 'Renders are deterministic' : 'Canvas noise injection detected',
+          POINTS.hard, 'wave2');
       } catch (e) {
-        addCheck('Canvas Render Consistency', false, 'Canvas check failed: ' + e.message);
+        addCheck('Canvas Render Consistency', false, 'Canvas check failed: ' + e.message, POINTS.hard, 'wave2');
       }
     })();
     
     // Check 11: Execution Context / Stack Trace CDP Detection
-    // CDP and automation frameworks leave traces in error stacks and function sources
     (function checkExecutionContext() {
       const anomalies = [];
       
-      // Check Error.prepareStackTrace tampering (used by some automation)
       if (Error.prepareStackTrace && Error.prepareStackTrace.toString().indexOf('native code') === -1) {
         anomalies.push('Error.prepareStackTrace modified');
       }
       
-      // Generate stack trace and inspect for CDP/puppeteer patterns
       try {
         const err = new Error();
         const stack = err.stack || '';
@@ -266,7 +438,6 @@
         }
       } catch (e) {}
       
-      // Check for CDP binding functions on window
       const cdpBindings = Object.keys(window).filter(k => 
         k.startsWith('__') && (k.includes('binding') || k.includes('driver') || k.includes('selenium'))
       );
@@ -274,7 +445,6 @@
         anomalies.push('CDP bindings on window: ' + cdpBindings.join(', '));
       }
       
-      // Check Function.prototype.toString tampering
       const fnToString = Function.prototype.toString;
       try {
         const fnStr = fnToString.call(fnToString);
@@ -285,7 +455,6 @@
         anomalies.push('toString check threw');
       }
       
-      // Check for Reflect.apply/get tampering (used in stealth proxy implementations)
       try {
         const reflectApplyStr = Reflect.apply.toString();
         if (!reflectApplyStr.includes('native code')) {
@@ -295,16 +464,17 @@
       
       const passed = anomalies.length === 0;
       addCheck('Execution Context Integrity', passed,
-        passed ? 'No automation framework traces' : anomalies.join('; '));
+        passed ? 'No automation framework traces' : anomalies.join('; '),
+        POINTS.hard, 'wave2');
     })();
+    
+    // === WAVE 3: BEHAVIORAL DETECTION (40 pts each) ===
     
     // Check 12: Mouse Movement Entropy
     // Bots typically don't move the mouse, or move it in perfectly straight lines
     (function checkMouseEntropy() {
       let mousePoints = [];
-      let checkComplete = false;
       
-      // Collect mouse movements for a brief period
       const handler = (e) => {
         if (mousePoints.length < 50) {
           mousePoints.push({ x: e.clientX, y: e.clientY, t: performance.now() });
@@ -312,21 +482,17 @@
       };
       document.addEventListener('mousemove', handler);
       
-      // Evaluate after 500ms
       setTimeout(() => {
         document.removeEventListener('mousemove', handler);
         
         if (mousePoints.length < 3) {
-          // No mouse movement at all - suspicious but could be touch device
           addCheck('Mouse Movement Entropy', false,
-            'No mouse movement detected (0 points)');
-          checkComplete = true;
+            'No mouse movement detected (0 points)',
+            POINTS.expert, 'wave3');
           return;
         }
         
-        // Calculate entropy metrics
         let totalDistance = 0;
-        let straightLineDistance = 0;
         let velocities = [];
         let angles = [];
         
@@ -341,33 +507,24 @@
           if (dt > 0) {
             velocities.push(dist / dt);
           }
-          
           angles.push(Math.atan2(dy, dx));
         }
         
-        // Straight line distance from first to last point
         const firstPoint = mousePoints[0];
         const lastPoint = mousePoints[mousePoints.length - 1];
-        straightLineDistance = Math.sqrt(
+        const straightLineDistance = Math.sqrt(
           Math.pow(lastPoint.x - firstPoint.x, 2) + 
           Math.pow(lastPoint.y - firstPoint.y, 2)
         );
         
-        // Calculate velocity variance (humans have variable speed)
         const avgVelocity = velocities.reduce((a, b) => a + b, 0) / velocities.length;
         const velocityVariance = velocities.reduce((sum, v) => sum + Math.pow(v - avgVelocity, 2), 0) / velocities.length;
         
-        // Calculate angle variance (humans don't move in perfectly straight lines)
         const avgAngle = angles.reduce((a, b) => a + b, 0) / angles.length;
         const angleVariance = angles.reduce((sum, a) => sum + Math.pow(a - avgAngle, 2), 0) / angles.length;
         
-        // Path efficiency (straight line / actual distance) - bots are often too efficient
         const pathEfficiency = straightLineDistance / (totalDistance || 1);
         
-        // Human-like movement has:
-        // - Velocity variance > 0.1 (variable speed)
-        // - Angle variance > 0.01 (not perfectly straight)
-        // - Path efficiency < 0.95 (some wandering)
         const hasNaturalVelocity = velocityVariance > 0.05;
         const hasNaturalPath = angleVariance > 0.005 || pathEfficiency < 0.98;
         const isHumanLike = hasNaturalVelocity || hasNaturalPath;
@@ -375,9 +532,8 @@
         addCheck('Mouse Movement Entropy', isHumanLike,
           isHumanLike 
             ? `${mousePoints.length} points, variance=${velocityVariance.toFixed(3)}`
-            : `Too mechanical: ${mousePoints.length} points, efficiency=${pathEfficiency.toFixed(3)}`);
-        
-        checkComplete = true;
+            : `Too mechanical: ${mousePoints.length} points, efficiency=${pathEfficiency.toFixed(3)}`,
+          POINTS.expert, 'wave3');
       }, 500);
     })();
     
@@ -389,29 +545,25 @@
       
       function measureTiming(i) {
         if (i >= iterations) {
-          // Analyze timing precision
           const deltas = [];
           for (let j = 1; j < timings.length; j++) {
             deltas.push(timings[j] - timings[j-1]);
           }
           
-          // Calculate variance in setTimeout delivery
           const avgDelta = deltas.reduce((a, b) => a + b, 0) / deltas.length;
           const variance = deltas.reduce((sum, d) => sum + Math.pow(d - avgDelta, 2), 0) / deltas.length;
           
-          // Real browsers have timing variance due to event loop, GC, etc.
-          // Automation/CDP can have very precise timing
           const minDelta = Math.min(...deltas);
           const maxDelta = Math.max(...deltas);
           const range = maxDelta - minDelta;
           
-          // Human browsing has natural variance (> 0.5ms typically)
           const hasNaturalVariance = variance > 0.1 || range > 1;
           
           addCheck('Timing Precision Analysis', hasNaturalVariance,
             hasNaturalVariance 
               ? `Natural variance: ${variance.toFixed(3)}ms²`
-              : `Suspicious precision: variance=${variance.toFixed(4)}ms², range=${range.toFixed(3)}ms`);
+              : `Suspicious precision: variance=${variance.toFixed(4)}ms², range=${range.toFixed(3)}ms`,
+            POINTS.expert, 'wave3');
           return;
         }
         
@@ -426,30 +578,107 @@
     function renderResults() {
       const passed = checks.filter(c => c.passed).length;
       const total = checks.length;
-      const allPassed = passed === total;
       
-      let html = `<h2>${passed}/${total} checks passed</h2>`;
+      // Calculate total points
+      let totalPoints = 0;
+      let maxPoints = 0;
+      checks.forEach(check => {
+        maxPoints += check.points;
+        if (check.passed) {
+          totalPoints += check.points;
+        }
+      });
+      
+      // Streak bonus: consecutive passes earn bonus points
+      let streak = 0;
+      let bonusPoints = 0;
+      checks.forEach(check => {
+        if (check.passed) {
+          streak++;
+          if (streak >= 3) {
+            bonusPoints += 5; // 5 bonus per check after 3-streak
+          }
+        } else {
+          streak = 0;
+        }
+      });
+      totalPoints += bonusPoints;
+      
+      // Determine tier
+      let currentTier = TIERS[0];
+      for (const tier of TIERS) {
+        if (totalPoints >= tier.min) {
+          currentTier = tier;
+        }
+      }
+      
+      // Update scorecard
+      document.getElementById('total-points').textContent = totalPoints;
+      document.getElementById('rank').textContent = `${currentTier.emoji} ${currentTier.name}`;
+      document.getElementById('checks-passed').textContent = `${passed}/${total}`;
+      
+      // Progress bar (max 300 for full bar)
+      const progressPercent = Math.min(100, (totalPoints / 300) * 100);
+      document.getElementById('progress-fill').style.width = `${progressPercent}%`;
+      
+      // Group checks by category
+      const categories = {
+        wave1: { name: '⚡ Wave 1: Basic Detection', checks: [] },
+        wave2: { name: '🔥 Wave 2: Advanced Detection', checks: [] },
+        wave3: { name: '🧠 Wave 3: Behavioral Analysis', checks: [] }
+      };
       
       checks.forEach(check => {
-        const status = check.passed ? 'pass' : 'fail';
+        const cat = check.category || 'wave1';
+        if (categories[cat]) {
+          categories[cat].checks.push(check);
+        }
+      });
+      
+      let html = '';
+      
+      for (const [key, category] of Object.entries(categories)) {
+        if (category.checks.length === 0) continue;
+        
+        html += `<div class="category">${category.name}</div>`;
+        
+        category.checks.forEach(check => {
+          const status = check.passed ? 'pass' : 'fail';
+          const pointsDisplay = check.passed ? `+${check.points}` : `0/${check.points}`;
+          html += `
+            <div class="check ${status}">
+              <div class="check-info">
+                <span class="check-name">${check.passed ? '✅' : '❌'} ${check.name}</span>
+                <span class="check-detail">${check.detail}</span>
+              </div>
+              <span class="check-points">${pointsDisplay}</span>
+            </div>
+          `;
+        });
+      }
+      
+      if (bonusPoints > 0) {
         html += `
-          <div class="check ${status}">
-            <span class="check-name">${check.passed ? '✅' : '❌'} ${check.name}</span>
-            <span class="check-detail">${check.detail}</span>
+          <div class="check pass">
+            <div class="check-info">
+              <span class="check-name">🔥 Streak Bonus</span>
+              <span class="check-detail">Consecutive passes reward</span>
+            </div>
+            <span class="check-points">+${bonusPoints}</span>
           </div>
         `;
-      });
+      }
       
       results.innerHTML = html;
       
-      // Only unlock protected content if ALL checks pass
-      if (allPassed) {
+      // Unlock content at Gold tier (150+ points)
+      if (totalPoints >= 150) {
         protectedContent.classList.add('unlocked');
       }
     }
     
-    // Run after a small delay to simulate real page load
-    setTimeout(renderResults, 100);
+    // Run after delay to allow async checks to complete
+    setTimeout(renderResults, 800);
   </script>
 </body>
 </html>
