@@ -298,6 +298,130 @@
         passed ? 'No automation framework traces' : anomalies.join('; '));
     })();
     
+    // Check 12: Mouse Movement Entropy
+    // Bots typically don't move the mouse, or move it in perfectly straight lines
+    (function checkMouseEntropy() {
+      let mousePoints = [];
+      let checkComplete = false;
+      
+      // Collect mouse movements for a brief period
+      const handler = (e) => {
+        if (mousePoints.length < 50) {
+          mousePoints.push({ x: e.clientX, y: e.clientY, t: performance.now() });
+        }
+      };
+      document.addEventListener('mousemove', handler);
+      
+      // Evaluate after 500ms
+      setTimeout(() => {
+        document.removeEventListener('mousemove', handler);
+        
+        if (mousePoints.length < 3) {
+          // No mouse movement at all - suspicious but could be touch device
+          addCheck('Mouse Movement Entropy', false,
+            'No mouse movement detected (0 points)');
+          checkComplete = true;
+          return;
+        }
+        
+        // Calculate entropy metrics
+        let totalDistance = 0;
+        let straightLineDistance = 0;
+        let velocities = [];
+        let angles = [];
+        
+        for (let i = 1; i < mousePoints.length; i++) {
+          const dx = mousePoints[i].x - mousePoints[i-1].x;
+          const dy = mousePoints[i].y - mousePoints[i-1].y;
+          const dt = mousePoints[i].t - mousePoints[i-1].t;
+          
+          const dist = Math.sqrt(dx*dx + dy*dy);
+          totalDistance += dist;
+          
+          if (dt > 0) {
+            velocities.push(dist / dt);
+          }
+          
+          angles.push(Math.atan2(dy, dx));
+        }
+        
+        // Straight line distance from first to last point
+        const firstPoint = mousePoints[0];
+        const lastPoint = mousePoints[mousePoints.length - 1];
+        straightLineDistance = Math.sqrt(
+          Math.pow(lastPoint.x - firstPoint.x, 2) + 
+          Math.pow(lastPoint.y - firstPoint.y, 2)
+        );
+        
+        // Calculate velocity variance (humans have variable speed)
+        const avgVelocity = velocities.reduce((a, b) => a + b, 0) / velocities.length;
+        const velocityVariance = velocities.reduce((sum, v) => sum + Math.pow(v - avgVelocity, 2), 0) / velocities.length;
+        
+        // Calculate angle variance (humans don't move in perfectly straight lines)
+        const avgAngle = angles.reduce((a, b) => a + b, 0) / angles.length;
+        const angleVariance = angles.reduce((sum, a) => sum + Math.pow(a - avgAngle, 2), 0) / angles.length;
+        
+        // Path efficiency (straight line / actual distance) - bots are often too efficient
+        const pathEfficiency = straightLineDistance / (totalDistance || 1);
+        
+        // Human-like movement has:
+        // - Velocity variance > 0.1 (variable speed)
+        // - Angle variance > 0.01 (not perfectly straight)
+        // - Path efficiency < 0.95 (some wandering)
+        const hasNaturalVelocity = velocityVariance > 0.05;
+        const hasNaturalPath = angleVariance > 0.005 || pathEfficiency < 0.98;
+        const isHumanLike = hasNaturalVelocity || hasNaturalPath;
+        
+        addCheck('Mouse Movement Entropy', isHumanLike,
+          isHumanLike 
+            ? `${mousePoints.length} points, variance=${velocityVariance.toFixed(3)}`
+            : `Too mechanical: ${mousePoints.length} points, efficiency=${pathEfficiency.toFixed(3)}`);
+        
+        checkComplete = true;
+      }, 500);
+    })();
+    
+    // Check 13: Timing Precision Analysis  
+    // Automation tools have unnaturally precise timing (< 1ms variance)
+    (function checkTimingPrecision() {
+      const timings = [];
+      const iterations = 20;
+      
+      function measureTiming(i) {
+        if (i >= iterations) {
+          // Analyze timing precision
+          const deltas = [];
+          for (let j = 1; j < timings.length; j++) {
+            deltas.push(timings[j] - timings[j-1]);
+          }
+          
+          // Calculate variance in setTimeout delivery
+          const avgDelta = deltas.reduce((a, b) => a + b, 0) / deltas.length;
+          const variance = deltas.reduce((sum, d) => sum + Math.pow(d - avgDelta, 2), 0) / deltas.length;
+          
+          // Real browsers have timing variance due to event loop, GC, etc.
+          // Automation/CDP can have very precise timing
+          const minDelta = Math.min(...deltas);
+          const maxDelta = Math.max(...deltas);
+          const range = maxDelta - minDelta;
+          
+          // Human browsing has natural variance (> 0.5ms typically)
+          const hasNaturalVariance = variance > 0.1 || range > 1;
+          
+          addCheck('Timing Precision Analysis', hasNaturalVariance,
+            hasNaturalVariance 
+              ? `Natural variance: ${variance.toFixed(3)}ms²`
+              : `Suspicious precision: variance=${variance.toFixed(4)}ms², range=${range.toFixed(3)}ms`);
+          return;
+        }
+        
+        timings.push(performance.now());
+        setTimeout(() => measureTiming(i + 1), 1);
+      }
+      
+      measureTiming(0);
+    })();
+    
     // === RENDER RESULTS ===
     function renderResults() {
       const passed = checks.filter(c => c.passed).length;
