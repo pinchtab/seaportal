@@ -421,6 +421,140 @@ const stealthScript = `
     return origCreateObjectURL(obj);
   };
   
+  // ============================================
+  // 13. SHARED WORKER SPOOFING
+  // ============================================
+  if (window.SharedWorker) {
+    const OriginalSharedWorker = window.SharedWorker;
+    window.SharedWorker = function(scriptURL, options) {
+      // For blob URLs, we've already injected via createObjectURL
+      // For regular URLs, we can't easily intercept, but most fingerprinters use blobs
+      return new OriginalSharedWorker(scriptURL, options);
+    };
+    window.SharedWorker.prototype = OriginalSharedWorker.prototype;
+    Object.defineProperty(window.SharedWorker, 'name', { value: 'SharedWorker' });
+  }
+  
+  // ============================================
+  // 14. IFRAME CONTEXT SPOOFING
+  // Inject spoofs into dynamically created iframes
+  // ============================================
+  const iframeSpoofScript = workerSpoofScript + ` + "`" + `;
+    // Additional iframe-specific spoofs
+    Object.defineProperty(navigator, 'webdriver', {
+      get: () => false,
+      configurable: true
+    });
+  ` + "`" + `;
+  
+  // Intercept iframe creation
+  const originalCreateElement = document.createElement.bind(document);
+  document.createElement = function(tagName) {
+    const element = originalCreateElement(tagName);
+    
+    if (tagName.toLowerCase() === 'iframe') {
+      // Monitor when iframe loads to inject spoofs
+      element.addEventListener('load', function() {
+        try {
+          const iframeWindow = element.contentWindow;
+          const iframeDocument = element.contentDocument;
+          
+          if (iframeWindow && iframeDocument) {
+            // Inject spoof script into iframe
+            const script = iframeDocument.createElement('script');
+            script.textContent = '(' + function(spoofs) {
+              try { eval(spoofs); } catch(e) {}
+            }.toString() + ')(' + JSON.stringify(iframeSpoofScript) + ')';
+            
+            if (iframeDocument.head) {
+              iframeDocument.head.insertBefore(script, iframeDocument.head.firstChild);
+            } else if (iframeDocument.body) {
+              iframeDocument.body.insertBefore(script, iframeDocument.body.firstChild);
+            }
+            
+            // Also spoof the iframe's navigator directly
+            try {
+              Object.defineProperty(iframeWindow.navigator, 'webdriver', {
+                get: () => false,
+                configurable: true
+              });
+              Object.defineProperty(iframeWindow.navigator, 'languages', {
+                get: () => Object.freeze(['en-US', 'en']),
+                configurable: true
+              });
+              Object.defineProperty(iframeWindow.navigator, 'hardwareConcurrency', {
+                get: () => 8,
+                configurable: true
+              });
+              Object.defineProperty(iframeWindow.navigator, 'deviceMemory', {
+                get: () => 8,
+                configurable: true
+              });
+            } catch(e) {
+              // Cross-origin iframes will throw - that's expected
+            }
+          }
+        } catch(e) {
+          // Security errors for cross-origin iframes - expected
+        }
+      });
+    }
+    
+    return element;
+  };
+  
+  // Also spoof existing iframes on the page
+  const spoofExistingIframes = () => {
+    document.querySelectorAll('iframe').forEach(iframe => {
+      try {
+        const iframeWindow = iframe.contentWindow;
+        if (iframeWindow && iframeWindow.navigator) {
+          Object.defineProperty(iframeWindow.navigator, 'webdriver', {
+            get: () => false,
+            configurable: true
+          });
+          Object.defineProperty(iframeWindow.navigator, 'languages', {
+            get: () => Object.freeze(['en-US', 'en']),
+            configurable: true
+          });
+          Object.defineProperty(iframeWindow.navigator, 'hardwareConcurrency', {
+            get: () => 8,
+            configurable: true
+          });
+        }
+      } catch(e) {}
+    });
+  };
+  
+  // Run on existing iframes and observe for new ones
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', spoofExistingIframes);
+  } else {
+    spoofExistingIframes();
+  }
+  
+  // Use MutationObserver to catch dynamically added iframes
+  const observer = new MutationObserver(mutations => {
+    for (const mutation of mutations) {
+      for (const node of mutation.addedNodes) {
+        if (node.tagName === 'IFRAME') {
+          node.addEventListener('load', () => {
+            try {
+              const iw = node.contentWindow;
+              if (iw && iw.navigator) {
+                Object.defineProperty(iw.navigator, 'webdriver', { get: () => false });
+                Object.defineProperty(iw.navigator, 'languages', { get: () => Object.freeze(['en-US', 'en']) });
+                Object.defineProperty(iw.navigator, 'hardwareConcurrency', { get: () => 8 });
+                Object.defineProperty(iw.navigator, 'deviceMemory', { get: () => 8 });
+              }
+            } catch(e) {}
+          });
+        }
+      }
+    }
+  });
+  observer.observe(document.documentElement, { childList: true, subtree: true });
+  
   return true;
 })()
 `
