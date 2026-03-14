@@ -197,11 +197,11 @@
       </div>
       <div class="progress-labels">
         <span>0</span>
-        <span class="tier-marker">🥉 50</span>
-        <span class="tier-marker">🥈 100</span>
-        <span class="tier-marker">🥇 150</span>
-        <span class="tier-marker">💎 200</span>
-        <span>250+</span>
+        <span class="tier-marker">🥉 75</span>
+        <span class="tier-marker">🥈 150</span>
+        <span class="tier-marker">🥇 250</span>
+        <span class="tier-marker">💎 350</span>
+        <span>450+</span>
       </div>
     </div>
   </div>
@@ -320,11 +320,11 @@ await page.addInitScript(() => {
     
     const TIERS = [
       { min: 0, name: 'Bot', emoji: '🤖', class: '' },
-      { min: 50, name: 'Bronze', emoji: '🥉', class: 'tier-bronze' },
-      { min: 100, name: 'Silver', emoji: '🥈', class: 'tier-silver' },
-      { min: 150, name: 'Gold', emoji: '🥇', class: 'tier-gold' },
-      { min: 200, name: 'Platinum', emoji: '💎', class: 'tier-platinum' },
-      { min: 250, name: 'Diamond', emoji: '👑', class: 'tier-diamond' }
+      { min: 75, name: 'Bronze', emoji: '🥉', class: 'tier-bronze' },
+      { min: 150, name: 'Silver', emoji: '🥈', class: 'tier-silver' },
+      { min: 250, name: 'Gold', emoji: '🥇', class: 'tier-gold' },
+      { min: 350, name: 'Platinum', emoji: '💎', class: 'tier-platinum' },
+      { min: 450, name: 'Diamond', emoji: '👑', class: 'tier-diamond' }
     ];
     
     function addCheck(name, passed, detail, points = POINTS.basic, category = 'basic') {
@@ -673,6 +673,230 @@ await page.addInitScript(() => {
       measureTiming(0);
     })();
     
+    // === WAVE 4: DEEP FINGERPRINTING (50 pts each) ===
+    
+    // Check 14: Font Enumeration Fingerprint
+    // Headless browsers have limited font sets
+    (function checkFonts() {
+      const testFonts = [
+        'Arial', 'Helvetica', 'Times New Roman', 'Georgia', 'Verdana',
+        'Comic Sans MS', 'Impact', 'Trebuchet MS', 'Courier New',
+        'Lucida Console', 'Palatino Linotype', 'Segoe UI', 'Tahoma'
+      ];
+      
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const baseFont = 'monospace';
+      const testString = 'mmmmmmmmmmlli';
+      
+      ctx.font = '72px ' + baseFont;
+      const baseWidth = ctx.measureText(testString).width;
+      
+      let fontsDetected = 0;
+      testFonts.forEach(font => {
+        ctx.font = '72px "' + font + '", ' + baseFont;
+        const width = ctx.measureText(testString).width;
+        if (width !== baseWidth) {
+          fontsDetected++;
+        }
+      });
+      
+      // Real browsers typically have 8+ fonts, headless often has 3-5
+      const hasRealFonts = fontsDetected >= 6;
+      addCheck('Font Enumeration', hasRealFonts,
+        hasRealFonts 
+          ? `${fontsDetected}/${testFonts.length} fonts detected`
+          : `Only ${fontsDetected} fonts (headless indicator)`,
+        50, 'wave4');
+    })();
+    
+    // Check 15: Keyboard Event Fingerprint
+    // Tests if keyboard events have realistic properties
+    (function checkKeyboardEvents() {
+      let keyboardScore = 0;
+      let testsRun = 0;
+      
+      // Check if KeyboardEvent has expected properties
+      try {
+        const evt = new KeyboardEvent('keydown', { key: 'a', code: 'KeyA' });
+        
+        // Real browsers populate these correctly
+        if (evt.key === 'a') keyboardScore++;
+        if (evt.code === 'KeyA') keyboardScore++;
+        if ('location' in evt) keyboardScore++;
+        if ('repeat' in evt) keyboardScore++;
+        if (typeof evt.getModifierState === 'function') keyboardScore++;
+        testsRun = 5;
+      } catch (e) {
+        testsRun = 1;
+      }
+      
+      const passed = keyboardScore >= 4;
+      addCheck('Keyboard Event Fingerprint', passed,
+        passed ? `${keyboardScore}/${testsRun} properties valid` : `Missing keyboard properties`,
+        50, 'wave4');
+    })();
+    
+    // Check 16: Native Function Spoofing Detection
+    // Detects if toString() itself has been tampered with
+    (function checkNativeFunctionIntegrity() {
+      const issues = [];
+      
+      // Test 1: Check if toString returns consistent format
+      const toStringResult = Function.prototype.toString.call(Function.prototype.toString);
+      if (!toStringResult.includes('function toString()')) {
+        issues.push('toString format anomaly');
+      }
+      
+      // Test 2: Check if bind().toString() is native
+      const boundFn = Function.prototype.toString.bind(Function.prototype.toString);
+      const boundResult = boundFn();
+      if (toStringResult !== boundResult) {
+        issues.push('bind() changes toString output');
+      }
+      
+      // Test 3: Check prototype chain integrity
+      const hasNativeProto = Object.getPrototypeOf(Function.prototype.toString) === Function.prototype;
+      if (!hasNativeProto) {
+        issues.push('prototype chain modified');
+      }
+      
+      // Test 4: Check if common spoofed functions have consistent toString
+      const functionsToCheck = [
+        [navigator, 'webdriver', 'get webdriver'],
+        [Navigator.prototype, 'webdriver', 'get webdriver']
+      ];
+      
+      functionsToCheck.forEach(([obj, prop, expectedName]) => {
+        try {
+          const desc = Object.getOwnPropertyDescriptor(obj, prop);
+          if (desc && desc.get) {
+            const fnStr = desc.get.toString();
+            // Check for suspicious patterns in "native" functions
+            if (fnStr.includes('native code') && fnStr.length > 60) {
+              issues.push(`${prop} getter has suspicious length`);
+            }
+          }
+        } catch (e) {}
+      });
+      
+      // Test 5: Check Error stack for proxy/wrapper patterns
+      try {
+        const err = new Error();
+        const stack = err.stack || '';
+        if (stack.includes('Proxy') || stack.includes('handler')) {
+          issues.push('Proxy detected in stack');
+        }
+      } catch (e) {}
+      
+      const passed = issues.length === 0;
+      addCheck('Native Function Integrity (Deep)', passed,
+        passed ? 'All native functions appear genuine' : issues.join(', '),
+        50, 'wave4');
+    })();
+    
+    // Check 17: Worker Context Comparison
+    // Compares fingerprints between main thread and Web Worker
+    (function checkWorkerConsistency() {
+      if (!window.Worker) {
+        addCheck('Worker Context Comparison', false, 'Workers not supported', 50, 'wave4');
+        return;
+      }
+      
+      // Create an inline worker
+      const workerCode = `
+        self.onmessage = function(e) {
+          const fingerprint = {
+            userAgent: navigator.userAgent,
+            hardwareConcurrency: navigator.hardwareConcurrency,
+            deviceMemory: navigator.deviceMemory,
+            languages: navigator.languages ? navigator.languages.join(',') : '',
+            platform: navigator.platform
+          };
+          self.postMessage(fingerprint);
+        };
+      `;
+      
+      try {
+        const blob = new Blob([workerCode], { type: 'application/javascript' });
+        const worker = new Worker(URL.createObjectURL(blob));
+        
+        worker.onmessage = function(e) {
+          const workerFP = e.data;
+          const mainFP = {
+            userAgent: navigator.userAgent,
+            hardwareConcurrency: navigator.hardwareConcurrency,
+            deviceMemory: navigator.deviceMemory,
+            languages: navigator.languages ? navigator.languages.join(',') : '',
+            platform: navigator.platform
+          };
+          
+          const mismatches = [];
+          
+          // Compare fingerprints
+          if (workerFP.userAgent !== mainFP.userAgent) {
+            mismatches.push('userAgent differs');
+          }
+          if (workerFP.hardwareConcurrency !== mainFP.hardwareConcurrency) {
+            mismatches.push('hardwareConcurrency differs');
+          }
+          if (workerFP.deviceMemory !== mainFP.deviceMemory) {
+            mismatches.push('deviceMemory differs');
+          }
+          if (workerFP.languages !== mainFP.languages) {
+            mismatches.push('languages differs');
+          }
+          
+          const passed = mismatches.length === 0;
+          addCheck('Worker Context Comparison', passed,
+            passed ? 'Main thread and Worker fingerprints match' : mismatches.join(', '),
+            50, 'wave4');
+          
+          worker.terminate();
+        };
+        
+        worker.onerror = function(err) {
+          addCheck('Worker Context Comparison', false, 'Worker error: ' + err.message, 50, 'wave4');
+        };
+        
+        worker.postMessage('check');
+      } catch (e) {
+        addCheck('Worker Context Comparison', false, 'Worker creation failed', 50, 'wave4');
+      }
+    })();
+    
+    // Check 18: Connection API Fingerprint
+    // Headless browsers often lack or have inconsistent Network Information API
+    (function checkConnectionAPI() {
+      const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+      
+      if (!connection) {
+        // No connection API - could be headless or privacy-focused browser
+        addCheck('Connection API', false, 'Network Information API not available', 50, 'wave4');
+        return;
+      }
+      
+      const hasExpectedProps = (
+        'effectiveType' in connection &&
+        'downlink' in connection &&
+        'rtt' in connection
+      );
+      
+      const hasRealisticValues = (
+        connection.effectiveType && 
+        ['slow-2g', '2g', '3g', '4g'].includes(connection.effectiveType) &&
+        connection.downlink > 0 &&
+        connection.rtt >= 0
+      );
+      
+      const passed = hasExpectedProps && hasRealisticValues;
+      addCheck('Connection API', passed,
+        passed 
+          ? `${connection.effectiveType}, ${connection.downlink}Mbps, ${connection.rtt}ms RTT`
+          : 'Missing or invalid connection properties',
+        50, 'wave4');
+    })();
+    
     // === RENDER RESULTS ===
     function renderResults() {
       const passed = checks.filter(c => c.passed).length;
@@ -716,15 +940,16 @@ await page.addInitScript(() => {
       document.getElementById('rank').textContent = `${currentTier.emoji} ${currentTier.name}`;
       document.getElementById('checks-passed').textContent = `${passed}/${total}`;
       
-      // Progress bar (max 300 for full bar)
-      const progressPercent = Math.min(100, (totalPoints / 300) * 100);
+      // Progress bar (max 500 for full bar)
+      const progressPercent = Math.min(100, (totalPoints / 500) * 100);
       document.getElementById('progress-fill').style.width = `${progressPercent}%`;
       
       // Group checks by category
       const categories = {
         wave1: { name: '⚡ Wave 1: Basic Detection', checks: [] },
         wave2: { name: '🔥 Wave 2: Advanced Detection', checks: [] },
-        wave3: { name: '🧠 Wave 3: Behavioral Analysis', checks: [] }
+        wave3: { name: '🧠 Wave 3: Behavioral Analysis', checks: [] },
+        wave4: { name: '💀 Wave 4: Deep Fingerprinting', checks: [] }
       };
       
       checks.forEach(check => {
@@ -771,16 +996,16 @@ await page.addInitScript(() => {
       results.innerHTML = html;
       
       // Unlock tiered content based on points
-      if (totalPoints >= 50) {
+      if (totalPoints >= 75) {
         document.getElementById('tier-bronze').classList.add('unlocked');
       }
-      if (totalPoints >= 100) {
+      if (totalPoints >= 150) {
         document.getElementById('tier-silver').classList.add('unlocked');
       }
-      if (totalPoints >= 150) {
+      if (totalPoints >= 250) {
         document.getElementById('tier-gold').classList.add('unlocked');
       }
-      if (totalPoints >= 250) {
+      if (totalPoints >= 450) {
         document.getElementById('tier-diamond').classList.add('unlocked');
       }
     }
