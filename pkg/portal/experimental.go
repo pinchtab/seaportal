@@ -173,67 +173,202 @@ const mouseEntropyScript = `
 `
 
 // stealthScript injects anti-detection bypasses before page loads
+// Designed to pass CreepJS and advanced fingerprinting
 const stealthScript = `
 (function() {
-  // 1. Override navigator.webdriver
+  // ============================================
+  // NATIVE FUNCTION WRAPPER UTILITY
+  // Makes spoofed functions appear native in toString()
+  // ============================================
+  const makeNativeFunction = (fn, name) => {
+    const wrapped = function() { return fn.apply(this, arguments); };
+    wrapped.toString = () => 'function ' + name + '() { [native code] }';
+    Object.defineProperty(wrapped, 'name', { value: name });
+    return wrapped;
+  };
+
+  // ============================================
+  // 1. NAVIGATOR PROPERTIES
+  // ============================================
+  
+  // webdriver - must appear native
   Object.defineProperty(navigator, 'webdriver', {
-    get: () => false,
+    get: makeNativeFunction(() => false, 'get webdriver'),
     configurable: true
   });
   
-  // 2. Delete CDP markers
-  delete window.cdc_adoQpoasnfa76pfcZLmcfl_Array;
-  delete window.cdc_adoQpoasnfa76pfcZLmcfl_Promise;
-  delete window.cdc_adoQpoasnfa76pfcZLmcfl_Symbol;
-  
-  // 3. Mock plugins array
-  Object.defineProperty(navigator, 'plugins', {
-    get: () => {
-      const plugins = [
-        { name: 'Chrome PDF Plugin', filename: 'internal-pdf-viewer', description: 'Portable Document Format' },
-        { name: 'Chrome PDF Viewer', filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai', description: '' },
-        { name: 'Native Client', filename: 'internal-nacl-plugin', description: '' }
-      ];
-      plugins.length = 3;
-      return plugins;
-    },
+  // Hardware concurrency (headless often has 1-2)
+  Object.defineProperty(navigator, 'hardwareConcurrency', {
+    get: makeNativeFunction(() => 8, 'get hardwareConcurrency'),
     configurable: true
   });
   
-  // 4. Mock languages
+  // Device memory (headless often has low values)
+  Object.defineProperty(navigator, 'deviceMemory', {
+    get: makeNativeFunction(() => 8, 'get deviceMemory'),
+    configurable: true
+  });
+  
+  // Languages array
   Object.defineProperty(navigator, 'languages', {
-    get: () => ['en-US', 'en'],
+    get: makeNativeFunction(() => Object.freeze(['en-US', 'en']), 'get languages'),
     configurable: true
   });
   
-  // 5. Fix user agent if HeadlessChrome present
-  if (navigator.userAgent.includes('HeadlessChrome')) {
+  // Fix HeadlessChrome in UA
+  const originalUA = navigator.userAgent;
+  if (originalUA.includes('HeadlessChrome')) {
     Object.defineProperty(navigator, 'userAgent', {
-      get: () => navigator.userAgent.replace('HeadlessChrome', 'Chrome'),
+      get: makeNativeFunction(() => originalUA.replace('HeadlessChrome', 'Chrome'), 'get userAgent'),
       configurable: true
     });
   }
   
-  // 6. Mock permissions
-  const originalQuery = navigator.permissions?.query;
-  if (originalQuery) {
-    navigator.permissions.query = (parameters) => {
-      if (parameters.name === 'notifications') {
+  // ============================================
+  // 2. PLUGINS & MIME TYPES (realistic Chrome set)
+  // ============================================
+  const createPlugin = (name, filename, desc, mimeTypes) => {
+    const plugin = { name, filename, description: desc, length: mimeTypes.length };
+    mimeTypes.forEach((mt, i) => { plugin[i] = mt; });
+    return plugin;
+  };
+  
+  const pdfMime = { type: 'application/pdf', suffixes: 'pdf', description: 'Portable Document Format' };
+  const plugins = [
+    createPlugin('Chrome PDF Plugin', 'internal-pdf-viewer', 'Portable Document Format', [pdfMime]),
+    createPlugin('Chrome PDF Viewer', 'mhjfbmdgcfjbbpaeojofohoefgiehjai', '', [pdfMime]),
+    createPlugin('Native Client', 'internal-nacl-plugin', '', [])
+  ];
+  plugins.length = 3;
+  plugins.item = (i) => plugins[i];
+  plugins.namedItem = (name) => plugins.find(p => p.name === name);
+  plugins.refresh = () => {};
+  
+  Object.defineProperty(navigator, 'plugins', {
+    get: makeNativeFunction(() => plugins, 'get plugins'),
+    configurable: true
+  });
+  
+  // ============================================
+  // 3. CDP MARKERS CLEANUP
+  // ============================================
+  Object.keys(window).filter(k => k.match(/^cdc_|^__webdriver/)).forEach(k => {
+    try { delete window[k]; } catch(e) {}
+  });
+  
+  // ============================================
+  // 4. CHROME RUNTIME OBJECT
+  // ============================================
+  if (!window.chrome) window.chrome = {};
+  window.chrome.runtime = {
+    connect: makeNativeFunction(() => ({}), 'connect'),
+    sendMessage: makeNativeFunction(() => {}, 'sendMessage'),
+    onMessage: { addListener: makeNativeFunction(() => {}, 'addListener') },
+    id: undefined
+  };
+  window.chrome.csi = makeNativeFunction(() => ({}), 'csi');
+  window.chrome.loadTimes = makeNativeFunction(() => ({}), 'loadTimes');
+  
+  // ============================================
+  // 5. PERMISSIONS API
+  // ============================================
+  const origQuery = navigator.permissions?.query?.bind(navigator.permissions);
+  if (origQuery) {
+    navigator.permissions.query = makeNativeFunction((params) => {
+      if (params.name === 'notifications') {
         return Promise.resolve({ state: 'prompt', onchange: null });
       }
-      return originalQuery.call(navigator.permissions, parameters);
-    };
+      return origQuery(params);
+    }, 'query');
   }
   
-  // 7. Mock chrome.runtime
-  if (!window.chrome) window.chrome = {};
-  if (!window.chrome.runtime) {
-    window.chrome.runtime = {
-      connect: () => {},
-      sendMessage: () => {},
-      onMessage: { addListener: () => {} }
-    };
+  // ============================================
+  // 6. WEBGL VENDOR/RENDERER SPOOFING
+  // ============================================
+  const originalGetParameter = WebGLRenderingContext.prototype.getParameter;
+  WebGLRenderingContext.prototype.getParameter = makeNativeFunction(function(param) {
+    // UNMASKED_VENDOR_WEBGL
+    if (param === 37445) return 'Google Inc. (Apple)';
+    // UNMASKED_RENDERER_WEBGL
+    if (param === 37446) return 'ANGLE (Apple, Apple M1, OpenGL 4.1)';
+    return originalGetParameter.call(this, param);
+  }, 'getParameter');
+  
+  const originalGetParameter2 = WebGL2RenderingContext?.prototype?.getParameter;
+  if (originalGetParameter2) {
+    WebGL2RenderingContext.prototype.getParameter = makeNativeFunction(function(param) {
+      if (param === 37445) return 'Google Inc. (Apple)';
+      if (param === 37446) return 'ANGLE (Apple, Apple M1, OpenGL 4.1)';
+      return originalGetParameter2.call(this, param);
+    }, 'getParameter');
   }
+  
+  // ============================================
+  // 7. AUDIO CONTEXT FINGERPRINT NORMALIZATION
+  // ============================================
+  const originalCreateOscillator = AudioContext.prototype.createOscillator;
+  const originalCreateDynamicsCompressor = AudioContext.prototype.createDynamicsCompressor;
+  const originalCreateAnalyser = AudioContext.prototype.createAnalyser;
+  
+  // Add slight deterministic noise to audio fingerprints
+  const audioNoise = 0.0000001;
+  
+  AudioContext.prototype.createAnalyser = makeNativeFunction(function() {
+    const analyser = originalCreateAnalyser.call(this);
+    const origGetFloatFrequencyData = analyser.getFloatFrequencyData.bind(analyser);
+    analyser.getFloatFrequencyData = makeNativeFunction(function(array) {
+      origGetFloatFrequencyData(array);
+      for (let i = 0; i < array.length; i++) {
+        array[i] += audioNoise * (i % 2 ? 1 : -1);
+      }
+    }, 'getFloatFrequencyData');
+    return analyser;
+  }, 'createAnalyser');
+  
+  // ============================================
+  // 8. SCREEN DIMENSIONS (consistent values)
+  // ============================================
+  Object.defineProperty(screen, 'width', { get: () => 1920 });
+  Object.defineProperty(screen, 'height', { get: () => 1080 });
+  Object.defineProperty(screen, 'availWidth', { get: () => 1920 });
+  Object.defineProperty(screen, 'availHeight', { get: () => 1055 }); // Account for taskbar
+  Object.defineProperty(screen, 'colorDepth', { get: () => 24 });
+  Object.defineProperty(screen, 'pixelDepth', { get: () => 24 });
+  
+  // ============================================
+  // 9. PERFORMANCE TIMING JITTER
+  // ============================================
+  const origNow = performance.now.bind(performance);
+  let offset = Math.random() * 0.1;
+  performance.now = makeNativeFunction(function() {
+    // Add small jitter (0.1-0.5ms) to prevent timing analysis
+    offset += (Math.random() - 0.5) * 0.1;
+    return origNow() + offset;
+  }, 'now');
+  
+  // ============================================
+  // 10. BATTERY API (headless often lacks this)
+  // ============================================
+  if (!navigator.getBattery) {
+    navigator.getBattery = makeNativeFunction(() => Promise.resolve({
+      charging: true,
+      chargingTime: 0,
+      dischargingTime: Infinity,
+      level: 1.0,
+      addEventListener: () => {},
+      removeEventListener: () => {}
+    }), 'getBattery');
+  }
+  
+  // ============================================
+  // 11. CONSOLE IFRAME DETECTION BYPASS
+  // ============================================
+  const originalFrame = HTMLIFrameElement.prototype;
+  Object.defineProperty(originalFrame, 'contentWindow', {
+    get: function() {
+      return this.contentDocument?.defaultView;
+    }
+  });
   
   return true;
 })()
