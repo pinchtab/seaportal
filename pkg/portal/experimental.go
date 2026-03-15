@@ -272,11 +272,19 @@ const stealthScript = `
   // 1. NAVIGATOR PROPERTIES
   // ============================================
   
-  // webdriver - must appear native
-  Object.defineProperty(navigator, 'webdriver', {
-    get: makeNativeFunction(() => false, 'get webdriver'),
-    configurable: true
-  });
+  // webdriver - must be undefined AND property must not exist
+  // Delete from prototype first, then make non-configurable
+  const navProto = Object.getPrototypeOf(navigator);
+  try { delete navProto.webdriver; } catch(e) {}
+  try { delete navigator.webdriver; } catch(e) {}
+  
+  // Only redefine if it still exists (shouldn't with enable-automation=false)
+  if ('webdriver' in navigator) {
+    Object.defineProperty(navigator, 'webdriver', {
+      get: makeNativeFunction(() => undefined, 'get webdriver'),
+      configurable: false
+    });
+  }
   
   // Hardware concurrency (headless often has 1-2)
   Object.defineProperty(navigator, 'hardwareConcurrency', {
@@ -306,29 +314,47 @@ const stealthScript = `
   }
   
   // ============================================
-  // 2. PLUGINS & MIME TYPES (realistic Chrome set)
+  // 2. PLUGINS & MIME TYPES (must pass instanceof PluginArray)
   // ============================================
-  const createPlugin = (name, filename, desc, mimeTypes) => {
-    const plugin = { name, filename, description: desc, length: mimeTypes.length };
-    mimeTypes.forEach((mt, i) => { plugin[i] = mt; });
-    return plugin;
-  };
-  
-  const pdfMime = { type: 'application/pdf', suffixes: 'pdf', description: 'Portable Document Format' };
-  const plugins = [
-    createPlugin('Chrome PDF Plugin', 'internal-pdf-viewer', 'Portable Document Format', [pdfMime]),
-    createPlugin('Chrome PDF Viewer', 'mhjfbmdgcfjbbpaeojofohoefgiehjai', '', [pdfMime]),
-    createPlugin('Native Client', 'internal-nacl-plugin', '', [])
-  ];
-  plugins.length = 3;
-  plugins.item = (i) => plugins[i];
-  plugins.namedItem = (name) => plugins.find(p => p.name === name);
-  plugins.refresh = () => {};
-  
-  Object.defineProperty(navigator, 'plugins', {
-    get: makeNativeFunction(() => plugins, 'get plugins'),
-    configurable: true
-  });
+  (function() {
+    const fakePlugins = [
+      { name: 'Chrome PDF Plugin', filename: 'internal-pdf-viewer', description: 'Portable Document Format', length: 1 },
+      { name: 'Chrome PDF Viewer', filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai', description: '', length: 1 },
+      { name: 'Native Client', filename: 'internal-nacl-plugin', description: '', length: 1 }
+    ];
+    
+    // Get real PluginArray prototype to pass instanceof checks
+    const realPluginsProto = Object.getPrototypeOf(navigator.plugins);
+    
+    const pluginArray = Object.create(realPluginsProto, {
+      length: { value: fakePlugins.length, writable: false, enumerable: true },
+      item: { value: function(i) { return this[i] || null; }, writable: false },
+      namedItem: { value: function(name) { 
+        for (let i = 0; i < this.length; i++) {
+          if (this[i] && this[i].name === name) return this[i];
+        }
+        return null;
+      }, writable: false },
+      refresh: { value: function() {}, writable: false }
+    });
+    
+    // Add indexed access with proper Plugin prototype
+    fakePlugins.forEach((p, i) => {
+      const plugin = Object.create(Plugin.prototype, {
+        name: { value: p.name, writable: false, enumerable: true },
+        filename: { value: p.filename, writable: false, enumerable: true },
+        description: { value: p.description, writable: false, enumerable: true },
+        length: { value: p.length, writable: false, enumerable: true }
+      });
+      Object.defineProperty(pluginArray, i, { value: plugin, writable: false, enumerable: true });
+      Object.defineProperty(pluginArray, p.name, { value: plugin, writable: false, enumerable: false });
+    });
+    
+    Object.defineProperty(navigator, 'plugins', {
+      get: makeNativeFunction(() => pluginArray, 'get plugins'),
+      configurable: true
+    });
+  })();
   
   // ============================================
   // 3. CDP MARKERS CLEANUP
@@ -1021,7 +1047,8 @@ func FromURLExperimental(targetURL string, opts ExperimentalOptions) Experimenta
 			chromedp.Flag("headless", "new"), // New headless mode has better WebGL support
 			chromedp.Flag("no-sandbox", true),
 			chromedp.Flag("disable-dev-shm-usage", true),
-			// Stealth-specific flags
+			// Stealth-specific flags - disable automation mode
+			chromedp.Flag("enable-automation", false), // Critical: prevents navigator.webdriver=true
 			chromedp.Flag("disable-blink-features", "AutomationControlled"),
 			chromedp.Flag("disable-features", "TranslateUI"),
 			chromedp.Flag("disable-infobars", true),
