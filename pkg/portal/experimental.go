@@ -269,6 +269,28 @@ const stealthScript = `
   };
 
   // ============================================
+  // 0. CDP MARKER CLEANUP - Remove automation traces
+  // ============================================
+  const markerPatterns = [/^cdc_/, /^\$cdc_/, /^__webdriver/, /^__selenium/, /^__driver/, /^__puppeteer/, /^__playwright/, /^\$chrome_/];
+  for (const prop of Object.getOwnPropertyNames(window)) {
+    if (markerPatterns.some(p => p.test(prop))) {
+      try { delete window[prop]; } catch(e) {}
+    }
+  }
+  
+  // ============================================
+  // 0b. ERROR.PREPARESTACKTRACE PROTECTION
+  // Prevent CDP detection via stack trace manipulation
+  // ============================================
+  const originalPrepareStackTrace = Error.prepareStackTrace;
+  Object.defineProperty(Error, 'prepareStackTrace', {
+    get() { return originalPrepareStackTrace; },
+    set(fn) { /* block modifications to prevent CDP detection */ },
+    configurable: true,
+    enumerable: false
+  });
+
+  // ============================================
   // 1. NAVIGATOR PROPERTIES
   // ============================================
   
@@ -364,30 +386,162 @@ const stealthScript = `
   });
   
   // ============================================
-  // 4. CHROME RUNTIME OBJECT
+  // 4. CHROME RUNTIME OBJECT (enhanced for Cloudflare Turnstile)
   // ============================================
   if (!window.chrome) window.chrome = {};
+  
+  // chrome.runtime with full connect() API - required by Cloudflare Turnstile
   window.chrome.runtime = {
-    connect: makeNativeFunction(() => ({}), 'connect'),
-    sendMessage: makeNativeFunction(() => {}, 'sendMessage'),
-    onMessage: { addListener: makeNativeFunction(() => {}, 'addListener') },
+    connect: makeNativeFunction(function(extensionId, connectInfo) {
+      return {
+        name: connectInfo?.name || '',
+        sender: undefined,
+        onDisconnect: { 
+          addListener: makeNativeFunction(() => {}, 'addListener'),
+          removeListener: makeNativeFunction(() => {}, 'removeListener'),
+          hasListener: makeNativeFunction(() => false, 'hasListener')
+        },
+        onMessage: { 
+          addListener: makeNativeFunction(() => {}, 'addListener'),
+          removeListener: makeNativeFunction(() => {}, 'removeListener'),
+          hasListener: makeNativeFunction(() => false, 'hasListener')
+        },
+        postMessage: makeNativeFunction(() => {}, 'postMessage'),
+        disconnect: makeNativeFunction(() => {}, 'disconnect')
+      };
+    }, 'connect'),
+    sendMessage: makeNativeFunction(function(extensionId, message, options, callback) {
+      if (typeof callback === 'function') setTimeout(callback, 0);
+    }, 'sendMessage'),
+    onConnect: {
+      addListener: makeNativeFunction(() => {}, 'addListener'),
+      removeListener: makeNativeFunction(() => {}, 'removeListener'),
+      hasListener: makeNativeFunction(() => false, 'hasListener')
+    },
+    onMessage: {
+      addListener: makeNativeFunction(() => {}, 'addListener'),
+      removeListener: makeNativeFunction(() => {}, 'removeListener'),
+      hasListener: makeNativeFunction(() => false, 'hasListener')
+    },
     id: undefined
   };
-  window.chrome.csi = makeNativeFunction(() => ({}), 'csi');
-  window.chrome.loadTimes = makeNativeFunction(() => ({}), 'loadTimes');
+  
+  // chrome.csi - Chrome Speed Index (some sites check this)
+  window.chrome.csi = makeNativeFunction(function() {
+    const now = Date.now();
+    return { startE: now - 500, onloadT: now - 100, pageT: now, tran: 15 };
+  }, 'csi');
+  
+  // chrome.loadTimes - deprecated but still checked
+  window.chrome.loadTimes = makeNativeFunction(function() {
+    const now = Date.now() / 1000;
+    return {
+      requestTime: now - 0.5, startLoadTime: now - 0.4, commitLoadTime: now - 0.3,
+      finishDocumentLoadTime: now - 0.1, finishLoadTime: now, firstPaintTime: now - 0.2,
+      firstPaintAfterLoadTime: 0, navigationType: "Other", wasFetchedViaSpdy: false,
+      wasNpnNegotiated: true, npnNegotiatedProtocol: "h2", wasAlternateProtocolAvailable: false,
+      connectionInfo: "h2"
+    };
+  }, 'loadTimes');
+  
+  // chrome.app object
+  if (!window.chrome.app) {
+    window.chrome.app = {
+      isInstalled: false,
+      InstallState: { DISABLED: 'disabled', INSTALLED: 'installed', NOT_INSTALLED: 'not_installed' },
+      RunningState: { CANNOT_RUN: 'cannot_run', READY_TO_RUN: 'ready_to_run', RUNNING: 'running' },
+      getDetails: makeNativeFunction(() => null, 'getDetails'),
+      getIsInstalled: makeNativeFunction(() => false, 'getIsInstalled')
+    };
+  }
   
   // ============================================
-  // 5. PERMISSIONS API
+  // 5. PERMISSIONS API (enhanced)
   // ============================================
   const origQuery = navigator.permissions?.query?.bind(navigator.permissions);
   if (origQuery) {
-    navigator.permissions.query = makeNativeFunction((params) => {
-      if (params.name === 'notifications') {
-        return Promise.resolve({ state: 'prompt', onchange: null });
+    navigator.permissions.query = makeNativeFunction(async function(desc) {
+      const handlers = {
+        'notifications': () => 'prompt',
+        'geolocation': () => 'prompt',
+        'camera': () => 'prompt',
+        'microphone': () => 'prompt',
+        'background-sync': () => 'granted',
+        'accelerometer': () => 'granted',
+        'gyroscope': () => 'granted'
+      };
+      if (desc.name in handlers) {
+        return { state: handlers[desc.name](), onchange: null };
       }
-      return origQuery(params);
+      return origQuery(desc);
     }, 'query');
   }
+  
+  // ============================================
+  // 5b. NAVIGATOR.USERAGENTDATA - Client Hints API (required by Turnstile/CF)
+  // ============================================
+  (function() {
+    const ua = navigator.userAgent || '';
+    const chromeMatch = ua.match(/Chrome\/(\d+)/);
+    const chromeVersion = chromeMatch ? chromeMatch[1] : '122';
+    
+    let platform = 'macOS', platformVersion = '14.0.0';
+    if (ua.includes('Windows')) { platform = 'Windows'; platformVersion = '15.0.0'; }
+    else if (ua.includes('Linux')) { platform = 'Linux'; platformVersion = '6.5.0'; }
+    
+    const brands = [
+      { brand: 'Chromium', version: chromeVersion },
+      { brand: 'Google Chrome', version: chromeVersion },
+      { brand: 'Not=A?Brand', version: '24' }
+    ];
+    
+    const userAgentData = {
+      brands: brands,
+      mobile: false,
+      platform: platform,
+      getHighEntropyValues: makeNativeFunction(async function(hints) {
+        const values = { brands: brands, mobile: false, platform: platform };
+        for (const hint of hints) {
+          if (hint === 'platformVersion') values.platformVersion = platformVersion;
+          else if (hint === 'architecture') values.architecture = 'x86';
+          else if (hint === 'model') values.model = '';
+          else if (hint === 'bitness') values.bitness = '64';
+          else if (hint === 'uaFullVersion') values.uaFullVersion = chromeVersion + '.0.0.0';
+          else if (hint === 'fullVersionList') values.fullVersionList = brands.map(b => ({ ...b, version: b.version + '.0.0.0' }));
+          else if (hint === 'wow64') values.wow64 = false;
+        }
+        return values;
+      }, 'getHighEntropyValues'),
+      toJSON: function() { return { brands: this.brands, mobile: this.mobile, platform: this.platform }; }
+    };
+    
+    Object.defineProperty(Navigator.prototype, 'userAgentData', {
+      get: makeNativeFunction(() => userAgentData, 'get userAgentData'),
+      configurable: true,
+      enumerable: true
+    });
+  })();
+  
+  // ============================================
+  // 5c. maxTouchPoints (0 for desktop)
+  // ============================================
+  Object.defineProperty(navigator, 'maxTouchPoints', {
+    get: makeNativeFunction(() => 0, 'get maxTouchPoints'),
+    configurable: true
+  });
+  
+  // ============================================
+  // 5d. VIDEO CODEC SPOOFING
+  // ============================================
+  const originalCanPlayType = HTMLMediaElement.prototype.canPlayType;
+  HTMLMediaElement.prototype.canPlayType = makeNativeFunction(function(type) {
+    if (type.includes('avc1') || type.includes('h264')) return 'probably';
+    if (type.includes('mp4a.40') || type.includes('aac')) return 'probably';
+    if (type === 'video/mp4' || type === 'audio/mp4') return 'probably';
+    if (type.includes('vp8') || type.includes('vp9') || type.includes('opus')) return 'probably';
+    if (type === 'video/webm' || type === 'audio/webm') return 'probably';
+    return originalCanPlayType.apply(this, arguments);
+  }, 'canPlayType');
   
   // ============================================
   // 6. WEBGL VENDOR/RENDERER SPOOFING
