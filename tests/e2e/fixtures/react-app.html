@@ -72,7 +72,9 @@
       developerResources: null,
       developerResourcesSummary: null,
       quickStartLoaded: false,
-      quickStart: null
+      quickStart: null,
+      complianceLoaded: false,
+      compliance: null
     };
 
     // Simulated async data fetch — wave 1 (500ms)
@@ -442,6 +444,30 @@
           )
         : h('p', null, '');
 
+      const complianceSection = state.complianceLoaded && state.compliance
+        ? h('section', { 'aria-label': 'Regulatory Compliance' },
+            h('h2', null, 'Regulatory Compliance'),
+            h('p', null, 'SeaPortal maintains compliance with major data protection frameworks worldwide. Our legal and security teams continuously monitor regulatory changes to ensure your extraction workflows remain compliant.'),
+            h('h3', null, 'Compliance Frameworks'),
+            ...state.compliance.frameworks.map(fw =>
+              h('div', { className: 'card' },
+                h('h4', null, fw.name),
+                h('p', null, h('strong', null, 'Region: '), fw.region),
+                h('p', null, h('strong', null, 'Status: '), fw.status),
+                h('p', null, fw.desc)
+              )
+            ),
+            h('h3', null, 'Recent Audit Activity'),
+            ...state.compliance.auditLog.map(entry =>
+              h('div', { className: 'card' },
+                h('h4', null, entry.event + ' — ' + entry.date),
+                h('p', null, h('strong', null, 'Result: '), entry.result),
+                h('p', null, entry.detail)
+              )
+            )
+          )
+        : h('p', null, '');
+
       const quickStartSection = state.quickStartLoaded && state.quickStart
         ? h('section', { 'aria-label': 'Quick Start Guide' },
             h('h2', null, 'Quick Start Guide'),
@@ -568,6 +594,7 @@
             architectureSection,
             migrationSection,
             developerResourcesSection,
+            complianceSection,
             quickStartSection,
             h('div', null,
               h('button', { onClick: () => { state.count++; render(); } }, 'Likes: ' + state.count),
@@ -1485,7 +1512,107 @@
       }, 6200);
     })();
 
-    // Wave 18: ResizeObserver-triggered content — only loads when container reaches observable dimensions
+    // Wave 18: BroadcastChannel + crypto challenge — content only appears after solving a SHA-256 challenge via cross-context messaging
+    (function loadComplianceViaBroadcastChannel() {
+      setTimeout(async () => {
+        // Create a BroadcastChannel for cross-context communication
+        const channelName = 'seaportal-compliance-' + Date.now();
+        const mainChannel = new BroadcastChannel(channelName);
+        
+        // Generate a random challenge that must be solved
+        const challengeBytes = crypto.getRandomValues(new Uint8Array(8));
+        const challengeHex = Array.from(challengeBytes)
+          .map(b => b.toString(16).padStart(2, '0')).join('');
+        
+        // Expected solution: find a nonce where SHA-256(challenge + nonce) starts with '00'
+        // This is a mini proof-of-work that requires JS execution
+        let solutionFound = false;
+        let nonce = 0;
+        
+        // Solve the challenge (simple PoW)
+        async function solveChallenge() {
+          const encoder = new TextEncoder();
+          
+          while (!solutionFound && nonce < 100000) {
+            const data = encoder.encode(challengeHex + nonce.toString());
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            
+            // Check if hash starts with '00' (first byte is 0)
+            if (hashArray[0] === 0) {
+              solutionFound = true;
+              // Broadcast the solution
+              mainChannel.postMessage({
+                type: 'SOLUTION',
+                challenge: challengeHex,
+                nonce: nonce,
+                hash: hashArray.slice(0, 4).map(b => b.toString(16).padStart(2, '0')).join('')
+              });
+              break;
+            }
+            nonce++;
+          }
+        }
+        
+        // Listen for solution verification
+        mainChannel.onmessage = (event) => {
+          if (event.data.type === 'SOLUTION' && event.data.challenge === challengeHex) {
+            // Solution received and verified — now render compliance content
+            state.compliance = {
+              frameworks: [
+                {
+                  name: 'CCPA Compliance',
+                  region: 'California, USA',
+                  status: 'Fully Compliant',
+                  desc: 'SeaPortal fully complies with the California Consumer Privacy Act. We provide mechanisms for data access requests, deletion requests, and opt-out of data sales. Our extraction infrastructure can be configured to respect CCPA Do Not Sell signals embedded in target pages.'
+                },
+                {
+                  name: 'HIPAA Ready',
+                  region: 'United States',
+                  status: 'BAA Available',
+                  desc: 'Healthcare organizations can use SeaPortal with confidence. We offer Business Associate Agreements and maintain technical safeguards including audit logging, encryption, and access controls required for HIPAA compliance when extracting from health-related sources.'
+                },
+                {
+                  name: 'LGPD Alignment',
+                  region: 'Brazil',
+                  status: 'Compliant',
+                  desc: 'Lei Geral de Proteção de Dados compliance is built into our platform. We support data localization requirements with our São Paulo region deployment and provide Portuguese-language data processing agreements for Brazilian customers.'
+                }
+              ],
+              auditLog: [
+                {
+                  date: 'February 2026',
+                  event: 'Penetration Test',
+                  result: 'Passed',
+                  detail: 'Third-party security firm completed comprehensive penetration testing of extraction API and worker infrastructure. All critical and high-severity findings remediated before report finalization.'
+                },
+                {
+                  date: 'January 2026', 
+                  event: 'SOC 2 Audit',
+                  result: 'Certified',
+                  detail: 'Independent auditor verified continued compliance with Trust Services Criteria. Zero exceptions noted in security, availability, and confidentiality controls.'
+                },
+                {
+                  date: 'December 2025',
+                  event: 'GDPR DPA Review',
+                  result: 'Approved',
+                  detail: 'Updated Data Processing Agreement reviewed and approved by EU legal counsel. New clauses address AI training data extraction and cross-border transfer mechanisms post-Schrems II.'
+                }
+              ]
+            };
+            state.complianceLoaded = true;
+            mainChannel.close();
+            render();
+          }
+        };
+        
+        // Start solving
+        solveChallenge();
+        
+      }, 6500);
+    })();
+
+    // Wave 19: ResizeObserver-triggered content — only loads when container reaches observable dimensions
     (function loadQuickStartViaResizeObserver() {
       let observerSetup = false;
 
