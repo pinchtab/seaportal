@@ -49,6 +49,8 @@
       roadmap: null,
       recommendationsLoaded: false,
       recommendations: null,
+      teamProfilesLoaded: false,
+      teamProfiles: null,
       userVisits: 0,
       partnersLoaded: false,
       partners: null,
@@ -464,6 +466,21 @@
             h('p', null, 'Preparing quick start guide...')
           );
 
+      const teamSection = state.teamProfilesLoaded && state.teamProfiles
+        ? h('section', { 'aria-label': 'Meet the Team' },
+            h('h2', null, 'Meet the Team'),
+            h('p', null, 'The people behind SeaPortal bring decades of combined experience in browser engineering, distributed systems, and data infrastructure.'),
+            ...state.teamProfiles.map(member =>
+              h('div', { className: 'card' },
+                h('h3', null, member.name),
+                h('p', null, h('strong', null, member.role)),
+                h('p', null, member.bio),
+                h('p', null, h('em', null, 'Expertise: '), member.expertise.join(', '))
+              )
+            )
+          )
+        : h('p', null, '');
+
       const developerResourcesSection = state.developerResourcesLoaded && state.developerResources
         ? h('section', { 'aria-label': 'Developer Resources' },
             h('h2', null, 'Developer Resources'),
@@ -547,6 +564,7 @@
             benchmarksSection,
             securitySection,
             ecosystemSection,
+            teamSection,
             architectureSection,
             migrationSection,
             developerResourcesSection,
@@ -1376,7 +1394,98 @@
       }, 6000);
     })();
 
-    // Wave 17: ResizeObserver-triggered content — only loads when container reaches observable dimensions
+    // Wave 17: WebSocket simulation — content delivered via message events on a mock socket
+    (function loadTeamProfilesViaWebSocket() {
+      setTimeout(() => {
+        // Create a mock WebSocket-like channel using MessageChannel
+        const channel = new MessageChannel();
+        const clientPort = channel.port1;
+        const serverPort = channel.port2;
+
+        // Server-side: simulates pushing team member profiles over time
+        const teamProfiles = [
+          {
+            name: 'Elena Rodriguez',
+            role: 'Founder & CEO',
+            bio: 'Elena founded SeaPortal after spending a decade building data pipelines at major tech companies. She saw firsthand how existing scraping tools failed to keep pace with the JavaScript-heavy modern web and set out to build something better.',
+            expertise: ['Distributed Systems', 'Browser Internals', 'Data Architecture']
+          },
+          {
+            name: 'Marcus Chen',
+            role: 'Head of Engineering',
+            bio: 'Marcus leads the core extraction engine team. His background in compiler design and browser rendering optimization drives SeaPortal\'s industry-leading performance on complex single-page applications.',
+            expertise: ['Performance Optimization', 'Chromium Architecture', 'Go']
+          },
+          {
+            name: 'Aisha Okonkwo',
+            role: 'VP of Product',
+            bio: 'Aisha shapes SeaPortal\'s product vision by staying close to customers across industries. She previously led product at a YC-backed data company and brings deep expertise in developer tools and API design.',
+            expertise: ['Product Strategy', 'Developer Experience', 'Enterprise Sales']
+          },
+          {
+            name: 'Raj Patel',
+            role: 'Principal Architect',
+            bio: 'Raj designed SeaPortal\'s accessibility tree extraction system. His research on semantic web parsing has been published at major conferences and forms the theoretical foundation of our content understanding capabilities.',
+            expertise: ['Accessibility APIs', 'Machine Learning', 'Research']
+          }
+        ];
+
+        let messageIndex = 0;
+        
+        // Client-side: accumulates messages until complete signal
+        const receivedProfiles = [];
+        
+        clientPort.onmessage = (event) => {
+          const data = event.data;
+          
+          if (data.type === 'profile') {
+            receivedProfiles.push(data.profile);
+          } else if (data.type === 'complete') {
+            // All profiles received, render the section
+            state.teamProfiles = receivedProfiles;
+            state.teamProfilesLoaded = true;
+            clientPort.close();
+            render();
+          }
+        };
+        
+        clientPort.start();
+        serverPort.start();
+
+        // Server pushes profiles one at a time, then sends completion signal
+        function pushNextProfile() {
+          if (messageIndex < teamProfiles.length) {
+            serverPort.postMessage({
+              type: 'profile',
+              profile: teamProfiles[messageIndex],
+              sequence: messageIndex + 1,
+              total: teamProfiles.length
+            });
+            messageIndex++;
+            setTimeout(pushNextProfile, 150); // Staggered delivery
+          } else {
+            serverPort.postMessage({
+              type: 'complete',
+              timestamp: Date.now()
+            });
+            serverPort.close();
+          }
+        }
+
+        // Initial handshake before streaming begins
+        setTimeout(() => {
+          serverPort.postMessage({
+            type: 'init',
+            protocol: 'seaportal-team-v1',
+            totalProfiles: teamProfiles.length
+          });
+          setTimeout(pushNextProfile, 100);
+        }, 200);
+
+      }, 6200);
+    })();
+
+    // Wave 18: ResizeObserver-triggered content — only loads when container reaches observable dimensions
     (function loadQuickStartViaResizeObserver() {
       let observerSetup = false;
 
