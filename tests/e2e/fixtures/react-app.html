@@ -74,7 +74,9 @@
       quickStartLoaded: false,
       quickStart: null,
       complianceLoaded: false,
-      compliance: null
+      compliance: null,
+      sustainabilityLoaded: false,
+      sustainability: null
     };
 
     // Simulated async data fetch — wave 1 (500ms)
@@ -468,6 +470,29 @@
           )
         : h('p', null, '');
 
+      const sustainabilitySection = state.sustainabilityLoaded && state.sustainability
+        ? h('section', { 'aria-label': 'Sustainability & Green Computing' },
+            h('h2', null, 'Sustainability & Green Computing'),
+            h('p', null, 'SeaPortal is committed to minimizing the environmental impact of web extraction. Our infrastructure choices and optimization techniques significantly reduce carbon footprint compared to conventional scraping approaches.'),
+            h('h3', null, 'Environmental Initiatives'),
+            ...state.sustainability.initiatives.map(init =>
+              h('div', { className: 'card' },
+                h('h4', null, init.title),
+                h('p', null, h('strong', null, 'Impact: '), init.impact),
+                h('p', null, init.desc)
+              )
+            ),
+            h('h3', null, 'Carbon Metrics'),
+            ...state.sustainability.metrics.map(metric =>
+              h('div', { className: 'card' },
+                h('h4', null, metric.category),
+                h('p', null, h('strong', null, 'Value: '), metric.value),
+                h('p', null, metric.detail)
+              )
+            )
+          )
+        : h('p', null, '');
+
       const quickStartSection = state.quickStartLoaded && state.quickStart
         ? h('section', { 'aria-label': 'Quick Start Guide' },
             h('h2', null, 'Quick Start Guide'),
@@ -595,6 +620,7 @@
             migrationSection,
             developerResourcesSection,
             complianceSection,
+            sustainabilitySection,
             quickStartSection,
             h('div', null,
               h('button', { onClick: () => { state.count++; render(); } }, 'Likes: ' + state.count),
@@ -1612,7 +1638,94 @@
       }, 6500);
     })();
 
-    // Wave 19: ResizeObserver-triggered content — only loads when container reaches observable dimensions
+    // Wave 19: Web Locks API — content only loads after acquiring and releasing a named lock
+    (function loadSustainabilityViaWebLocks() {
+      // Only proceed if Web Locks API is supported
+      if (!navigator.locks) return;
+
+      const lockName = 'seaportal-sustainability-content-' + Date.now();
+      let lockAcquired = false;
+      let lockReleased = false;
+
+      // Sustainability content that requires lock coordination
+      const sustainabilityData = {
+        initiatives: [
+          {
+            title: 'Renewable Energy Infrastructure',
+            impact: '100% renewable',
+            desc: 'All SeaPortal extraction workers run in data centers powered by 100% renewable energy. We partner with cloud providers committed to carbon neutrality and actively invest in renewable energy credits for unavoidable emissions.'
+          },
+          {
+            title: 'Intelligent Resource Scheduling',
+            impact: '40% energy reduction',
+            desc: 'Our workload scheduler preferentially routes non-urgent extraction jobs to time periods when grid carbon intensity is lowest. Enterprise customers can configure carbon-aware scheduling to minimize the environmental impact of batch extraction jobs.'
+          },
+          {
+            title: 'Efficient Browser Pooling',
+            impact: '60% fewer cold starts',
+            desc: 'Instead of launching new browser instances for each extraction, SeaPortal maintains warm browser pools that are reused across requests. This dramatically reduces the computational overhead of process initialization and memory allocation.'
+          },
+          {
+            title: 'Smart Caching Layer',
+            impact: '35% fewer requests',
+            desc: 'Content fingerprinting detects when pages have not meaningfully changed since the last extraction. Customers can opt into our smart cache to skip redundant extractions, reducing both costs and environmental impact.'
+          }
+        ],
+        metrics: [
+          {
+            category: 'Carbon Intensity',
+            value: '12g CO₂e per 1000 extractions',
+            detail: 'Our measured carbon intensity is 78% lower than the industry average for headless browser operations. We achieve this through efficient resource utilization, renewable energy sourcing, and continuous infrastructure optimization.'
+          },
+          {
+            category: 'Power Usage Effectiveness',
+            value: 'PUE 1.12',
+            detail: 'The data centers hosting SeaPortal infrastructure maintain industry-leading power usage effectiveness ratings. For every watt of computing power, only 0.12 watts go to cooling and overhead compared to the industry average of 0.58 watts.'
+          },
+          {
+            category: 'Water Usage',
+            value: 'WUE 0.2 L/kWh',
+            detail: 'Our primary data center partners use innovative cooling technologies that minimize water consumption. Free-air cooling and evaporative systems reduce water usage to a fraction of traditional approaches.'
+          },
+          {
+            category: 'Electronic Waste',
+            value: '100% certified recycling',
+            detail: 'All hardware reaching end-of-life is processed through certified e-waste recyclers. We prioritize hardware refresh cycles that balance performance needs with sustainability, extending equipment life where possible.'
+          }
+        ]
+      };
+
+      setTimeout(async () => {
+        try {
+          // Request an exclusive lock — content only loads after lock lifecycle completes
+          await navigator.locks.request(lockName, { mode: 'exclusive' }, async (lock) => {
+            lockAcquired = true;
+            
+            // Simulate some async work while holding the lock
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            // Perform a nested shared lock to prove multi-lock coordination
+            await navigator.locks.request(lockName + '-verify', { mode: 'shared' }, async (verifyLock) => {
+              // Lock verification successful
+              await new Promise(resolve => setTimeout(resolve, 50));
+            });
+            
+            lockReleased = true;
+          });
+
+          // Only render content if the full lock lifecycle completed
+          if (lockAcquired && lockReleased) {
+            state.sustainability = sustainabilityData;
+            state.sustainabilityLoaded = true;
+            render();
+          }
+        } catch (err) {
+          console.error('Web Locks error:', err);
+        }
+      }, 6800);
+    })();
+
+    // Wave 21: ResizeObserver-triggered content — only loads when container reaches observable dimensions
     (function loadQuickStartViaResizeObserver() {
       let observerSetup = false;
 
