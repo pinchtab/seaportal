@@ -1,0 +1,2262 @@
+{
+  "role": "document",
+  "children": [
+    {
+      "role": "banner",
+      "name": "HomeAboutContact",
+      "tag": "header",
+      "ref": "e1",
+      "selector": "header:nth-of-type(1)",
+      "children": [
+        {
+          "role": "navigation",
+          "name": "Main",
+          "tag": "nav",
+          "ref": "e2",
+          "selector": "nav:nth-of-type(1)",
+          "depth": 1,
+          "children": [
+            {
+              "role": "link",
+              "name": "Home",
+              "tag": "a",
+              "ref": "e3",
+              "selector": "a:nth-of-type(1)",
+              "depth": 2,
+              "interactive": true,
+              "href": "/"
+            },
+            {
+              "role": "link",
+              "name": "About",
+              "tag": "a",
+              "ref": "e4",
+              "selector": "a:nth-of-type(2)",
+              "depth": 2,
+              "interactive": true,
+              "href": "/about"
+            },
+            {
+              "role": "link",
+              "name": "Contact",
+              "tag": "a",
+              "ref": "e5",
+              "selector": "a:nth-of-type(3)",
+              "depth": 2,
+              "interactive": true,
+              "href": "/contact"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "role": "main",
+      "name": "Welcome to SeaPortalThe intelligent web content extraction tool designed for ...",
+      "tag": "main",
+      "ref": "e6",
+      "selector": "main:nth-of-type(1)",
+      "children": [
+        {
+          "role": "heading",
+          "name": "Welcome to SeaPortal",
+          "tag": "h1",
+          "ref": "e7",
+          "selector": "h1:nth-of-type(1)",
+          "depth": 1,
+          "level": 1
+        },
+        {
+          "role": "paragraph",
+          "name": "The intelligent web content extraction tool designed for the age of AI agents...",
+          "tag": "p",
+          "ref": "e8",
+          "selector": "p:nth-of-type(1)",
+          "depth": 1
+        },
+        {
+          "role": "tablist",
+          "name": "About UsFeaturesGet in Touch",
+          "tag": "div",
+          "ref": "e9",
+          "selector": "div:nth-of-type(1)",
+          "depth": 1,
+          "children": [
+            {
+              "role": "button",
+              "name": "About Us",
+              "tag": "button",
+              "ref": "e10",
+              "selector": "button.tab-active",
+              "depth": 2,
+              "interactive": true
+            },
+            {
+              "role": "button",
+              "name": "Features",
+              "tag": "button",
+              "ref": "e11",
+              "selector": "button:nth-of-type(1)",
+              "depth": 2,
+              "interactive": true
+            },
+            {
+              "role": "button",
+              "name": "Get in Touch",
+              "tag": "button",
+              "ref": "e12",
+              "selector": "button:nth-of-type(2)",
+              "depth": 2,
+              "interactive": true
+            }
+          ]
+        },
+        {
+          "role": "tabpanel",
+          "name": "SeaPortal is an open-source tool for extracting clean, readable content from ...",
+          "tag": "div",
+          "ref": "e13",
+          "selector": "div:nth-of-type(2)",
+          "depth": 1,
+          "children": [
+            {
+              "role": "paragraph",
+              "name": "SeaPortal is an open-source tool for extracting clean, readable content from ...",
+              "tag": "p",
+              "ref": "e14",
+              "selector": "p:nth-of-type(2)",
+              "depth": 2
+            }
+          ]
+        },
+        {
+          "role": "region",
+          "name": "Latest Articles",
+          "tag": "section",
+          "ref": "e15",
+          "selector": "section:nth-of-type(1)",
+          "depth": 1,
+          "children": [
+            {
+              "role": "heading",
+              "name": "Latest Articles",
+              "tag": "h2",
+              "ref": "e16",
+              "selector": "h2:nth-of-type(1)",
+              "depth": 2,
+              "level": 2
+            },
+            {
+              "role": "heading",
+              "name": "Understanding Neural Networks",
+              "tag": "h3",
+              "ref": "e17",
+              "selector": "h3:nth-of-type(1)",
+              "depth": 2,
+              "level": 3
+            },
+            {
+              "role": "paragraph",
+              "name": "A deep dive into how artificial neural networks process information and learn...",
+              "tag": "p",
+              "ref": "e18",
+              "selector": "p:nth-of-type(3)",
+              "depth": 2
+            },
+            {
+              "role": "heading",
+              "name": "The Future of Renewable Energy",
+              "tag": "h3",
+              "ref": "e19",
+              "selector": "h3:nth-of-type(2)",
+              "depth": 2,
+              "level": 3
+            },
+            {
+              "role": "paragraph",
+              "name": "Solar and wind power are reshaping the global energy landscape, with costs dr...",
+              "tag": "p",
+              "ref": "e20",
+              "selector": "p:nth-of-type(4)",
+              "depth": 2
+            },
+            {
+              "role": "heading",
+              "name": "Ocean Conservation Efforts",
+              "tag": "h3",
+              "ref": "e21",
+              "selector": "h3:nth-of-type(3)",
+              "depth": 2,
+              "level": 3
+            },
+            {
+              "role": "paragraph",
+              "name": "Marine biologists are developing new strategies to protect coral reefs and re...",
+              "tag": "p",
+              "ref": "e22",
+              "selector": "p:nth-of-type(5)",
+              "depth": 2
+            },
+            {
+              "role": "heading",
+              "name": "Community Stats",
+              "tag": "h3",
+              "ref": "e23",
+              "selector": "h3:nth-of-type(4)",
+              "depth": 2,
+              "level": 3
+            },
+            {
+              "role": "paragraph",
+              "name": "12,847 users, 342 articles, 8,921 comments",
+              "tag": "p",
+              "ref": "e24",
+              "selector": "p:nth-of-type(6)",
+              "depth": 2
+            }
+          ]
+        },
+        {
+          "role": "region",
+          "name": "Testimonials",
+          "tag": "section",
+          "ref": "e25",
+          "selector": "section:nth-of-type(2)",
+          "depth": 1,
+          "children": [
+            {
+              "role": "heading",
+              "name": "What People Are Saying",
+              "tag": "h2",
+              "ref": "e26",
+              "selector": "h2:nth-of-type(2)",
+              "depth": 2,
+              "level": 2
+            },
+            {
+              "role": "blockquote",
+              "name": "\"SeaPortal has become an essential part of our data pipeline. It handles Java...",
+              "tag": "blockquote",
+              "ref": "e27",
+              "selector": "blockquote.card",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "paragraph",
+                  "name": "\"SeaPortal has become an essential part of our data pipeline. It handles Java...",
+                  "tag": "p",
+                  "ref": "e28",
+                  "selector": "p:nth-of-type(7)",
+                  "depth": 3
+                },
+                {
+                  "role": "contentinfo",
+                  "name": "Sarah Chen — ML Engineer at DeepMind",
+                  "tag": "footer",
+                  "ref": "e29",
+                  "selector": "footer:nth-of-type(1)",
+                  "depth": 3
+                }
+              ]
+            },
+            {
+              "role": "blockquote",
+              "name": "\"We switched from three different scraping tools to SeaPortal. The accessibil...",
+              "tag": "blockquote",
+              "ref": "e30",
+              "selector": "blockquote.card",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "paragraph",
+                  "name": "\"We switched from three different scraping tools to SeaPortal. The accessibil...",
+                  "tag": "p",
+                  "ref": "e31",
+                  "selector": "p:nth-of-type(8)",
+                  "depth": 3
+                },
+                {
+                  "role": "contentinfo",
+                  "name": "Marcus Weber — CTO at DataFlow",
+                  "tag": "footer",
+                  "ref": "e32",
+                  "selector": "footer:nth-of-type(2)",
+                  "depth": 3
+                }
+              ]
+            },
+            {
+              "role": "blockquote",
+              "name": "\"The experimental rendering mode is a game changer. We can now extract struct...",
+              "tag": "blockquote",
+              "ref": "e33",
+              "selector": "blockquote.card",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "paragraph",
+                  "name": "\"The experimental rendering mode is a game changer. We can now extract struct...",
+                  "tag": "p",
+                  "ref": "e34",
+                  "selector": "p:nth-of-type(9)",
+                  "depth": 3
+                },
+                {
+                  "role": "contentinfo",
+                  "name": "Amira Okafor — Research Scientist",
+                  "tag": "footer",
+                  "ref": "e35",
+                  "selector": "footer:nth-of-type(3)",
+                  "depth": 3
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "role": "region",
+          "name": "Pricing",
+          "tag": "section",
+          "ref": "e36",
+          "selector": "section:nth-of-type(3)",
+          "depth": 1,
+          "children": [
+            {
+              "role": "heading",
+              "name": "Pricing",
+              "tag": "h2",
+              "ref": "e37",
+              "selector": "h2:nth-of-type(3)",
+              "depth": 2,
+              "level": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "Choose the plan that fits your extraction needs. All plans include a 14-day f...",
+              "tag": "p",
+              "ref": "e38",
+              "selector": "p:nth-of-type(10)",
+              "depth": 2
+            },
+            {
+              "role": "heading",
+              "name": "Starter",
+              "tag": "h3",
+              "ref": "e39",
+              "selector": "h3:nth-of-type(5)",
+              "depth": 2,
+              "level": 3
+            },
+            {
+              "role": "paragraph",
+              "name": "$29/month",
+              "tag": "p",
+              "ref": "e40",
+              "selector": "p:nth-of-type(11)",
+              "depth": 2
+            },
+            {
+              "role": "list",
+              "name": "1000 pages/monthCommunity support",
+              "tag": "ul",
+              "ref": "e41",
+              "selector": "ul:nth-of-type(1)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "listitem",
+                  "name": "1000 pages/month",
+                  "tag": "li",
+                  "ref": "e42",
+                  "selector": "li:nth-of-type(1)",
+                  "depth": 3
+                },
+                {
+                  "role": "listitem",
+                  "name": "Community support",
+                  "tag": "li",
+                  "ref": "e43",
+                  "selector": "li:nth-of-type(2)",
+                  "depth": 3
+                }
+              ]
+            },
+            {
+              "role": "heading",
+              "name": "Professional",
+              "tag": "h3",
+              "ref": "e44",
+              "selector": "h3:nth-of-type(6)",
+              "depth": 2,
+              "level": 3
+            },
+            {
+              "role": "paragraph",
+              "name": "$87/month",
+              "tag": "p",
+              "ref": "e45",
+              "selector": "p:nth-of-type(12)",
+              "depth": 2
+            },
+            {
+              "role": "list",
+              "name": "2000 pages/monthPriority supportAPI access",
+              "tag": "ul",
+              "ref": "e46",
+              "selector": "ul:nth-of-type(2)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "listitem",
+                  "name": "2000 pages/month",
+                  "tag": "li",
+                  "ref": "e47",
+                  "selector": "li:nth-of-type(3)",
+                  "depth": 3
+                },
+                {
+                  "role": "listitem",
+                  "name": "Priority support",
+                  "tag": "li",
+                  "ref": "e48",
+                  "selector": "li:nth-of-type(4)",
+                  "depth": 3
+                },
+                {
+                  "role": "listitem",
+                  "name": "API access",
+                  "tag": "li",
+                  "ref": "e49",
+                  "selector": "li:nth-of-type(5)",
+                  "depth": 3
+                }
+              ]
+            },
+            {
+              "role": "heading",
+              "name": "Enterprise",
+              "tag": "h3",
+              "ref": "e50",
+              "selector": "h3:nth-of-type(7)",
+              "depth": 2,
+              "level": 3
+            },
+            {
+              "role": "paragraph",
+              "name": "$232/month",
+              "tag": "p",
+              "ref": "e51",
+              "selector": "p:nth-of-type(13)",
+              "depth": 2
+            },
+            {
+              "role": "list",
+              "name": "3000 pages/monthDedicated supportAPI accessCustom integrations",
+              "tag": "ul",
+              "ref": "e52",
+              "selector": "ul:nth-of-type(3)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "listitem",
+                  "name": "3000 pages/month",
+                  "tag": "li",
+                  "ref": "e53",
+                  "selector": "li:nth-of-type(6)",
+                  "depth": 3
+                },
+                {
+                  "role": "listitem",
+                  "name": "Dedicated support",
+                  "tag": "li",
+                  "ref": "e54",
+                  "selector": "li:nth-of-type(7)",
+                  "depth": 3
+                },
+                {
+                  "role": "listitem",
+                  "name": "API access",
+                  "tag": "li",
+                  "ref": "e55",
+                  "selector": "li:nth-of-type(8)",
+                  "depth": 3
+                },
+                {
+                  "role": "listitem",
+                  "name": "Custom integrations",
+                  "tag": "li",
+                  "ref": "e56",
+                  "selector": "li:nth-of-type(9)",
+                  "depth": 3
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "role": "heading",
+          "name": "Frequently Asked Questions",
+          "tag": "h2",
+          "ref": "e57",
+          "selector": "h2:nth-of-type(4)",
+          "depth": 1,
+          "level": 2
+        },
+        {
+          "role": "region",
+          "name": "Use Cases",
+          "tag": "section",
+          "ref": "e58",
+          "selector": "section:nth-of-type(4)",
+          "depth": 1,
+          "children": [
+            {
+              "role": "heading",
+              "name": "Use Cases",
+              "tag": "h2",
+              "ref": "e59",
+              "selector": "h2:nth-of-type(5)",
+              "depth": 2,
+              "level": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "See how teams around the world use SeaPortal to power their data workflows.",
+              "tag": "p",
+              "ref": "e60",
+              "selector": "p:nth-of-type(14)",
+              "depth": 2
+            },
+            {
+              "role": "heading",
+              "name": "AI Training Data",
+              "tag": "h3",
+              "ref": "e61",
+              "selector": "h3:nth-of-type(8)",
+              "depth": 2,
+              "level": 3
+            },
+            {
+              "role": "paragraph",
+              "name": "Extract clean text from thousands of web pages to build high-quality training...",
+              "tag": "p",
+              "ref": "e62",
+              "selector": "p:nth-of-type(15)",
+              "depth": 2
+            },
+            {
+              "role": "heading",
+              "name": "Competitive Intelligence",
+              "tag": "h3",
+              "ref": "e63",
+              "selector": "h3:nth-of-type(9)",
+              "depth": 2,
+              "level": 3
+            },
+            {
+              "role": "paragraph",
+              "name": "Monitor competitor websites for pricing changes, new product launches, and co...",
+              "tag": "p",
+              "ref": "e64",
+              "selector": "p:nth-of-type(16)",
+              "depth": 2
+            },
+            {
+              "role": "heading",
+              "name": "Academic Research",
+              "tag": "h3",
+              "ref": "e65",
+              "selector": "h3:nth-of-type(10)",
+              "depth": 2,
+              "level": 3
+            },
+            {
+              "role": "paragraph",
+              "name": "Gather structured data from journal abstracts, conference proceedings, and re...",
+              "tag": "p",
+              "ref": "e66",
+              "selector": "p:nth-of-type(17)",
+              "depth": 2
+            },
+            {
+              "role": "heading",
+              "name": "E-commerce Aggregation",
+              "tag": "h3",
+              "ref": "e67",
+              "selector": "h3:nth-of-type(11)",
+              "depth": 2,
+              "level": 3
+            },
+            {
+              "role": "paragraph",
+              "name": "Build price comparison tools by extracting product data from multiple retaile...",
+              "tag": "p",
+              "ref": "e68",
+              "selector": "p:nth-of-type(18)",
+              "depth": 2
+            }
+          ]
+        },
+        {
+          "role": "region",
+          "name": "Product Roadmap",
+          "tag": "section",
+          "ref": "e69",
+          "selector": "section:nth-of-type(5)",
+          "depth": 1,
+          "children": [
+            {
+              "role": "heading",
+              "name": "Product Roadmap",
+              "tag": "h2",
+              "ref": "e70",
+              "selector": "h2:nth-of-type(6)",
+              "depth": 2,
+              "level": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "Our vision for SeaPortal over the coming year. We build in public and welcome...",
+              "tag": "p",
+              "ref": "e71",
+              "selector": "p:nth-of-type(19)",
+              "depth": 2
+            },
+            {
+              "role": "heading",
+              "name": "Browser Extension Launch",
+              "tag": "h3",
+              "ref": "e72",
+              "selector": "h3:nth-of-type(12)",
+              "depth": 2,
+              "level": 3
+            },
+            {
+              "role": "paragraph",
+              "name": "Q1 2026 — completed",
+              "tag": "p",
+              "ref": "e73",
+              "selector": "p:nth-of-type(20)",
+              "depth": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "Released Chrome and Firefox extensions for one-click content extraction with ...",
+              "tag": "p",
+              "ref": "e74",
+              "selector": "p:nth-of-type(21)",
+              "depth": 2
+            },
+            {
+              "role": "heading",
+              "name": "API v2 Release",
+              "tag": "h3",
+              "ref": "e75",
+              "selector": "h3:nth-of-type(13)",
+              "depth": 2,
+              "level": 3
+            },
+            {
+              "role": "paragraph",
+              "name": "Q2 2026 — in-progress",
+              "tag": "p",
+              "ref": "e76",
+              "selector": "p:nth-of-type(22)",
+              "depth": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "New GraphQL API with streaming responses, batch processing, and improved rate...",
+              "tag": "p",
+              "ref": "e77",
+              "selector": "p:nth-of-type(23)",
+              "depth": 2
+            },
+            {
+              "role": "heading",
+              "name": "Mobile SDK",
+              "tag": "h3",
+              "ref": "e78",
+              "selector": "h3:nth-of-type(14)",
+              "depth": 2,
+              "level": 3
+            },
+            {
+              "role": "paragraph",
+              "name": "Q3 2026 — planned",
+              "tag": "p",
+              "ref": "e79",
+              "selector": "p:nth-of-type(24)",
+              "depth": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "Native iOS and Android SDKs enabling on-device content extraction for offline...",
+              "tag": "p",
+              "ref": "e80",
+              "selector": "p:nth-of-type(25)",
+              "depth": 2
+            },
+            {
+              "role": "heading",
+              "name": "AI Integration Hub",
+              "tag": "h3",
+              "ref": "e81",
+              "selector": "h3:nth-of-type(15)",
+              "depth": 2,
+              "level": 3
+            },
+            {
+              "role": "paragraph",
+              "name": "Q4 2026 — planned",
+              "tag": "p",
+              "ref": "e82",
+              "selector": "p:nth-of-type(26)",
+              "depth": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "Direct integrations with OpenAI, Anthropic, and Google AI platforms for seaml...",
+              "tag": "p",
+              "ref": "e83",
+              "selector": "p:nth-of-type(27)",
+              "depth": 2
+            }
+          ]
+        },
+        {
+          "role": "region",
+          "name": "Personalized Recommendations",
+          "tag": "section",
+          "ref": "e84",
+          "selector": "section:nth-of-type(6)",
+          "depth": 1,
+          "children": [
+            {
+              "role": "heading",
+              "name": "Recommended For You",
+              "tag": "h2",
+              "ref": "e85",
+              "selector": "h2:nth-of-type(7)",
+              "depth": 2,
+              "level": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "Based on your 7 visits, here are resources tailored to your interests.",
+              "tag": "p",
+              "ref": "e86",
+              "selector": "p:nth-of-type(28)",
+              "depth": 2
+            },
+            {
+              "role": "heading",
+              "name": "ML Data Pipelines",
+              "tag": "h3",
+              "ref": "e87",
+              "selector": "h3:nth-of-type(16)",
+              "depth": 2,
+              "level": 3
+            },
+            {
+              "role": "paragraph",
+              "name": "Learn how SeaPortal integrates with popular ML frameworks like PyTorch and Te...",
+              "tag": "p",
+              "ref": "e88",
+              "selector": "p:nth-of-type(29)",
+              "depth": 2
+            },
+            {
+              "role": "heading",
+              "name": "Advanced Extraction Patterns",
+              "tag": "h3",
+              "ref": "e89",
+              "selector": "h3:nth-of-type(17)",
+              "depth": 2,
+              "level": 3
+            },
+            {
+              "role": "paragraph",
+              "name": "Master complex extraction scenarios including infinite scroll pagination, laz...",
+              "tag": "p",
+              "ref": "e90",
+              "selector": "p:nth-of-type(30)",
+              "depth": 2
+            },
+            {
+              "role": "heading",
+              "name": "CI/CD Integration Guide",
+              "tag": "h3",
+              "ref": "e91",
+              "selector": "h3:nth-of-type(18)",
+              "depth": 2,
+              "level": 3
+            },
+            {
+              "role": "paragraph",
+              "name": "Run SeaPortal as part of your deployment pipeline. Monitor content changes, v...",
+              "tag": "p",
+              "ref": "e92",
+              "selector": "p:nth-of-type(31)",
+              "depth": 2
+            }
+          ]
+        },
+        {
+          "role": "region",
+          "name": "Integration Partners",
+          "tag": "section",
+          "ref": "e93",
+          "selector": "section:nth-of-type(7)",
+          "depth": 1,
+          "children": [
+            {
+              "role": "heading",
+              "name": "Integration Partners",
+              "tag": "h2",
+              "ref": "e94",
+              "selector": "h2:nth-of-type(8)",
+              "depth": 2,
+              "level": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "SeaPortal connects seamlessly with your existing infrastructure. Our verified...",
+              "tag": "p",
+              "ref": "e95",
+              "selector": "p:nth-of-type(32)",
+              "depth": 2
+            },
+            {
+              "role": "heading",
+              "name": "Vercel",
+              "tag": "h3",
+              "ref": "e96",
+              "selector": "h3:nth-of-type(19)",
+              "depth": 2,
+              "level": 3
+            },
+            {
+              "role": "paragraph",
+              "name": "Deployment",
+              "tag": "p",
+              "ref": "e97",
+              "selector": "p:nth-of-type(33)",
+              "depth": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "Deploy SeaPortal as serverless functions on Vercel's edge network. Automatic ...",
+              "tag": "p",
+              "ref": "e98",
+              "selector": "p:nth-of-type(34)",
+              "depth": 2
+            },
+            {
+              "role": "heading",
+              "name": "Supabase",
+              "tag": "h3",
+              "ref": "e99",
+              "selector": "h3:nth-of-type(20)",
+              "depth": 2,
+              "level": 3
+            },
+            {
+              "role": "paragraph",
+              "name": "Database",
+              "tag": "p",
+              "ref": "e100",
+              "selector": "p:nth-of-type(35)",
+              "depth": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "Store extracted content directly in Supabase PostgreSQL with automatic vector...",
+              "tag": "p",
+              "ref": "e101",
+              "selector": "p:nth-of-type(36)",
+              "depth": 2
+            },
+            {
+              "role": "heading",
+              "name": "Temporal",
+              "tag": "h3",
+              "ref": "e102",
+              "selector": "h3:nth-of-type(21)",
+              "depth": 2,
+              "level": 3
+            },
+            {
+              "role": "paragraph",
+              "name": "Orchestration",
+              "tag": "p",
+              "ref": "e103",
+              "selector": "p:nth-of-type(37)",
+              "depth": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "Build reliable extraction workflows with Temporal's durable execution engine....",
+              "tag": "p",
+              "ref": "e104",
+              "selector": "p:nth-of-type(38)",
+              "depth": 2
+            },
+            {
+              "role": "heading",
+              "name": "Grafana",
+              "tag": "h3",
+              "ref": "e105",
+              "selector": "h3:nth-of-type(22)",
+              "depth": 2,
+              "level": 3
+            },
+            {
+              "role": "paragraph",
+              "name": "Observability",
+              "tag": "p",
+              "ref": "e106",
+              "selector": "p:nth-of-type(39)",
+              "depth": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "Monitor extraction metrics with pre-built Grafana dashboards. Track success r...",
+              "tag": "p",
+              "ref": "e107",
+              "selector": "p:nth-of-type(40)",
+              "depth": 2
+            }
+          ]
+        },
+        {
+          "role": "region",
+          "name": "Customer Case Studies",
+          "tag": "section",
+          "ref": "e108",
+          "selector": "section:nth-of-type(8)",
+          "depth": 1,
+          "children": [
+            {
+              "role": "heading",
+              "name": "Customer Case Studies",
+              "tag": "h2",
+              "ref": "e109",
+              "selector": "h2:nth-of-type(9)",
+              "depth": 2,
+              "level": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "Real-world success stories from organizations that transformed their data wor...",
+              "tag": "p",
+              "ref": "e110",
+              "selector": "p:nth-of-type(41)",
+              "depth": 2
+            },
+            {
+              "role": "heading",
+              "name": "Meridian Analytics",
+              "tag": "h3",
+              "ref": "e111",
+              "selector": "h3:nth-of-type(23)",
+              "depth": 2,
+              "level": 3
+            },
+            {
+              "role": "paragraph",
+              "name": "Industry: Financial Services",
+              "tag": "p",
+              "ref": "e112",
+              "selector": "p:nth-of-type(42)",
+              "depth": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "Challenge: Extracting real-time market sentiment from 200+ news sources with ...",
+              "tag": "p",
+              "ref": "e113",
+              "selector": "p:nth-of-type(43)",
+              "depth": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "Solution: Deployed SeaPortal with custom authentication handlers and parallel...",
+              "tag": "p",
+              "ref": "e114",
+              "selector": "p:nth-of-type(44)",
+              "depth": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "Results: Reduced data latency from 45 minutes to under 3 minutes. Sentiment a...",
+              "tag": "p",
+              "ref": "e115",
+              "selector": "p:nth-of-type(45)",
+              "depth": 2
+            },
+            {
+              "role": "blockquote",
+              "name": "\"SeaPortal transformed our competitive intelligence pipeline. We now detect m...",
+              "tag": "blockquote",
+              "ref": "e116",
+              "selector": "blockquote:nth-of-type(1)",
+              "depth": 2
+            },
+            {
+              "role": "heading",
+              "name": "HealthBridge Research",
+              "tag": "h3",
+              "ref": "e117",
+              "selector": "h3:nth-of-type(24)",
+              "depth": 2,
+              "level": 3
+            },
+            {
+              "role": "paragraph",
+              "name": "Industry: Healthcare",
+              "tag": "p",
+              "ref": "e118",
+              "selector": "p:nth-of-type(46)",
+              "depth": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "Challenge: Building a comprehensive database of clinical trial results from h...",
+              "tag": "p",
+              "ref": "e119",
+              "selector": "p:nth-of-type(47)",
+              "depth": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "Solution: Used SeaPortal accessibility tree extraction to navigate nested ifr...",
+              "tag": "p",
+              "ref": "e120",
+              "selector": "p:nth-of-type(48)",
+              "depth": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "Results: Catalogued over 12,000 clinical trials across 150 institutions. Rese...",
+              "tag": "p",
+              "ref": "e121",
+              "selector": "p:nth-of-type(49)",
+              "depth": 2
+            },
+            {
+              "role": "blockquote",
+              "name": "\"The accessibility tree approach was a revelation. We extracted structured da...",
+              "tag": "blockquote",
+              "ref": "e122",
+              "selector": "blockquote:nth-of-type(2)",
+              "depth": 2
+            },
+            {
+              "role": "heading",
+              "name": "EduPath Global",
+              "tag": "h3",
+              "ref": "e123",
+              "selector": "h3:nth-of-type(25)",
+              "depth": 2,
+              "level": 3
+            },
+            {
+              "role": "paragraph",
+              "name": "Industry: Education Technology",
+              "tag": "p",
+              "ref": "e124",
+              "selector": "p:nth-of-type(50)",
+              "depth": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "Challenge: Aggregating course content and pricing from 80+ online learning pl...",
+              "tag": "p",
+              "ref": "e125",
+              "selector": "p:nth-of-type(51)",
+              "depth": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "Solution: Implemented SeaPortal with intelligent scroll detection to handle i...",
+              "tag": "p",
+              "ref": "e126",
+              "selector": "p:nth-of-type(52)",
+              "depth": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "Results: Database now contains 450,000+ courses with weekly freshness. User e...",
+              "tag": "p",
+              "ref": "e127",
+              "selector": "p:nth-of-type(53)",
+              "depth": 2
+            },
+            {
+              "role": "blockquote",
+              "name": "\"Other tools gave us partial data. SeaPortal gives us everything—descriptio...",
+              "tag": "blockquote",
+              "ref": "e128",
+              "selector": "blockquote:nth-of-type(3)",
+              "depth": 2
+            }
+          ]
+        },
+        {
+          "role": "paragraph",
+          "name": "Loading spotlight...",
+          "tag": "p",
+          "ref": "e129",
+          "selector": "p:nth-of-type(54)",
+          "depth": 1
+        },
+        {
+          "role": "region",
+          "name": "Performance Benchmarks",
+          "tag": "section",
+          "ref": "e130",
+          "selector": "section:nth-of-type(9)",
+          "depth": 1,
+          "children": [
+            {
+              "role": "heading",
+              "name": "Performance Benchmarks",
+              "tag": "h2",
+              "ref": "e131",
+              "selector": "h2:nth-of-type(10)",
+              "depth": 2,
+              "level": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "Real-world extraction performance measured across diverse website categories....",
+              "tag": "p",
+              "ref": "e132",
+              "selector": "p:nth-of-type(55)",
+              "depth": 2
+            },
+            {
+              "role": "heading",
+              "name": "E-commerce",
+              "tag": "h3",
+              "ref": "e133",
+              "selector": "h3:nth-of-type(26)",
+              "depth": 2,
+              "level": 3
+            },
+            {
+              "role": "paragraph",
+              "name": "Sites tested: 150",
+              "tag": "p",
+              "ref": "e134",
+              "selector": "p:nth-of-type(56)",
+              "depth": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "Avg extraction time: 1.2s",
+              "tag": "p",
+              "ref": "e135",
+              "selector": "p:nth-of-type(57)",
+              "depth": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "Success rate: 98.5%",
+              "tag": "p",
+              "ref": "e136",
+              "selector": "p:nth-of-type(58)",
+              "depth": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "E-commerce sites present unique challenges with infinite scroll product grids...",
+              "tag": "p",
+              "ref": "e137",
+              "selector": "p:nth-of-type(59)",
+              "depth": 2
+            },
+            {
+              "role": "heading",
+              "name": "News Sites",
+              "tag": "h3",
+              "ref": "e138",
+              "selector": "h3:nth-of-type(27)",
+              "depth": 2,
+              "level": 3
+            },
+            {
+              "role": "paragraph",
+              "name": "Sites tested: 197",
+              "tag": "p",
+              "ref": "e139",
+              "selector": "p:nth-of-type(60)",
+              "depth": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "Avg extraction time: 1.5s",
+              "tag": "p",
+              "ref": "e140",
+              "selector": "p:nth-of-type(61)",
+              "depth": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "Success rate: 97.7%",
+              "tag": "p",
+              "ref": "e141",
+              "selector": "p:nth-of-type(62)",
+              "depth": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "Modern news outlets rely heavily on client-side rendering and lazy-loaded med...",
+              "tag": "p",
+              "ref": "e142",
+              "selector": "p:nth-of-type(63)",
+              "depth": 2
+            },
+            {
+              "role": "heading",
+              "name": "Social Platforms",
+              "tag": "h3",
+              "ref": "e143",
+              "selector": "h3:nth-of-type(28)",
+              "depth": 2,
+              "level": 3
+            },
+            {
+              "role": "paragraph",
+              "name": "Sites tested: 244",
+              "tag": "p",
+              "ref": "e144",
+              "selector": "p:nth-of-type(64)",
+              "depth": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "Avg extraction time: 1.8s",
+              "tag": "p",
+              "ref": "e145",
+              "selector": "p:nth-of-type(65)",
+              "depth": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "Success rate: 96.9%",
+              "tag": "p",
+              "ref": "e146",
+              "selector": "p:nth-of-type(66)",
+              "depth": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "Social platform extraction requires handling real-time content updates and co...",
+              "tag": "p",
+              "ref": "e147",
+              "selector": "p:nth-of-type(67)",
+              "depth": 2
+            },
+            {
+              "role": "heading",
+              "name": "SaaS Dashboards",
+              "tag": "h3",
+              "ref": "e148",
+              "selector": "h3:nth-of-type(29)",
+              "depth": 2,
+              "level": 3
+            },
+            {
+              "role": "paragraph",
+              "name": "Sites tested: 291",
+              "tag": "p",
+              "ref": "e149",
+              "selector": "p:nth-of-type(68)",
+              "depth": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "Avg extraction time: 2.1s",
+              "tag": "p",
+              "ref": "e150",
+              "selector": "p:nth-of-type(69)",
+              "depth": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "Success rate: 96.1%",
+              "tag": "p",
+              "ref": "e151",
+              "selector": "p:nth-of-type(70)",
+              "depth": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "SaaS dashboards often feature custom charting libraries and WebSocket-driven ...",
+              "tag": "p",
+              "ref": "e152",
+              "selector": "p:nth-of-type(71)",
+              "depth": 2
+            },
+            {
+              "role": "heading",
+              "name": "Government Portals",
+              "tag": "h3",
+              "ref": "e153",
+              "selector": "h3:nth-of-type(30)",
+              "depth": 2,
+              "level": 3
+            },
+            {
+              "role": "paragraph",
+              "name": "Sites tested: 338",
+              "tag": "p",
+              "ref": "e154",
+              "selector": "p:nth-of-type(72)",
+              "depth": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "Avg extraction time: 2.4s",
+              "tag": "p",
+              "ref": "e155",
+              "selector": "p:nth-of-type(73)",
+              "depth": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "Success rate: 95.3%",
+              "tag": "p",
+              "ref": "e156",
+              "selector": "p:nth-of-type(74)",
+              "depth": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "Government portals frequently use legacy frameworks with non-standard markup....",
+              "tag": "p",
+              "ref": "e157",
+              "selector": "p:nth-of-type(75)",
+              "depth": 2
+            }
+          ]
+        },
+        {
+          "role": "region",
+          "name": "Security \u0026 Compliance",
+          "tag": "section",
+          "ref": "e158",
+          "selector": "section:nth-of-type(10)",
+          "depth": 1,
+          "children": [
+            {
+              "role": "heading",
+              "name": "Security \u0026 Compliance",
+              "tag": "h2",
+              "ref": "e159",
+              "selector": "h2:nth-of-type(11)",
+              "depth": 2,
+              "level": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "Enterprise-grade security built into every layer of the SeaPortal extraction ...",
+              "tag": "p",
+              "ref": "e160",
+              "selector": "p:nth-of-type(76)",
+              "depth": 2
+            },
+            {
+              "role": "heading",
+              "name": "Certifications",
+              "tag": "h3",
+              "ref": "e161",
+              "selector": "h3:nth-of-type(31)",
+              "depth": 2,
+              "level": 3
+            },
+            {
+              "role": "heading",
+              "name": "SOC 2 Type II",
+              "tag": "h4",
+              "ref": "e162",
+              "selector": "h4:nth-of-type(1)",
+              "depth": 2,
+              "level": 4
+            },
+            {
+              "role": "paragraph",
+              "name": "Status: Certified",
+              "tag": "p",
+              "ref": "e163",
+              "selector": "p:nth-of-type(77)",
+              "depth": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "SeaPortal maintains SOC 2 Type II compliance, demonstrating our commitment to...",
+              "tag": "p",
+              "ref": "e164",
+              "selector": "p:nth-of-type(78)",
+              "depth": 2
+            },
+            {
+              "role": "heading",
+              "name": "GDPR Compliant",
+              "tag": "h4",
+              "ref": "e165",
+              "selector": "h4:nth-of-type(2)",
+              "depth": 2,
+              "level": 4
+            },
+            {
+              "role": "paragraph",
+              "name": "Status: Verified",
+              "tag": "p",
+              "ref": "e166",
+              "selector": "p:nth-of-type(79)",
+              "depth": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "Full compliance with European data protection regulations. SeaPortal supports...",
+              "tag": "p",
+              "ref": "e167",
+              "selector": "p:nth-of-type(80)",
+              "depth": 2
+            },
+            {
+              "role": "heading",
+              "name": "ISO 27001",
+              "tag": "h4",
+              "ref": "e168",
+              "selector": "h4:nth-of-type(3)",
+              "depth": 2,
+              "level": 4
+            },
+            {
+              "role": "paragraph",
+              "name": "Status: In Progress",
+              "tag": "p",
+              "ref": "e169",
+              "selector": "p:nth-of-type(81)",
+              "depth": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "Currently pursuing ISO 27001 certification for our information security manag...",
+              "tag": "p",
+              "ref": "e170",
+              "selector": "p:nth-of-type(82)",
+              "depth": 2
+            },
+            {
+              "role": "heading",
+              "name": "Security Features",
+              "tag": "h3",
+              "ref": "e171",
+              "selector": "h3:nth-of-type(32)",
+              "depth": 2,
+              "level": 3
+            },
+            {
+              "role": "heading",
+              "name": "End-to-End Encryption",
+              "tag": "h4",
+              "ref": "e172",
+              "selector": "h4:nth-of-type(4)",
+              "depth": 2,
+              "level": 4
+            },
+            {
+              "role": "paragraph",
+              "name": "All extracted content is encrypted in transit using TLS 1.3 and at rest using...",
+              "tag": "p",
+              "ref": "e173",
+              "selector": "p:nth-of-type(83)",
+              "depth": 2
+            },
+            {
+              "role": "heading",
+              "name": "Zero-Retention Mode",
+              "tag": "h4",
+              "ref": "e174",
+              "selector": "h4:nth-of-type(5)",
+              "depth": 2,
+              "level": 4
+            },
+            {
+              "role": "paragraph",
+              "name": "Optional mode where extracted content is streamed directly to your destinatio...",
+              "tag": "p",
+              "ref": "e175",
+              "selector": "p:nth-of-type(84)",
+              "depth": 2
+            },
+            {
+              "role": "heading",
+              "name": "Audit Logging",
+              "tag": "h4",
+              "ref": "e176",
+              "selector": "h4:nth-of-type(6)",
+              "depth": 2,
+              "level": 4
+            },
+            {
+              "role": "paragraph",
+              "name": "Comprehensive audit trails record every extraction request, including source ...",
+              "tag": "p",
+              "ref": "e177",
+              "selector": "p:nth-of-type(85)",
+              "depth": 2
+            },
+            {
+              "role": "heading",
+              "name": "IP Allowlisting",
+              "tag": "h4",
+              "ref": "e178",
+              "selector": "h4:nth-of-type(7)",
+              "depth": 2,
+              "level": 4
+            },
+            {
+              "role": "paragraph",
+              "name": "Restrict API access to specific IP ranges. Combined with API key rotation pol...",
+              "tag": "p",
+              "ref": "e179",
+              "selector": "p:nth-of-type(86)",
+              "depth": 2
+            }
+          ]
+        },
+        {
+          "role": "region",
+          "name": "Community Ecosystem",
+          "tag": "section",
+          "ref": "e180",
+          "selector": "section:nth-of-type(11)",
+          "depth": 1,
+          "children": [
+            {
+              "role": "heading",
+              "name": "Community Ecosystem",
+              "tag": "h2",
+              "ref": "e181",
+              "selector": "h2:nth-of-type(12)",
+              "depth": 2,
+              "level": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "SeaPortal thrives thanks to a vibrant open-source community. Here are some of...",
+              "tag": "p",
+              "ref": "e182",
+              "selector": "p:nth-of-type(87)",
+              "depth": 2
+            },
+            {
+              "role": "heading",
+              "name": "Community Plugins",
+              "tag": "h3",
+              "ref": "e183",
+              "selector": "h3:nth-of-type(33)",
+              "depth": 2,
+              "level": 3
+            },
+            {
+              "role": "heading",
+              "name": "seaportal-pandas",
+              "tag": "h4",
+              "ref": "e184",
+              "selector": "h4:nth-of-type(8)",
+              "depth": 2,
+              "level": 4
+            },
+            {
+              "role": "paragraph",
+              "name": "Author: DataWizard",
+              "tag": "p",
+              "ref": "e185",
+              "selector": "p:nth-of-type(88)",
+              "depth": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "Downloads: 45,230",
+              "tag": "p",
+              "ref": "e186",
+              "selector": "p:nth-of-type(89)",
+              "depth": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "Direct integration between SeaPortal extraction output and pandas DataFrames....",
+              "tag": "p",
+              "ref": "e187",
+              "selector": "p:nth-of-type(90)",
+              "depth": 2
+            },
+            {
+              "role": "heading",
+              "name": "seaportal-notion",
+              "tag": "h4",
+              "ref": "e188",
+              "selector": "h4:nth-of-type(9)",
+              "depth": 2,
+              "level": 4
+            },
+            {
+              "role": "paragraph",
+              "name": "Author: ProductivityHackers",
+              "tag": "p",
+              "ref": "e189",
+              "selector": "p:nth-of-type(91)",
+              "depth": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "Downloads: 28,914",
+              "tag": "p",
+              "ref": "e190",
+              "selector": "p:nth-of-type(92)",
+              "depth": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "Sync extracted web content directly to Notion databases. Automatically maps H...",
+              "tag": "p",
+              "ref": "e191",
+              "selector": "p:nth-of-type(93)",
+              "depth": 2
+            },
+            {
+              "role": "heading",
+              "name": "seaportal-langchain",
+              "tag": "h4",
+              "ref": "e192",
+              "selector": "h4:nth-of-type(10)",
+              "depth": 2,
+              "level": 4
+            },
+            {
+              "role": "paragraph",
+              "name": "Author: AIDevCollective",
+              "tag": "p",
+              "ref": "e193",
+              "selector": "p:nth-of-type(94)",
+              "depth": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "Downloads: 67,821",
+              "tag": "p",
+              "ref": "e194",
+              "selector": "p:nth-of-type(95)",
+              "depth": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "LangChain document loader that uses SeaPortal for JavaScript-heavy page extra...",
+              "tag": "p",
+              "ref": "e195",
+              "selector": "p:nth-of-type(96)",
+              "depth": 2
+            },
+            {
+              "role": "heading",
+              "name": "seaportal-scheduler",
+              "tag": "h4",
+              "ref": "e196",
+              "selector": "h4:nth-of-type(11)",
+              "depth": 2,
+              "level": 4
+            },
+            {
+              "role": "paragraph",
+              "name": "Author: CronMaster",
+              "tag": "p",
+              "ref": "e197",
+              "selector": "p:nth-of-type(97)",
+              "depth": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "Downloads: 19,455",
+              "tag": "p",
+              "ref": "e198",
+              "selector": "p:nth-of-type(98)",
+              "depth": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "Declarative scheduling system for recurring extraction jobs. Define extractio...",
+              "tag": "p",
+              "ref": "e199",
+              "selector": "p:nth-of-type(99)",
+              "depth": 2
+            },
+            {
+              "role": "heading",
+              "name": "Learning Resources",
+              "tag": "h3",
+              "ref": "e200",
+              "selector": "h3:nth-of-type(34)",
+              "depth": 2,
+              "level": 3
+            },
+            {
+              "role": "heading",
+              "name": "SeaPortal Mastery Course",
+              "tag": "h4",
+              "ref": "e201",
+              "selector": "h4:nth-of-type(12)",
+              "depth": 2,
+              "level": 4
+            },
+            {
+              "role": "paragraph",
+              "name": "Type: Video Series",
+              "tag": "p",
+              "ref": "e202",
+              "selector": "p:nth-of-type(100)",
+              "depth": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "A comprehensive 12-hour video course covering everything from basic extractio...",
+              "tag": "p",
+              "ref": "e203",
+              "selector": "p:nth-of-type(101)",
+              "depth": 2
+            },
+            {
+              "role": "heading",
+              "name": "The Extraction Cookbook",
+              "tag": "h4",
+              "ref": "e204",
+              "selector": "h4:nth-of-type(13)",
+              "depth": 2,
+              "level": 4
+            },
+            {
+              "role": "paragraph",
+              "name": "Type: E-Book",
+              "tag": "p",
+              "ref": "e205",
+              "selector": "p:nth-of-type(102)",
+              "depth": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "Community-maintained collection of 200+ extraction recipes for popular websit...",
+              "tag": "p",
+              "ref": "e206",
+              "selector": "p:nth-of-type(103)",
+              "depth": 2
+            },
+            {
+              "role": "heading",
+              "name": "SeaPortal Weekly Newsletter",
+              "tag": "h4",
+              "ref": "e207",
+              "selector": "h4:nth-of-type(14)",
+              "depth": 2,
+              "level": 4
+            },
+            {
+              "role": "paragraph",
+              "name": "Type: Newsletter",
+              "tag": "p",
+              "ref": "e208",
+              "selector": "p:nth-of-type(104)",
+              "depth": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "Curated roundup of extraction tips, community plugin releases, and industry n...",
+              "tag": "p",
+              "ref": "e209",
+              "selector": "p:nth-of-type(105)",
+              "depth": 2
+            }
+          ]
+        },
+        {
+          "role": "paragraph",
+          "tag": "p",
+          "ref": "e210",
+          "selector": "p:nth-of-type(106)",
+          "depth": 1
+        },
+        {
+          "role": "paragraph",
+          "tag": "p",
+          "ref": "e211",
+          "selector": "p:nth-of-type(107)",
+          "depth": 1
+        },
+        {
+          "role": "paragraph",
+          "tag": "p",
+          "ref": "e212",
+          "selector": "p:nth-of-type(108)",
+          "depth": 1
+        },
+        {
+          "role": "region",
+          "name": "Developer Resources",
+          "tag": "section",
+          "ref": "e213",
+          "selector": "section:nth-of-type(12)",
+          "depth": 1,
+          "children": [
+            {
+              "role": "heading",
+              "name": "Developer Resources",
+              "tag": "h2",
+              "ref": "e214",
+              "selector": "h2:nth-of-type(13)",
+              "depth": 2,
+              "level": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "Everything you need to integrate SeaPortal into your applications. 4 official...",
+              "tag": "p",
+              "ref": "e215",
+              "selector": "p:nth-of-type(109)",
+              "depth": 2
+            },
+            {
+              "role": "heading",
+              "name": "Official SDKs",
+              "tag": "h3",
+              "ref": "e216",
+              "selector": "h3:nth-of-type(35)",
+              "depth": 2,
+              "level": 3
+            },
+            {
+              "role": "heading",
+              "name": "Python — seaportal-py",
+              "tag": "h4",
+              "ref": "e217",
+              "selector": "h4:nth-of-type(15)",
+              "depth": 2,
+              "level": 4
+            },
+            {
+              "role": "paragraph",
+              "name": "Version: 2.4.1",
+              "tag": "p",
+              "ref": "e218",
+              "selector": "p:nth-of-type(110)",
+              "depth": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "The official Python SDK provides a Pythonic interface to SeaPortal extraction...",
+              "tag": "p",
+              "ref": "e219",
+              "selector": "p:nth-of-type(111)",
+              "depth": 2
+            },
+            {
+              "role": "code",
+              "name": "from seaportal import Client; client = Client(); result = await client.extrac...",
+              "tag": "pre",
+              "ref": "e220",
+              "selector": "pre:nth-of-type(1)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "code",
+                  "name": "from seaportal import Client; client = Client(); result = await client.extrac...",
+                  "tag": "code",
+                  "ref": "e221",
+                  "selector": "code:nth-of-type(1)",
+                  "depth": 3
+                }
+              ]
+            },
+            {
+              "role": "heading",
+              "name": "TypeScript — @seaportal/sdk",
+              "tag": "h4",
+              "ref": "e222",
+              "selector": "h4:nth-of-type(16)",
+              "depth": 2,
+              "level": 4
+            },
+            {
+              "role": "paragraph",
+              "name": "Version: 3.1.0",
+              "tag": "p",
+              "ref": "e223",
+              "selector": "p:nth-of-type(112)",
+              "depth": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "Full TypeScript support with complete type definitions for all extraction opt...",
+              "tag": "p",
+              "ref": "e224",
+              "selector": "p:nth-of-type(113)",
+              "depth": 2
+            },
+            {
+              "role": "code",
+              "name": "import { SeaPortal } from \"@seaportal/sdk\"; const sp = new SeaPortal({ apiKey...",
+              "tag": "pre",
+              "ref": "e225",
+              "selector": "pre:nth-of-type(2)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "code",
+                  "name": "import { SeaPortal } from \"@seaportal/sdk\"; const sp = new SeaPortal({ apiKey...",
+                  "tag": "code",
+                  "ref": "e226",
+                  "selector": "code:nth-of-type(2)",
+                  "depth": 3
+                }
+              ]
+            },
+            {
+              "role": "heading",
+              "name": "Go — github.com/seaportal/go-client",
+              "tag": "h4",
+              "ref": "e227",
+              "selector": "h4:nth-of-type(17)",
+              "depth": 2,
+              "level": 4
+            },
+            {
+              "role": "paragraph",
+              "name": "Version: 1.8.0",
+              "tag": "p",
+              "ref": "e228",
+              "selector": "p:nth-of-type(114)",
+              "depth": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "Lightweight Go client optimized for high-throughput extraction pipelines. Sup...",
+              "tag": "p",
+              "ref": "e229",
+              "selector": "p:nth-of-type(115)",
+              "depth": 2
+            },
+            {
+              "role": "code",
+              "name": "client := seaportal.NewClient(apiKey); doc, err := client.Extract(ctx, url, s...",
+              "tag": "pre",
+              "ref": "e230",
+              "selector": "pre:nth-of-type(3)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "code",
+                  "name": "client := seaportal.NewClient(apiKey); doc, err := client.Extract(ctx, url, s...",
+                  "tag": "code",
+                  "ref": "e231",
+                  "selector": "code:nth-of-type(3)",
+                  "depth": 3
+                }
+              ]
+            },
+            {
+              "role": "heading",
+              "name": "Rust — seaportal-rs",
+              "tag": "h4",
+              "ref": "e232",
+              "selector": "h4:nth-of-type(18)",
+              "depth": 2,
+              "level": 4
+            },
+            {
+              "role": "paragraph",
+              "name": "Version: 0.9.2",
+              "tag": "p",
+              "ref": "e233",
+              "selector": "p:nth-of-type(116)",
+              "depth": 2
+            },
+            {
+              "role": "paragraph",
+              "name": "Community-maintained Rust crate offering zero-copy deserialization and compil...",
+              "tag": "p",
+              "ref": "e234",
+              "selector": "p:nth-of-type(117)",
+              "depth": 2
+            },
+            {
+              "role": "code",
+              "name": "let client = SeaPortal::new(api_key)?; let doc = client.extract(\u0026url).await?;",
+              "tag": "pre",
+              "ref": "e235",
+              "selector": "pre:nth-of-type(4)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "code",
+                  "name": "let client = SeaPortal::new(api_key)?; let doc = client.extract(\u0026url).await?;",
+                  "tag": "code",
+                  "ref": "e236",
+                  "selector": "code:nth-of-type(4)",
+                  "depth": 3
+                }
+              ]
+            },
+            {
+              "role": "heading",
+              "name": "CLI Tools",
+              "tag": "h3",
+              "ref": "e237",
+              "selector": "h3:nth-of-type(36)",
+              "depth": 2,
+              "level": 3
+            },
+            {
+              "role": "heading",
+              "name": "sp-extract",
+              "tag": "h4",
+              "ref": "e238",
+              "selector": "h4:nth-of-type(19)",
+              "depth": 2,
+              "level": 4
+            },
+            {
+              "role": "paragraph",
+              "name": "Command-line extraction tool for quick one-off jobs and shell scripting. Supp...",
+              "tag": "p",
+              "ref": "e239",
+              "selector": "p:nth-of-type(118)",
+              "depth": 2
+            },
+            {
+              "role": "code",
+              "name": "sp-extract https://example.com --format json --selector main",
+              "tag": "pre",
+              "ref": "e240",
+              "selector": "pre:nth-of-type(5)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "code",
+                  "name": "sp-extract https://example.com --format json --selector main",
+                  "tag": "code",
+                  "ref": "e241",
+                  "selector": "code:nth-of-type(5)",
+                  "depth": 3
+                }
+              ]
+            },
+            {
+              "role": "heading",
+              "name": "sp-watch",
+              "tag": "h4",
+              "ref": "e242",
+              "selector": "h4:nth-of-type(20)",
+              "depth": 2,
+              "level": 4
+            },
+            {
+              "role": "paragraph",
+              "name": "Monitor URLs for content changes with configurable polling intervals. Emits s...",
+              "tag": "p",
+              "ref": "e243",
+              "selector": "p:nth-of-type(119)",
+              "depth": 2
+            },
+            {
+              "role": "code",
+              "name": "sp-watch --url https://example.com/pricing --interval 1h --on-change ./notify.sh",
+              "tag": "pre",
+              "ref": "e244",
+              "selector": "pre:nth-of-type(6)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "code",
+                  "name": "sp-watch --url https://example.com/pricing --interval 1h --on-change ./notify.sh",
+                  "tag": "code",
+                  "ref": "e245",
+                  "selector": "code:nth-of-type(6)",
+                  "depth": 3
+                }
+              ]
+            },
+            {
+              "role": "heading",
+              "name": "sp-batch",
+              "tag": "h4",
+              "ref": "e246",
+              "selector": "h4:nth-of-type(21)",
+              "depth": 2,
+              "level": 4
+            },
+            {
+              "role": "paragraph",
+              "name": "Process URL lists in parallel with automatic rate limiting and failure recove...",
+              "tag": "p",
+              "ref": "e247",
+              "selector": "p:nth-of-type(120)",
+              "depth": 2
+            },
+            {
+              "role": "code",
+              "name": "sp-batch --input urls.txt --output results/ --parallelism 10",
+              "tag": "pre",
+              "ref": "e248",
+              "selector": "pre:nth-of-type(7)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "code",
+                  "name": "sp-batch --input urls.txt --output results/ --parallelism 10",
+                  "tag": "code",
+                  "ref": "e249",
+                  "selector": "code:nth-of-type(7)",
+                  "depth": 3
+                }
+              ]
+            },
+            {
+              "role": "heading",
+              "name": "API Reference",
+              "tag": "h3",
+              "ref": "e250",
+              "selector": "h3:nth-of-type(37)",
+              "depth": 2,
+              "level": 3
+            },
+            {
+              "role": "heading",
+              "name": "POST /v2/extract",
+              "tag": "h4",
+              "ref": "e251",
+              "selector": "h4:nth-of-type(22)",
+              "depth": 2,
+              "level": 4
+            },
+            {
+              "role": "paragraph",
+              "name": "Primary extraction endpoint. Accepts a URL and configuration options, returns...",
+              "tag": "p",
+              "ref": "e252",
+              "selector": "p:nth-of-type(121)",
+              "depth": 2
+            },
+            {
+              "role": "heading",
+              "name": "GET /v2/jobs/{id}",
+              "tag": "h4",
+              "ref": "e253",
+              "selector": "h4:nth-of-type(23)",
+              "depth": 2,
+              "level": 4
+            },
+            {
+              "role": "paragraph",
+              "name": "Poll job status for async extractions. Returns progress percentage, estimated...",
+              "tag": "p",
+              "ref": "e254",
+              "selector": "p:nth-of-type(122)",
+              "depth": 2
+            },
+            {
+              "role": "heading",
+              "name": "POST /v2/batch",
+              "tag": "h4",
+              "ref": "e255",
+              "selector": "h4:nth-of-type(24)",
+              "depth": 2,
+              "level": 4
+            },
+            {
+              "role": "paragraph",
+              "name": "Submit multiple URLs for batch processing. Returns a batch ID for tracking ov...",
+              "tag": "p",
+              "ref": "e256",
+              "selector": "p:nth-of-type(123)",
+              "depth": 2
+            }
+          ]
+        },
+        {
+          "role": "paragraph",
+          "name": "Preparing quick start guide...",
+          "tag": "p",
+          "ref": "e257",
+          "selector": "p:nth-of-type(124)",
+          "depth": 1
+        },
+        {
+          "role": "button",
+          "name": "Likes: 0",
+          "tag": "button",
+          "ref": "e258",
+          "selector": "button:nth-of-type(3)",
+          "depth": 1,
+          "interactive": true
+        },
+        {
+          "role": "form",
+          "name": "Search",
+          "tag": "form",
+          "ref": "e259",
+          "selector": "form:nth-of-type(1)",
+          "depth": 1,
+          "children": [
+            {
+              "role": "textbox",
+              "name": "Search articles...",
+              "tag": "input",
+              "ref": "e260",
+              "selector": "input:nth-of-type(1)",
+              "depth": 2,
+              "interactive": true
+            },
+            {
+              "role": "button",
+              "name": "Search",
+              "tag": "button",
+              "ref": "e261",
+              "selector": "button:nth-of-type(4)",
+              "depth": 2,
+              "interactive": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "role": "contentinfo",
+      "name": "Built with passion by the SeaPortal team. Open source under the MIT License.C...",
+      "tag": "footer",
+      "ref": "e262",
+      "selector": "footer:nth-of-type(4)",
+      "children": [
+        {
+          "role": "paragraph",
+          "name": "Built with passion by the SeaPortal team. Open source under the MIT License.",
+          "tag": "p",
+          "ref": "e263",
+          "selector": "p:nth-of-type(125)",
+          "depth": 1
+        },
+        {
+          "role": "paragraph",
+          "name": "Copyright 2026 Pinchtab. All rights reserved.",
+          "tag": "p",
+          "ref": "e264",
+          "selector": "p:nth-of-type(126)",
+          "depth": 1
+        }
+      ]
+    }
+  ]
+}
