@@ -76,7 +76,9 @@
       complianceLoaded: false,
       compliance: null,
       sustainabilityLoaded: false,
-      sustainability: null
+      sustainability: null,
+      enterpriseFeaturesLoaded: false,
+      enterpriseFeatures: null
     };
 
     // Simulated async data fetch — wave 1 (500ms)
@@ -470,6 +472,31 @@
           )
         : h('p', null, '');
 
+      const enterpriseFeaturesSection = state.enterpriseFeaturesLoaded && state.enterpriseFeatures
+        ? h('section', { 'aria-label': 'Enterprise Features' },
+            h('h2', null, 'Enterprise Features'),
+            h('p', null, 'Advanced capabilities designed for large-scale deployments. These features undergo rigorous testing before release and represent our commitment to enterprise-grade reliability.'),
+            h('h3', null, 'Deployment Options'),
+            ...state.enterpriseFeatures.deploymentOptions.map(opt =>
+              h('div', { className: 'card' },
+                h('h4', null, opt.name),
+                h('p', null, h('strong', null, 'Use Case: '), opt.useCase),
+                h('p', null, opt.desc)
+              )
+            ),
+            h('h3', null, 'Advanced Capabilities'),
+            ...state.enterpriseFeatures.advancedCapabilities.map(cap =>
+              h('div', { className: 'card' },
+                h('h4', null, cap.feature),
+                h('p', null, h('strong', null, 'Availability: '), cap.availability),
+                h('p', null, cap.detail)
+              )
+            )
+          )
+        : h('div', { id: 'enterprise-animation-sentinel', style: 'min-height: 20px;' },
+            h('p', null, '')
+          );
+
       const sustainabilitySection = state.sustainabilityLoaded && state.sustainability
         ? h('section', { 'aria-label': 'Sustainability & Green Computing' },
             h('h2', null, 'Sustainability & Green Computing'),
@@ -620,6 +647,7 @@
             migrationSection,
             developerResourcesSection,
             complianceSection,
+            enterpriseFeaturesSection,
             sustainabilitySection,
             quickStartSection,
             h('div', null,
@@ -1723,6 +1751,91 @@
           console.error('Web Locks error:', err);
         }
       }, 6800);
+    })();
+
+    // Wave 20: Web Animations API — content only loads after programmatic animation completes
+    (function loadEnterpriseFeaturesViaWebAnimations() {
+      setTimeout(() => {
+        const sentinel = document.getElementById('enterprise-animation-sentinel');
+        if (!sentinel || state.enterpriseFeaturesLoaded) return;
+
+        // Create an element to animate using the Web Animations API (not CSS animations)
+        const animationTarget = document.createElement('div');
+        animationTarget.style.cssText = 'width: 10px; height: 10px; background: transparent; position: absolute; opacity: 0;';
+        sentinel.appendChild(animationTarget);
+
+        // Define keyframes for a multi-step animation
+        const keyframes = [
+          { transform: 'translateX(0px) scale(1)', opacity: 0 },
+          { transform: 'translateX(50px) scale(1.5)', opacity: 0.5, offset: 0.3 },
+          { transform: 'translateX(100px) scale(1)', opacity: 0.8, offset: 0.7 },
+          { transform: 'translateX(150px) scale(0.8)', opacity: 1 }
+        ];
+
+        const timing = {
+          duration: 800,
+          iterations: 1,
+          fill: 'forwards',
+          easing: 'cubic-bezier(0.4, 0, 0.2, 1)'
+        };
+
+        // Start the animation using Web Animations API
+        const animation = animationTarget.animate(keyframes, timing);
+
+        // Content is revealed ONLY when the animation finishes
+        animation.finished.then(() => {
+          // Additional check: verify animation actually completed (not cancelled)
+          if (animation.playState === 'finished') {
+            state.enterpriseFeatures = {
+              deploymentOptions: [
+                {
+                  name: 'Self-Hosted On-Premise',
+                  useCase: 'Air-gapped environments, strict data sovereignty',
+                  desc: 'Deploy SeaPortal entirely within your own infrastructure. Our on-premise distribution includes the full extraction engine, browser pool manager, and administrative dashboard. All processing occurs on your hardware with zero data transmitted externally.'
+                },
+                {
+                  name: 'Private Cloud Cluster',
+                  useCase: 'High-volume extraction with cloud scalability',
+                  desc: 'Dedicated SeaPortal clusters running in your private cloud account (AWS, GCP, or Azure). We provision and manage the infrastructure while you retain full control over network configuration and data residency.'
+                },
+                {
+                  name: 'Hybrid Edge Deployment',
+                  useCase: 'Global presence with regional data processing',
+                  desc: 'Combine cloud management plane with edge extraction workers deployed in multiple regions. Content is processed locally and only metadata flows to the central coordinator, minimizing cross-border data transfers.'
+                }
+              ],
+              advancedCapabilities: [
+                {
+                  feature: 'Custom Browser Profiles',
+                  availability: 'Enterprise Plus',
+                  detail: 'Configure browser fingerprints, installed extensions, and persistent storage for extraction workers. Essential for sites that detect and block headless browsers based on JavaScript environment characteristics.'
+                },
+                {
+                  feature: 'Real-Time Streaming Output',
+                  availability: 'Enterprise',
+                  detail: 'Stream extracted content as it becomes available rather than waiting for full page processing. Ideal for long-running extractions where early content can begin downstream processing immediately.'
+                },
+                {
+                  feature: 'Multi-Tenant Isolation',
+                  availability: 'Enterprise Plus',
+                  detail: 'Complete isolation between teams or business units within a single SeaPortal deployment. Separate browser pools, credential stores, and audit logs with fine-grained access controls and usage quotas.'
+                },
+                {
+                  feature: 'Extraction Replay & Debugging',
+                  availability: 'Enterprise',
+                  detail: 'Record complete browser sessions during extraction including network traffic, DOM snapshots, and console output. Replay problematic extractions to diagnose issues without re-running against live sites.'
+                }
+              ]
+            };
+            state.enterpriseFeaturesLoaded = true;
+            animationTarget.remove();
+            render();
+          }
+        }).catch(err => {
+          console.error('Web Animation error:', err);
+        });
+
+      }, 7100);
     })();
 
     // Wave 21: ResizeObserver-triggered content — only loads when container reaches observable dimensions
