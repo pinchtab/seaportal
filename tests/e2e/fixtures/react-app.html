@@ -1,0 +1,1933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>React App</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    .hidden { display: none; }
+    .tab-active { font-weight: bold; border-bottom: 2px solid #333; }
+    .card { border: 1px solid #ddd; padding: 12px; margin: 8px 0; border-radius: 4px; }
+    faq-section { display: block; margin: 16px 0; }
+    @keyframes spotlightReveal {
+      0% { opacity: 0; transform: translateY(20px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    .spotlight-container { animation: spotlightReveal 0.8s ease-out forwards; }
+    .spotlight-pending { visibility: hidden; height: 0; overflow: hidden; }
+  </style>
+</head>
+<body>
+  <noscript>You need to enable JavaScript to run this app.</noscript>
+  <div id="root"></div>
+  <script>
+    function h(tag, props, ...children) {
+      const el = document.createElement(tag);
+      if (props) Object.entries(props).forEach(([k, v]) => {
+        if (k.startsWith('on')) el.addEventListener(k.slice(2).toLowerCase(), v);
+        else if (k === 'className') el.className = v;
+        else el.setAttribute(k, v);
+      });
+      children.flat().forEach(c =>
+        el.appendChild(typeof c === 'string' ? document.createTextNode(c) : c)
+      );
+      return el;
+    }
+
+    // App state
+    const state = {
+      count: 0,
+      activeTab: 'about',
+      asyncLoaded: false,
+      asyncData: null,
+      testimonialsLoaded: false,
+      testimonials: null,
+      faqLoaded: false,
+      useCasesVisible: false,
+      useCases: null,
+      roadmapLoaded: false,
+      roadmap: null,
+      recommendationsLoaded: false,
+      recommendations: null,
+      teamProfilesLoaded: false,
+      teamProfiles: null,
+      userVisits: 0,
+      partnersLoaded: false,
+      partners: null,
+      caseStudiesLoaded: false,
+      caseStudies: null,
+      spotlightLoaded: false,
+      spotlight: null,
+      benchmarksLoaded: false,
+      benchmarks: null,
+      securityLoaded: false,
+      securityInfo: null,
+      ecosystemLoaded: false,
+      ecosystem: null,
+      architectureLoaded: false,
+      architecture: null,
+      migrationLoaded: false,
+      migration: null,
+      developerResourcesLoaded: false,
+      developerResources: null,
+      developerResourcesSummary: null,
+      quickStartLoaded: false,
+      quickStart: null,
+      complianceLoaded: false,
+      compliance: null,
+      sustainabilityLoaded: false,
+      sustainability: null,
+      enterpriseFeaturesLoaded: false,
+      enterpriseFeatures: null
+    };
+
+    // Simulated async data fetch — wave 1 (500ms)
+    setTimeout(() => {
+      state.asyncData = {
+        articles: [
+          { title: 'Understanding Neural Networks', summary: 'A deep dive into how artificial neural networks process information and learn patterns from data.' },
+          { title: 'The Future of Renewable Energy', summary: 'Solar and wind power are reshaping the global energy landscape, with costs dropping by 90% in the last decade.' },
+          { title: 'Ocean Conservation Efforts', summary: 'Marine biologists are developing new strategies to protect coral reefs and reduce plastic pollution in our oceans.' }
+        ],
+        stats: { users: 12847, articles: 342, comments: 8921 }
+      };
+      state.asyncLoaded = true;
+      render();
+    }, 500);
+
+    // Simulated async data fetch — wave 2 (1.5s)
+    setTimeout(() => {
+      state.testimonials = [
+        { name: 'Sarah Chen', role: 'ML Engineer at DeepMind', text: 'SeaPortal has become an essential part of our data pipeline. It handles JavaScript-heavy pages that other tools simply cannot parse.' },
+        { name: 'Marcus Weber', role: 'CTO at DataFlow', text: 'We switched from three different scraping tools to SeaPortal. The accessibility tree feature alone saved us hundreds of engineering hours.' },
+        { name: 'Amira Okafor', role: 'Research Scientist', text: 'The experimental rendering mode is a game changer. We can now extract structured data from React dashboards automatically.' }
+      ];
+      state.testimonialsLoaded = true;
+      render();
+    }, 1500);
+
+    // Wave 3 (2.5s): computed pricing built from JS logic — invisible without execution
+    setTimeout(() => {
+      const base = 29;
+      const tiers = ['Starter', 'Professional', 'Enterprise'];
+      const multipliers = [1, 3, 8];
+      state.pricing = tiers.map((name, i) => ({
+        name,
+        price: base * multipliers[i],
+        features: [
+          `${(i + 1) * 1000} pages/month`,
+          `${i === 0 ? 'Community' : i === 1 ? 'Priority' : 'Dedicated'} support`,
+          i > 0 ? 'API access' : null,
+          i > 1 ? 'Custom integrations' : null
+        ].filter(Boolean)
+      }));
+      state.pricingLoaded = true;
+      render();
+    }, 2500);
+
+    // Wave 4 (3s): Shadow DOM FAQ component — content hidden from regular DOM traversal
+    class FaqSection extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({ mode: 'open' });
+      }
+      connectedCallback() {
+        const faqs = [
+          { q: 'How does SeaPortal handle JavaScript-rendered content?', a: 'SeaPortal uses a headless browser engine to fully execute JavaScript, waiting for dynamic content to load before extraction. It detects network idle and DOM stability to ensure all async content is captured.' },
+          { q: 'Can I extract content from pages behind authentication?', a: 'Yes. SeaPortal supports cookie injection and session management, allowing you to extract content from authenticated pages. Enterprise plans include built-in credential vaulting.' },
+          { q: 'What makes the accessibility tree approach unique?', a: 'Unlike raw HTML parsing, our accessibility tree extraction captures the semantic meaning of content as perceived by assistive technologies. This provides cleaner, more structured output ideal for AI processing.' }
+        ];
+        this.shadowRoot.innerHTML = `
+          <style>
+            :host { display: block; }
+            .faq-item { border-left: 3px solid #0066cc; padding: 8px 12px; margin: 12px 0; background: #f9f9f9; }
+            .question { font-weight: bold; color: #333; margin-bottom: 4px; }
+            .answer { color: #555; line-height: 1.5; }
+          </style>
+          <h2>Frequently Asked Questions</h2>
+          ${faqs.map(f => `
+            <div class="faq-item">
+              <div class="question">${f.q}</div>
+              <div class="answer">${f.a}</div>
+            </div>
+          `).join('')}
+        `;
+      }
+    }
+    customElements.define('faq-section', FaqSection);
+
+    setTimeout(() => {
+      state.faqLoaded = true;
+      render();
+    }, 3000);
+
+    // Wave 5: IntersectionObserver lazy section — content only loads when scrolled into view
+    function setupLazyUseCases() {
+      const sentinel = document.getElementById('use-cases-sentinel');
+      if (!sentinel || state.useCases) return;
+
+      const observer = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting) {
+          observer.disconnect();
+          // Simulate fetching use case data
+          state.useCases = [
+            { title: 'AI Training Data', desc: 'Extract clean text from thousands of web pages to build high-quality training datasets. SeaPortal removes boilerplate and navigation, leaving only meaningful content.' },
+            { title: 'Competitive Intelligence', desc: 'Monitor competitor websites for pricing changes, new product launches, and content updates. Our smart diffing highlights what changed since your last extraction.' },
+            { title: 'Academic Research', desc: 'Gather structured data from journal abstracts, conference proceedings, and research portals. Export to CSV, JSON, or directly to your data analysis pipeline.' },
+            { title: 'E-commerce Aggregation', desc: 'Build price comparison tools by extracting product data from multiple retailers. Handle infinite scroll, lazy-loaded images, and dynamic filters automatically.' }
+          ];
+          state.useCasesVisible = true;
+          render();
+        }
+      }, { threshold: 0.1 });
+
+      observer.observe(sentinel);
+    }
+
+    const tabs = {
+      about: {
+        title: 'About Us',
+        content: 'SeaPortal is an open-source tool for extracting clean, readable content from any web page. Built with Go, it handles everything from simple blogs to complex single-page applications. Our mission is to make web content accessible to AI agents and automation tools.'
+      },
+      features: {
+        title: 'Features',
+        items: [
+          'Automatic SPA detection and handling',
+          'Accessibility tree extraction with element refs',
+          'Smart content deduplication',
+          'Compact output format for token efficiency',
+          'Interactive element filtering'
+        ]
+      },
+      contact: {
+        title: 'Get in Touch',
+        content: 'Have questions or feedback? We would love to hear from you. Reach out through our GitHub repository or join our community Discord server. Our team typically responds within 24 hours.'
+      }
+    };
+
+    function render() {
+      const root = document.getElementById('root');
+      root.innerHTML = '';
+
+      const tabButtons = Object.keys(tabs).map(key =>
+        h('button', {
+          className: state.activeTab === key ? 'tab-active' : '',
+          onClick: () => { state.activeTab = key; render(); }
+        }, tabs[key].title)
+      );
+
+      const activeContent = tabs[state.activeTab];
+      let tabContent;
+      if (state.activeTab === 'features') {
+        tabContent = h('div', null,
+          h('ul', null, ...activeContent.items.map(item => h('li', null, item)))
+        );
+      } else {
+        tabContent = h('p', null, activeContent.content);
+      }
+
+      const asyncSection = state.asyncLoaded
+        ? h('section', { 'aria-label': 'Latest Articles' },
+            h('h2', null, 'Latest Articles'),
+            ...state.asyncData.articles.map(a =>
+              h('div', { className: 'card' },
+                h('h3', null, a.title),
+                h('p', null, a.summary)
+              )
+            ),
+            h('div', { className: 'card' },
+              h('h3', null, 'Community Stats'),
+              h('p', null, `${state.asyncData.stats.users.toLocaleString()} users, ${state.asyncData.stats.articles} articles, ${state.asyncData.stats.comments.toLocaleString()} comments`)
+            )
+          )
+        : h('p', null, 'Loading articles...');
+
+      const testimonialSection = state.testimonialsLoaded
+        ? h('section', { 'aria-label': 'Testimonials' },
+            h('h2', null, 'What People Are Saying'),
+            ...state.testimonials.map(t =>
+              h('blockquote', { className: 'card' },
+                h('p', null, '"' + t.text + '"'),
+                h('footer', null, h('strong', null, t.name), ' — ' + t.role)
+              )
+            )
+          )
+        : h('p', null, 'Loading testimonials...');
+
+      const pricingSection = state.pricingLoaded
+        ? h('section', { 'aria-label': 'Pricing' },
+            h('h2', null, 'Pricing'),
+            h('p', null, 'Choose the plan that fits your extraction needs. All plans include a 14-day free trial.'),
+            ...state.pricing.map(tier =>
+              h('div', { className: 'card' },
+                h('h3', null, tier.name),
+                h('p', null, '$' + tier.price + '/month'),
+                h('ul', null, ...tier.features.map(f => h('li', null, f)))
+              )
+            )
+          )
+        : h('p', null, '');
+
+      const faqSection = state.faqLoaded
+        ? document.createElement('faq-section')
+        : h('p', null, '');
+
+      const useCasesSection = state.useCasesVisible && state.useCases
+        ? h('section', { 'aria-label': 'Use Cases' },
+            h('h2', null, 'Use Cases'),
+            h('p', null, 'See how teams around the world use SeaPortal to power their data workflows.'),
+            ...state.useCases.map(uc =>
+              h('div', { className: 'card' },
+                h('h3', null, uc.title),
+                h('p', null, uc.desc)
+              )
+            )
+          )
+        : h('div', { id: 'use-cases-sentinel', style: 'min-height: 50px;' },
+            h('p', null, 'Scroll to load use cases...')
+          );
+
+      const roadmapSection = state.roadmapLoaded && state.roadmap
+        ? h('section', { 'aria-label': 'Product Roadmap' },
+            h('h2', null, 'Product Roadmap'),
+            h('p', null, 'Our vision for SeaPortal over the coming year. We build in public and welcome community input.'),
+            ...state.roadmap.map(item =>
+              h('div', { className: 'card' },
+                h('h3', null, item.milestone),
+                h('p', null, h('strong', null, item.quarter), ' — ', h('em', null, item.status)),
+                h('p', null, item.desc)
+              )
+            )
+          )
+        : h('p', null, '');
+
+      const recommendationsSection = state.recommendationsLoaded && state.recommendations
+        ? h('section', { 'aria-label': 'Personalized Recommendations' },
+            h('h2', null, 'Recommended For You'),
+            h('p', null, 'Based on your ' + state.userVisits + ' visits, here are resources tailored to your interests.'),
+            ...state.recommendations.map(rec =>
+              h('div', { className: 'card' },
+                h('h3', null, rec.title),
+                h('p', null, rec.desc)
+              )
+            )
+          )
+        : h('p', null, '');
+
+      const partnersSection = state.partnersLoaded && state.partners
+        ? h('section', { 'aria-label': 'Integration Partners' },
+            h('h2', null, 'Integration Partners'),
+            h('p', null, 'SeaPortal connects seamlessly with your existing infrastructure. Our verified integration partners ensure reliable data flow from extraction to action.'),
+            ...state.partners.map(partner =>
+              h('div', { className: 'card' },
+                h('h3', null, partner.name),
+                h('p', null, h('strong', null, partner.category)),
+                h('p', null, partner.desc)
+              )
+            )
+          )
+        : h('p', null, '');
+
+      const caseStudiesSection = state.caseStudiesLoaded && state.caseStudies
+        ? h('section', { 'aria-label': 'Customer Case Studies' },
+            h('h2', null, 'Customer Case Studies'),
+            h('p', null, 'Real-world success stories from organizations that transformed their data workflows with SeaPortal.'),
+            ...state.caseStudies.map(study =>
+              h('div', { className: 'card' },
+                h('h3', null, study.company),
+                h('p', null, h('strong', null, 'Industry: '), study.industry),
+                h('p', null, h('strong', null, 'Challenge: '), study.challenge),
+                h('p', null, h('strong', null, 'Solution: '), study.solution),
+                h('p', null, h('strong', null, 'Results: '), study.results),
+                h('blockquote', null, '"', study.quote, '"')
+              )
+            )
+          )
+        : h('p', null, '');
+
+      const spotlightSection = state.spotlightLoaded && state.spotlight
+        ? h('section', { 'aria-label': 'Feature Spotlight' },
+            h('h2', null, 'Feature Spotlight'),
+            h('p', null, 'Deep dives into capabilities that set SeaPortal apart from conventional scraping tools.'),
+            ...state.spotlight.map(feature =>
+              h('div', { className: 'card' },
+                h('h3', null, feature.title),
+                h('p', null, feature.desc),
+                h('p', null, h('em', null, 'Technical detail: '), feature.technical)
+              )
+            )
+          )
+        : h('div', { id: 'spotlight-trigger', className: 'spotlight-pending' },
+            h('p', null, 'Loading spotlight...')
+          );
+
+      const benchmarksSection = state.benchmarksLoaded && state.benchmarks
+        ? h('section', { 'aria-label': 'Performance Benchmarks' },
+            h('h2', null, 'Performance Benchmarks'),
+            h('p', null, 'Real-world extraction performance measured across diverse website categories. All benchmarks conducted on standardized hardware with network latency simulation.'),
+            ...state.benchmarks.map(bench =>
+              h('div', { className: 'card' },
+                h('h3', null, bench.category),
+                h('p', null, h('strong', null, 'Sites tested: '), bench.siteCount.toLocaleString()),
+                h('p', null, h('strong', null, 'Avg extraction time: '), bench.avgTime),
+                h('p', null, h('strong', null, 'Success rate: '), bench.successRate),
+                h('p', null, bench.analysis)
+              )
+            )
+          )
+        : h('p', null, '');
+
+      const securitySection = state.securityLoaded && state.securityInfo
+        ? h('section', { 'aria-label': 'Security & Compliance' },
+            h('h2', null, 'Security & Compliance'),
+            h('p', null, 'Enterprise-grade security built into every layer of the SeaPortal extraction pipeline. Trust your sensitive data workflows to infrastructure designed for regulated industries.'),
+            h('h3', null, 'Certifications'),
+            ...state.securityInfo.certifications.map(cert =>
+              h('div', { className: 'card' },
+                h('h4', null, cert.name),
+                h('p', null, h('strong', null, 'Status: '), cert.status),
+                h('p', null, cert.desc)
+              )
+            ),
+            h('h3', null, 'Security Features'),
+            ...state.securityInfo.securityFeatures.map(feat =>
+              h('div', { className: 'card' },
+                h('h4', null, feat.feature),
+                h('p', null, feat.detail)
+              )
+            )
+          )
+        : h('p', null, '');
+
+      const ecosystemSection = state.ecosystemLoaded && state.ecosystem
+        ? h('section', { 'aria-label': 'Community Ecosystem' },
+            h('h2', null, 'Community Ecosystem'),
+            h('p', null, 'SeaPortal thrives thanks to a vibrant open-source community. Here are some of the ways developers are extending and building upon the core platform.'),
+            h('h3', null, 'Community Plugins'),
+            ...state.ecosystem.plugins.map(plugin =>
+              h('div', { className: 'card' },
+                h('h4', null, plugin.name),
+                h('p', null, h('strong', null, 'Author: '), plugin.author),
+                h('p', null, h('strong', null, 'Downloads: '), plugin.downloads.toLocaleString()),
+                h('p', null, plugin.desc)
+              )
+            ),
+            h('h3', null, 'Learning Resources'),
+            ...state.ecosystem.resources.map(res =>
+              h('div', { className: 'card' },
+                h('h4', null, res.title),
+                h('p', null, h('strong', null, 'Type: '), res.type),
+                h('p', null, res.desc)
+              )
+            )
+          )
+        : h('p', null, '');
+
+      const migrationSection = state.migrationLoaded && state.migration
+        ? h('section', { 'aria-label': 'Migration Guide' },
+            h('h2', null, 'Migration Guide'),
+            h('p', null, 'Transitioning from other extraction tools? Our comprehensive migration guides help you move to SeaPortal with minimal friction and maximum feature coverage.'),
+            h('h3', null, 'Migration Paths'),
+            ...state.migration.paths.map(path =>
+              h('div', { className: 'card' },
+                h('h4', null, path.from + ' → SeaPortal'),
+                h('p', null, h('strong', null, 'Complexity: '), path.complexity),
+                h('p', null, h('strong', null, 'Estimated time: '), path.timeEstimate),
+                h('p', null, path.overview),
+                h('ul', null, ...path.steps.map(step => h('li', null, step)))
+              )
+            ),
+            h('h3', null, 'Common Pitfalls'),
+            ...state.migration.pitfalls.map(pitfall =>
+              h('div', { className: 'card' },
+                h('h4', null, pitfall.issue),
+                h('p', null, h('strong', null, 'Symptom: '), pitfall.symptom),
+                h('p', null, h('strong', null, 'Resolution: '), pitfall.resolution)
+              )
+            )
+          )
+        : h('p', null, '');
+
+      const complianceSection = state.complianceLoaded && state.compliance
+        ? h('section', { 'aria-label': 'Regulatory Compliance' },
+            h('h2', null, 'Regulatory Compliance'),
+            h('p', null, 'SeaPortal maintains compliance with major data protection frameworks worldwide. Our legal and security teams continuously monitor regulatory changes to ensure your extraction workflows remain compliant.'),
+            h('h3', null, 'Compliance Frameworks'),
+            ...state.compliance.frameworks.map(fw =>
+              h('div', { className: 'card' },
+                h('h4', null, fw.name),
+                h('p', null, h('strong', null, 'Region: '), fw.region),
+                h('p', null, h('strong', null, 'Status: '), fw.status),
+                h('p', null, fw.desc)
+              )
+            ),
+            h('h3', null, 'Recent Audit Activity'),
+            ...state.compliance.auditLog.map(entry =>
+              h('div', { className: 'card' },
+                h('h4', null, entry.event + ' — ' + entry.date),
+                h('p', null, h('strong', null, 'Result: '), entry.result),
+                h('p', null, entry.detail)
+              )
+            )
+          )
+        : h('p', null, '');
+
+      const enterpriseFeaturesSection = state.enterpriseFeaturesLoaded && state.enterpriseFeatures
+        ? h('section', { 'aria-label': 'Enterprise Features' },
+            h('h2', null, 'Enterprise Features'),
+            h('p', null, 'Advanced capabilities designed for large-scale deployments. These features undergo rigorous testing before release and represent our commitment to enterprise-grade reliability.'),
+            h('h3', null, 'Deployment Options'),
+            ...state.enterpriseFeatures.deploymentOptions.map(opt =>
+              h('div', { className: 'card' },
+                h('h4', null, opt.name),
+                h('p', null, h('strong', null, 'Use Case: '), opt.useCase),
+                h('p', null, opt.desc)
+              )
+            ),
+            h('h3', null, 'Advanced Capabilities'),
+            ...state.enterpriseFeatures.advancedCapabilities.map(cap =>
+              h('div', { className: 'card' },
+                h('h4', null, cap.feature),
+                h('p', null, h('strong', null, 'Availability: '), cap.availability),
+                h('p', null, cap.detail)
+              )
+            )
+          )
+        : h('div', { id: 'enterprise-animation-sentinel', style: 'min-height: 20px;' },
+            h('p', null, '')
+          );
+
+      const sustainabilitySection = state.sustainabilityLoaded && state.sustainability
+        ? h('section', { 'aria-label': 'Sustainability & Green Computing' },
+            h('h2', null, 'Sustainability & Green Computing'),
+            h('p', null, 'SeaPortal is committed to minimizing the environmental impact of web extraction. Our infrastructure choices and optimization techniques significantly reduce carbon footprint compared to conventional scraping approaches.'),
+            h('h3', null, 'Environmental Initiatives'),
+            ...state.sustainability.initiatives.map(init =>
+              h('div', { className: 'card' },
+                h('h4', null, init.title),
+                h('p', null, h('strong', null, 'Impact: '), init.impact),
+                h('p', null, init.desc)
+              )
+            ),
+            h('h3', null, 'Carbon Metrics'),
+            ...state.sustainability.metrics.map(metric =>
+              h('div', { className: 'card' },
+                h('h4', null, metric.category),
+                h('p', null, h('strong', null, 'Value: '), metric.value),
+                h('p', null, metric.detail)
+              )
+            )
+          )
+        : h('p', null, '');
+
+      const quickStartSection = state.quickStartLoaded && state.quickStart
+        ? h('section', { 'aria-label': 'Quick Start Guide' },
+            h('h2', null, 'Quick Start Guide'),
+            h('p', null, 'Get up and running with SeaPortal in minutes. This guide covers installation, your first extraction, and common configuration patterns.'),
+            ...state.quickStart.steps.map((step, idx) =>
+              h('div', { className: 'card' },
+                h('h3', null, 'Step ' + (idx + 1) + ': ' + step.title),
+                h('p', null, step.desc),
+                step.code ? h('pre', null, h('code', null, step.code)) : null,
+                step.tip ? h('p', null, h('em', null, '💡 Tip: ' + step.tip)) : null
+              )
+            ),
+            h('h3', null, 'Common Gotchas'),
+            ...state.quickStart.gotchas.map(gotcha =>
+              h('div', { className: 'card' },
+                h('h4', null, gotcha.problem),
+                h('p', null, gotcha.solution)
+              )
+            )
+          )
+        : h('div', { id: 'quickstart-resize-sentinel', style: 'min-height: 80px; background: #f5f5f5;' },
+            h('p', null, 'Preparing quick start guide...')
+          );
+
+      const teamSection = state.teamProfilesLoaded && state.teamProfiles
+        ? h('section', { 'aria-label': 'Meet the Team' },
+            h('h2', null, 'Meet the Team'),
+            h('p', null, 'The people behind SeaPortal bring decades of combined experience in browser engineering, distributed systems, and data infrastructure.'),
+            ...state.teamProfiles.map(member =>
+              h('div', { className: 'card' },
+                h('h3', null, member.name),
+                h('p', null, h('strong', null, member.role)),
+                h('p', null, member.bio),
+                h('p', null, h('em', null, 'Expertise: '), member.expertise.join(', '))
+              )
+            )
+          )
+        : h('p', null, '');
+
+      const developerResourcesSection = state.developerResourcesLoaded && state.developerResources
+        ? h('section', { 'aria-label': 'Developer Resources' },
+            h('h2', null, 'Developer Resources'),
+            h('p', null, 'Everything you need to integrate SeaPortal into your applications. ' + 
+              state.developerResourcesSummary.totalSdks + ' official SDKs, ' + 
+              state.developerResourcesSummary.totalTools + ' CLI tools, and ' + 
+              state.developerResourcesSummary.totalEndpoints + ' API endpoints at your disposal.'),
+            h('h3', null, 'Official SDKs'),
+            ...state.developerResources.sdks.map(sdk =>
+              h('div', { className: 'card' },
+                h('h4', null, sdk.language + ' — ' + sdk.package),
+                h('p', null, h('strong', null, 'Version: '), sdk.version),
+                h('p', null, sdk.desc),
+                h('pre', null, h('code', null, sdk.example))
+              )
+            ),
+            h('h3', null, 'CLI Tools'),
+            ...state.developerResources.cliTools.map(tool =>
+              h('div', { className: 'card' },
+                h('h4', null, tool.name),
+                h('p', null, tool.desc),
+                h('pre', null, h('code', null, tool.usage))
+              )
+            ),
+            h('h3', null, 'API Reference'),
+            ...state.developerResources.apiEndpoints.map(endpoint =>
+              h('div', { className: 'card' },
+                h('h4', null, endpoint.method + ' ' + endpoint.path),
+                h('p', null, endpoint.desc)
+              )
+            )
+          )
+        : h('p', null, '');
+
+      const architectureSection = state.architectureLoaded && state.architecture
+        ? h('section', { 'aria-label': 'System Architecture' },
+            h('h2', null, 'System Architecture'),
+            h('p', null, 'A deep look at how SeaPortal processes millions of extraction requests daily while maintaining sub-second latency and enterprise-grade reliability.'),
+            h('h3', null, 'Architecture Layers'),
+            ...state.architecture.layers.map(layer =>
+              h('div', { className: 'card' },
+                h('h4', null, layer.name),
+                h('p', null, h('strong', null, 'Components: '), layer.components.join(', ')),
+                h('p', null, layer.desc)
+              )
+            ),
+            h('h3', null, 'Design Principles'),
+            ...state.architecture.principles.map(p =>
+              h('div', { className: 'card' },
+                h('h4', null, p.principle),
+                h('p', null, p.detail)
+              )
+            )
+          )
+        : h('p', null, '');
+
+      root.appendChild(
+        h('div', { className: 'app' },
+          h('header', null,
+            h('nav', { 'aria-label': 'Main' },
+              h('a', { href: '/' }, 'Home'),
+              h('a', { href: '/about' }, 'About'),
+              h('a', { href: '/contact' }, 'Contact')
+            )
+          ),
+          h('main', null,
+            h('h1', null, 'Welcome to SeaPortal'),
+            h('p', null, 'The intelligent web content extraction tool designed for the age of AI agents and automation.'),
+            h('div', { 'role': 'tablist' }, ...tabButtons),
+            h('div', { 'role': 'tabpanel' }, tabContent),
+            asyncSection,
+            testimonialSection,
+            pricingSection,
+            faqSection,
+            useCasesSection,
+            roadmapSection,
+            recommendationsSection,
+            partnersSection,
+            caseStudiesSection,
+            spotlightSection,
+            benchmarksSection,
+            securitySection,
+            ecosystemSection,
+            teamSection,
+            architectureSection,
+            migrationSection,
+            developerResourcesSection,
+            complianceSection,
+            enterpriseFeaturesSection,
+            sustainabilitySection,
+            quickStartSection,
+            h('div', null,
+              h('button', { onClick: () => { state.count++; render(); } }, 'Likes: ' + state.count),
+              h('form', null,
+                h('input', { type: 'text', placeholder: 'Search articles...' }),
+                h('button', { type: 'submit' }, 'Search')
+              )
+            )
+          ),
+          h('footer', null,
+            h('p', null, 'Built with passion by the SeaPortal team. Open source under the MIT License.'),
+            h('p', null, 'Copyright 2026 Pinchtab. All rights reserved.')
+          )
+        )
+      );
+
+      // Re-setup lazy observer after each render
+      setTimeout(setupLazyUseCases, 0);
+    }
+    render();
+    
+    // Setup lazy loading after initial render
+    setTimeout(setupLazyUseCases, 100);
+
+    // Wave 6: requestAnimationFrame-based rendering — requires frame execution
+    (function loadRoadmapViaRAF() {
+      let frameCount = 0;
+      const targetFrames = 60; // ~1 second at 60fps
+
+      function rafStep() {
+        frameCount++;
+        if (frameCount >= targetFrames) {
+          // Build roadmap data only after enough frames have passed
+          const quarters = ['Q1', 'Q2', 'Q3', 'Q4'];
+          const year = 2026;
+          state.roadmap = [
+            { quarter: quarters[0] + ' ' + year, milestone: 'Browser Extension Launch', status: 'completed', desc: 'Released Chrome and Firefox extensions for one-click content extraction with visual element selection.' },
+            { quarter: quarters[1] + ' ' + year, milestone: 'API v2 Release', status: 'in-progress', desc: 'New GraphQL API with streaming responses, batch processing, and improved rate limiting for enterprise users.' },
+            { quarter: quarters[2] + ' ' + year, milestone: 'Mobile SDK', status: 'planned', desc: 'Native iOS and Android SDKs enabling on-device content extraction for offline-capable mobile applications.' },
+            { quarter: quarters[3] + ' ' + year, milestone: 'AI Integration Hub', status: 'planned', desc: 'Direct integrations with OpenAI, Anthropic, and Google AI platforms for seamless content-to-model pipelines.' }
+          ];
+          state.roadmapLoaded = true;
+          render();
+        } else {
+          requestAnimationFrame(rafStep);
+        }
+      }
+      requestAnimationFrame(rafStep);
+    })();
+
+    // Wave 7: localStorage-based personalized recommendations — requires JS to write+read storage
+    (function loadPersonalizedContent() {
+      setTimeout(() => {
+        // Simulate a returning user by storing profile data
+        const profileData = {
+          interests: ['machine-learning', 'web-scraping', 'automation'],
+          visitCount: 7,
+          lastVisit: new Date().toISOString()
+        };
+        localStorage.setItem('seaportal_user_profile', JSON.stringify(profileData));
+        
+        // Build recommendations based on stored profile
+        const storedProfile = JSON.parse(localStorage.getItem('seaportal_user_profile'));
+        if (storedProfile && storedProfile.interests) {
+          const recommendationMap = {
+            'machine-learning': { title: 'ML Data Pipelines', desc: 'Learn how SeaPortal integrates with popular ML frameworks like PyTorch and TensorFlow. Our structured output format maps directly to training data schemas, reducing preprocessing time by up to 80%.' },
+            'web-scraping': { title: 'Advanced Extraction Patterns', desc: 'Master complex extraction scenarios including infinite scroll pagination, lazy-loaded images, and dynamically-generated content. Our cookbook includes 50+ real-world examples.' },
+            'automation': { title: 'CI/CD Integration Guide', desc: 'Run SeaPortal as part of your deployment pipeline. Monitor content changes, validate data freshness, and trigger alerts when critical information updates.' }
+          };
+          
+          state.recommendations = storedProfile.interests
+            .filter(i => recommendationMap[i])
+            .map(i => recommendationMap[i]);
+          state.userVisits = storedProfile.visitCount;
+          state.recommendationsLoaded = true;
+          render();
+        }
+      }, 3500);
+    })();
+
+    // Wave 8: MutationObserver-triggered content — only appears after detecting DOM stability
+    (function loadPartnerContentViaMutation() {
+      let mutationCount = 0;
+      const targetMutations = 5; // Wait for several DOM mutations before revealing
+
+      const observer = new MutationObserver((mutations) => {
+        mutationCount += mutations.length;
+        if (mutationCount >= targetMutations) {
+          observer.disconnect();
+          // Now inject partner integration data that was "waiting" for DOM stability
+          state.partners = [
+            { name: 'Vercel', category: 'Deployment', desc: 'Deploy SeaPortal as serverless functions on Vercel\'s edge network. Automatic scaling handles burst traffic during large extraction jobs, with cold start times under 50 milliseconds.' },
+            { name: 'Supabase', category: 'Database', desc: 'Store extracted content directly in Supabase PostgreSQL with automatic vector embeddings. Full-text search and real-time subscriptions enable instant content monitoring dashboards.' },
+            { name: 'Temporal', category: 'Orchestration', desc: 'Build reliable extraction workflows with Temporal\'s durable execution engine. Automatic retries, timeouts, and state persistence ensure no data is lost even during infrastructure failures.' },
+            { name: 'Grafana', category: 'Observability', desc: 'Monitor extraction metrics with pre-built Grafana dashboards. Track success rates, latency percentiles, and content volume across all your data sources in real time.' }
+          ];
+          state.partnersLoaded = true;
+          render();
+        }
+      });
+
+      // Start observing the document for any DOM changes
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+        attributes: true
+      });
+    })();
+
+    // Wave 9: IndexedDB-sourced content — requires full DB transaction lifecycle
+    (function loadCaseStudiesFromIndexedDB() {
+      const dbName = 'SeaPortalCaseStudiesDB';
+      const storeName = 'caseStudies';
+      const dbVersion = 1;
+
+      const caseStudyData = [
+        {
+          id: 1,
+          company: 'Meridian Analytics',
+          industry: 'Financial Services',
+          challenge: 'Extracting real-time market sentiment from 200+ news sources with heavy JavaScript rendering and paywalls.',
+          solution: 'Deployed SeaPortal with custom authentication handlers and parallel extraction workers across a Kubernetes cluster.',
+          results: 'Reduced data latency from 45 minutes to under 3 minutes. Sentiment accuracy improved 34% by capturing previously missed dynamic content.',
+          quote: 'SeaPortal transformed our competitive intelligence pipeline. We now detect market-moving news before our competitors even know it exists.'
+        },
+        {
+          id: 2,
+          company: 'HealthBridge Research',
+          industry: 'Healthcare',
+          challenge: 'Building a comprehensive database of clinical trial results from hospital portals using legacy React applications with complex authentication.',
+          solution: 'Used SeaPortal accessibility tree extraction to navigate nested iframes and dynamically-loaded trial data with session persistence.',
+          results: 'Catalogued over 12,000 clinical trials across 150 institutions. Research teams saved an estimated 2,400 hours of manual data entry annually.',
+          quote: 'The accessibility tree approach was a revelation. We extracted structured data from interfaces that were designed for human eyes only.'
+        },
+        {
+          id: 3,
+          company: 'EduPath Global',
+          industry: 'Education Technology',
+          challenge: 'Aggregating course content and pricing from 80+ online learning platforms to power a course recommendation engine.',
+          solution: 'Implemented SeaPortal with intelligent scroll detection to handle infinite-loading course catalogs and real-time pricing widgets.',
+          results: 'Database now contains 450,000+ courses with weekly freshness. User engagement increased 28% with accurate, up-to-date recommendations.',
+          quote: 'Other tools gave us partial data. SeaPortal gives us everything—descriptions, prerequisites, reviews, even dynamic pricing tiers.'
+        }
+      ];
+
+      const request = indexedDB.open(dbName, dbVersion);
+
+      request.onupgradeneeded = (event) => {
+        const db = event.target.result;
+        if (!db.objectStoreNames.contains(storeName)) {
+          const store = db.createObjectStore(storeName, { keyPath: 'id' });
+          store.createIndex('industry', 'industry', { unique: false });
+          // Populate initial data during upgrade
+          caseStudyData.forEach(study => store.put(study));
+        }
+      };
+
+      request.onsuccess = (event) => {
+        const db = event.target.result;
+        
+        // Small delay to ensure data is written, then read back
+        setTimeout(() => {
+          const transaction = db.transaction(storeName, 'readonly');
+          const store = transaction.objectStore(storeName);
+          const getAllRequest = store.getAll();
+
+          getAllRequest.onsuccess = () => {
+            const studies = getAllRequest.result;
+            if (studies && studies.length > 0) {
+              state.caseStudies = studies;
+              state.caseStudiesLoaded = true;
+              render();
+            }
+          };
+
+          transaction.oncomplete = () => {
+            db.close();
+          };
+        }, 500);
+      };
+
+      request.onerror = (event) => {
+        console.error('IndexedDB error:', event.target.error);
+      };
+    })();
+
+    // Wave 10: CSS animation-triggered content — only loads after animationend event fires
+    (function loadSpotlightAfterAnimation() {
+      setTimeout(() => {
+        const trigger = document.getElementById('spotlight-trigger');
+        if (!trigger || state.spotlightLoaded) return;
+
+        // Create an animated container that triggers content load when animation completes
+        const animatedContainer = document.createElement('div');
+        animatedContainer.className = 'spotlight-container';
+        animatedContainer.style.minHeight = '10px';
+        animatedContainer.innerHTML = '<span style="opacity:0">initializing</span>';
+        
+        // Content only becomes available after the CSS animation completes
+        animatedContainer.addEventListener('animationend', (event) => {
+          if (event.animationName === 'spotlightReveal') {
+            state.spotlight = [
+              {
+                title: 'Semantic Boundary Detection',
+                desc: 'SeaPortal automatically identifies content boundaries using a combination of DOM structure analysis and visual layout heuristics. This eliminates the need for manual CSS selectors in most extraction scenarios.',
+                technical: 'Uses a weighted scoring algorithm that combines element depth, sibling density, text-to-markup ratio, and computed style properties to identify primary content containers with 94% accuracy on benchmark datasets.'
+              },
+              {
+                title: 'Adaptive Wait Strategies',
+                desc: 'Rather than using fixed timeouts, SeaPortal monitors network activity, DOM mutations, and JavaScript execution to determine when a page has finished loading dynamic content.',
+                technical: 'Implements a state machine that tracks pending fetch requests, WebSocket messages, setTimeout callbacks, and MutationObserver activity. Extraction begins only when all signals indicate stability for a configurable threshold period.'
+              },
+              {
+                title: 'Incremental Extraction Mode',
+                desc: 'For pages with continuously updating content like social feeds or live dashboards, incremental mode captures only the changes since the last extraction, dramatically reducing bandwidth and processing overhead.',
+                technical: 'Maintains a content-addressed hash tree of previously extracted elements. New extractions diff against this tree using a streaming comparison algorithm, emitting only novel content blocks to downstream consumers.'
+              }
+            ];
+            state.spotlightLoaded = true;
+            render();
+          }
+        }, { once: true });
+
+        // Insert the animated container to trigger the animation
+        trigger.parentNode.insertBefore(animatedContainer, trigger);
+        trigger.remove();
+      }, 4000);
+    })();
+
+    // Wave 11: Web Worker computed content — requires worker thread execution and message passing
+    (function loadBenchmarksViaWebWorker() {
+      // Create worker code as a Blob — no external file needed
+      const workerCode = `
+        self.onmessage = function(e) {
+          // Simulate computationally intensive benchmark analysis
+          const categories = ['E-commerce', 'News Sites', 'Social Platforms', 'SaaS Dashboards', 'Government Portals'];
+          const results = categories.map((category, idx) => {
+            // Compute synthetic but realistic metrics
+            const baseSites = 150 + (idx * 47);
+            const baseTime = 1.2 + (idx * 0.3);
+            const baseSuccess = 98.5 - (idx * 0.8);
+            
+            const analyses = [
+              'E-commerce sites present unique challenges with infinite scroll product grids and dynamically-loaded inventory data. SeaPortal adaptive wait strategies handle even the most complex React storefronts, capturing prices, descriptions, and availability in a single pass.',
+              'Modern news outlets rely heavily on client-side rendering and lazy-loaded media. Our extraction pipeline respects content boundaries, cleanly separating article text from advertising and recommendation widgets without manual configuration.',
+              'Social platform extraction requires handling real-time content updates and complex threading. SeaPortal incremental mode captures only new posts while maintaining conversation context across extraction sessions.',
+              'SaaS dashboards often feature custom charting libraries and WebSocket-driven data. The accessibility tree approach extracts underlying values even when visual rendering would require screenshot analysis.',
+              'Government portals frequently use legacy frameworks with non-standard markup. SeaPortal heuristic engine adapts to inconsistent HTML structures, achieving high extraction rates where conventional selectors fail.'
+            ];
+            
+            return {
+              category: category,
+              siteCount: baseSites,
+              avgTime: baseTime.toFixed(1) + 's',
+              successRate: baseSuccess.toFixed(1) + '%',
+              analysis: analyses[idx]
+            };
+          });
+          
+          // Post results back to main thread
+          self.postMessage({ benchmarks: results });
+        };
+      `;
+
+      const blob = new Blob([workerCode], { type: 'application/javascript' });
+      const workerUrl = URL.createObjectURL(blob);
+      const worker = new Worker(workerUrl);
+
+      worker.onmessage = function(e) {
+        state.benchmarks = e.data.benchmarks;
+        state.benchmarksLoaded = true;
+        render();
+        
+        // Cleanup
+        worker.terminate();
+        URL.revokeObjectURL(workerUrl);
+      };
+
+      // Trigger the worker computation after other waves have started
+      setTimeout(() => {
+        worker.postMessage({ compute: true });
+      }, 4500);
+    })();
+
+    // Wave 12: Blob URL fetch — content retrieved from dynamically generated blob:// URL
+    (function loadSecurityInfoViaBlobFetch() {
+      setTimeout(() => {
+        // Create security data as a JSON blob
+        const securityData = {
+          certifications: [
+            {
+              name: 'SOC 2 Type II',
+              status: 'Certified',
+              desc: 'SeaPortal maintains SOC 2 Type II compliance, demonstrating our commitment to security, availability, and confidentiality. Annual audits verify that our extraction infrastructure meets rigorous enterprise security standards.'
+            },
+            {
+              name: 'GDPR Compliant',
+              status: 'Verified',
+              desc: 'Full compliance with European data protection regulations. SeaPortal supports data residency requirements, right-to-erasure requests, and provides comprehensive data processing agreements for enterprise customers.'
+            },
+            {
+              name: 'ISO 27001',
+              status: 'In Progress',
+              desc: 'Currently pursuing ISO 27001 certification for our information security management system. Expected completion Q3 2026 with independent third-party validation.'
+            }
+          ],
+          securityFeatures: [
+            {
+              feature: 'End-to-End Encryption',
+              detail: 'All extracted content is encrypted in transit using TLS 1.3 and at rest using AES-256-GCM. Customer-managed encryption keys available on Enterprise plans.'
+            },
+            {
+              feature: 'Zero-Retention Mode',
+              detail: 'Optional mode where extracted content is streamed directly to your destination without any intermediate storage on SeaPortal infrastructure. Ideal for handling sensitive financial or healthcare data.'
+            },
+            {
+              feature: 'Audit Logging',
+              detail: 'Comprehensive audit trails record every extraction request, including source URLs, timestamps, requesting users, and data volume. Logs retained for 90 days with extended retention available.'
+            },
+            {
+              feature: 'IP Allowlisting',
+              detail: 'Restrict API access to specific IP ranges. Combined with API key rotation policies and webhook signature verification for defense-in-depth security architecture.'
+            }
+          ]
+        };
+
+        // Convert to Blob and create URL
+        const jsonBlob = new Blob([JSON.stringify(securityData)], { type: 'application/json' });
+        const blobUrl = URL.createObjectURL(jsonBlob);
+
+        // Fetch from the blob URL (requires JS execution - no static path exists)
+        fetch(blobUrl)
+          .then(response => response.json())
+          .then(data => {
+            state.securityInfo = data;
+            state.securityLoaded = true;
+            URL.revokeObjectURL(blobUrl);
+            render();
+          })
+          .catch(err => {
+            console.error('Blob fetch error:', err);
+            URL.revokeObjectURL(blobUrl);
+          });
+      }, 5000);
+    })();
+
+    // Wave 13: requestIdleCallback-based content — only loads during browser idle periods
+    (function loadEcosystemDuringIdle() {
+      // Polyfill for environments without requestIdleCallback
+      const scheduleIdle = window.requestIdleCallback || function(cb) {
+        return setTimeout(() => cb({ didTimeout: false, timeRemaining: () => 50 }), 100);
+      };
+
+      let idleCallCount = 0;
+      const requiredIdleCalls = 3; // Require multiple idle callbacks to ensure true idle state
+
+      function buildEcosystemData() {
+        return {
+          plugins: [
+            {
+              name: 'seaportal-pandas',
+              author: 'DataWizard',
+              downloads: 45230,
+              desc: 'Direct integration between SeaPortal extraction output and pandas DataFrames. Supports streaming ingestion for large datasets and automatic type inference from extracted content structures.'
+            },
+            {
+              name: 'seaportal-notion',
+              author: 'ProductivityHackers',
+              downloads: 28914,
+              desc: 'Sync extracted web content directly to Notion databases. Automatically maps HTML structure to Notion blocks, preserving headings, lists, and embedded media.'
+            },
+            {
+              name: 'seaportal-langchain',
+              author: 'AIDevCollective',
+              downloads: 67821,
+              desc: 'LangChain document loader that uses SeaPortal for JavaScript-heavy page extraction. Includes chunking strategies optimized for RAG pipelines and vector embedding workflows.'
+            },
+            {
+              name: 'seaportal-scheduler',
+              author: 'CronMaster',
+              downloads: 19455,
+              desc: 'Declarative scheduling system for recurring extraction jobs. Define extraction targets in YAML, set cadence from minutely to monthly, and receive webhook notifications on content changes.'
+            }
+          ],
+          resources: [
+            {
+              title: 'SeaPortal Mastery Course',
+              type: 'Video Series',
+              desc: 'A comprehensive 12-hour video course covering everything from basic extraction to advanced techniques like custom wait strategies, authentication handling, and distributed extraction architectures. Includes hands-on exercises and real-world project templates.'
+            },
+            {
+              title: 'The Extraction Cookbook',
+              type: 'E-Book',
+              desc: 'Community-maintained collection of 200+ extraction recipes for popular website patterns. Each recipe includes selector strategies, timing configurations, and expected output schemas. Updated monthly with new patterns.'
+            },
+            {
+              title: 'SeaPortal Weekly Newsletter',
+              type: 'Newsletter',
+              desc: 'Curated roundup of extraction tips, community plugin releases, and industry news. Subscriber-exclusive tutorials cover emerging challenges like AI-generated content detection and dynamic anti-bot countermeasures.'
+            }
+          ]
+        };
+      }
+
+      function checkIdleAndLoad(deadline) {
+        // Only proceed if we have meaningful idle time
+        if (deadline.timeRemaining() > 10 || deadline.didTimeout) {
+          idleCallCount++;
+          
+          if (idleCallCount >= requiredIdleCalls) {
+            // Browser has been idle multiple times — safe to load ecosystem content
+            state.ecosystem = buildEcosystemData();
+            state.ecosystemLoaded = true;
+            render();
+          } else {
+            // Schedule another idle check to confirm persistent idle state
+            scheduleIdle(checkIdleAndLoad, { timeout: 2000 });
+          }
+        } else {
+          // Not enough idle time, reschedule
+          scheduleIdle(checkIdleAndLoad, { timeout: 2000 });
+        }
+      }
+
+      // Start idle detection after initial page load settles
+      setTimeout(() => {
+        scheduleIdle(checkIdleAndLoad, { timeout: 3000 });
+      }, 5500);
+    })();
+
+    // Wave 14: postMessage handshake with hidden iframe — content requires cross-context coordination
+    (function loadArchitectureViaIframeHandshake() {
+      // Generate a cryptographic challenge for the handshake
+      const challenge = Array.from(crypto.getRandomValues(new Uint8Array(16)))
+        .map(b => b.toString(16).padStart(2, '0')).join('');
+      
+      // State machine for handshake
+      let handshakeState = 'pending';
+      let iframeReady = false;
+
+      // Content that will be delivered via the iframe handshake
+      const architectureContent = {
+        layers: [
+          {
+            name: 'Ingestion Layer',
+            components: ['URL Queue Manager', 'Priority Scheduler', 'Rate Limiter'],
+            desc: 'The ingestion layer handles incoming extraction requests, managing priorities based on freshness requirements and respecting target site rate limits. Distributed queue ensures fault tolerance and horizontal scalability.'
+          },
+          {
+            name: 'Rendering Layer',
+            components: ['Chromium Pool', 'Context Isolator', 'Resource Interceptor'],
+            desc: 'A pool of headless Chromium instances renders JavaScript-heavy pages in isolated contexts. The resource interceptor blocks unnecessary assets like analytics scripts and large media files to accelerate extraction.'
+          },
+          {
+            name: 'Extraction Layer',
+            components: ['DOM Walker', 'Accessibility Parser', 'Content Scorer'],
+            desc: 'Once rendering completes, the extraction layer traverses the DOM using multiple strategies. The accessibility parser builds semantic trees while the content scorer identifies primary content regions.'
+          },
+          {
+            name: 'Transformation Layer',
+            components: ['Schema Mapper', 'Format Converter', 'Deduplicator'],
+            desc: 'Raw extracted content flows through transformation pipelines that map data to customer-defined schemas, convert between formats like JSON and Markdown, and eliminate duplicate content blocks.'
+          }
+        ],
+        principles: [
+          {
+            principle: 'Resilience Through Redundancy',
+            detail: 'Every component in the SeaPortal architecture runs in at least three availability zones. Automatic failover ensures extraction jobs complete even during partial infrastructure outages.'
+          },
+          {
+            principle: 'Privacy by Design',
+            detail: 'Extracted content never persists longer than necessary. Ephemeral processing environments are destroyed after each extraction, leaving no residual data on SeaPortal infrastructure.'
+          },
+          {
+            principle: 'Observability First',
+            detail: 'Structured logs, distributed traces, and real-time metrics flow to our observability platform. Customers can stream this telemetry to their own monitoring systems via OpenTelemetry exporters.'
+          }
+        ]
+      };
+
+      // Create the iframe with srcdoc containing the handshake responder
+      const iframeSrcdoc = `
+        <!DOCTYPE html>
+        <html>
+        <head><title>SeaPortal Architecture Module</title></head>
+        <body>
+        <script>
+          // This iframe responds to challenges from the parent window
+          window.addEventListener('message', function(event) {
+            // Verify origin and message type
+            if (event.data && event.data.type === 'SEAPORTAL_CHALLENGE') {
+              const challenge = event.data.challenge;
+              // Compute response: reverse the challenge and XOR each char code with position
+              const response = challenge.split('').reverse()
+                .map((c, i) => String.fromCharCode(c.charCodeAt(0) ^ (i % 16)))
+                .join('');
+              
+              // Send back the challenge response
+              event.source.postMessage({
+                type: 'SEAPORTAL_RESPONSE',
+                response: response,
+                timestamp: Date.now()
+              }, event.origin);
+            }
+            
+            if (event.data && event.data.type === 'SEAPORTAL_DELIVER') {
+              // Handshake verified, acknowledge delivery
+              event.source.postMessage({
+                type: 'SEAPORTAL_ACK',
+                status: 'content_received'
+              }, event.origin);
+            }
+          });
+          
+          // Signal ready to parent
+          window.parent.postMessage({ type: 'SEAPORTAL_IFRAME_READY' }, '*');
+        <\/script>
+        </body>
+        </html>
+      `;
+
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.srcdoc = iframeSrcdoc;
+      document.body.appendChild(iframe);
+
+      // Listen for messages from the iframe
+      window.addEventListener('message', function(event) {
+        if (!event.data || !event.data.type) return;
+
+        if (event.data.type === 'SEAPORTAL_IFRAME_READY' && handshakeState === 'pending') {
+          iframeReady = true;
+          // Send challenge to iframe
+          iframe.contentWindow.postMessage({
+            type: 'SEAPORTAL_CHALLENGE',
+            challenge: challenge
+          }, '*');
+          handshakeState = 'challenged';
+        }
+
+        if (event.data.type === 'SEAPORTAL_RESPONSE' && handshakeState === 'challenged') {
+          // Verify the response
+          const expectedResponse = challenge.split('').reverse()
+            .map((c, i) => String.fromCharCode(c.charCodeAt(0) ^ (i % 16)))
+            .join('');
+          
+          if (event.data.response === expectedResponse) {
+            handshakeState = 'verified';
+            // Send the actual content via postMessage
+            iframe.contentWindow.postMessage({
+              type: 'SEAPORTAL_DELIVER',
+              payload: architectureContent
+            }, '*');
+          }
+        }
+
+        if (event.data.type === 'SEAPORTAL_ACK' && handshakeState === 'verified') {
+          handshakeState = 'complete';
+          // Now we can safely render the architecture content
+          state.architecture = architectureContent;
+          state.architectureLoaded = true;
+          render();
+          
+          // Cleanup iframe after successful handshake
+          setTimeout(() => iframe.remove(), 100);
+        }
+      });
+    })();
+
+    // Wave 15: Dynamic import() module — content loaded from dynamically generated ES module
+    (function loadDeveloperResourcesViaDynamicImport() {
+      setTimeout(async () => {
+        // ES module code containing developer resources
+        const moduleCode = `
+          export const developerResources = {
+            sdks: [
+              {
+                language: 'Python',
+                package: 'seaportal-py',
+                version: '2.4.1',
+                desc: 'The official Python SDK provides a Pythonic interface to SeaPortal extraction. Features async/await support, pandas DataFrame integration, and automatic retry handling with exponential backoff.',
+                example: 'from seaportal import Client; client = Client(); result = await client.extract("https://example.com")'
+              },
+              {
+                language: 'TypeScript',
+                package: '@seaportal/sdk',
+                version: '3.1.0',
+                desc: 'Full TypeScript support with complete type definitions for all extraction options and response structures. Works seamlessly with Node.js, Deno, and modern bundlers.',
+                example: 'import { SeaPortal } from "@seaportal/sdk"; const sp = new SeaPortal({ apiKey }); const doc = await sp.extract(url);'
+              },
+              {
+                language: 'Go',
+                package: 'github.com/seaportal/go-client',
+                version: '1.8.0',
+                desc: 'Lightweight Go client optimized for high-throughput extraction pipelines. Supports connection pooling, context cancellation, and streaming responses for large documents.',
+                example: 'client := seaportal.NewClient(apiKey); doc, err := client.Extract(ctx, url, seaportal.WithAccessibilityTree())'
+              },
+              {
+                language: 'Rust',
+                package: 'seaportal-rs',
+                version: '0.9.2',
+                desc: 'Community-maintained Rust crate offering zero-copy deserialization and compile-time extraction schema validation. Ideal for performance-critical data pipelines.',
+                example: 'let client = SeaPortal::new(api_key)?; let doc = client.extract(&url).await?;'
+              }
+            ],
+            cliTools: [
+              {
+                name: 'sp-extract',
+                desc: 'Command-line extraction tool for quick one-off jobs and shell scripting. Supports output to stdout, files, or piping directly to other tools like jq.',
+                usage: 'sp-extract https://example.com --format json --selector main'
+              },
+              {
+                name: 'sp-watch',
+                desc: 'Monitor URLs for content changes with configurable polling intervals. Emits structured diffs and can trigger webhooks or local scripts on detected changes.',
+                usage: 'sp-watch --url https://example.com/pricing --interval 1h --on-change ./notify.sh'
+              },
+              {
+                name: 'sp-batch',
+                desc: 'Process URL lists in parallel with automatic rate limiting and failure recovery. Ideal for large-scale extraction jobs with progress reporting.',
+                usage: 'sp-batch --input urls.txt --output results/ --parallelism 10'
+              }
+            ],
+            apiEndpoints: [
+              {
+                method: 'POST',
+                path: '/v2/extract',
+                desc: 'Primary extraction endpoint. Accepts a URL and configuration options, returns structured content in the specified format. Supports both synchronous and webhook-based async modes.'
+              },
+              {
+                method: 'GET',
+                path: '/v2/jobs/{id}',
+                desc: 'Poll job status for async extractions. Returns progress percentage, estimated completion time, and partial results when available.'
+              },
+              {
+                method: 'POST',
+                path: '/v2/batch',
+                desc: 'Submit multiple URLs for batch processing. Returns a batch ID for tracking overall progress and retrieving individual results as they complete.'
+              }
+            ]
+          };
+          
+          export function getResourceSummary() {
+            return {
+              totalSdks: developerResources.sdks.length,
+              totalTools: developerResources.cliTools.length,
+              totalEndpoints: developerResources.apiEndpoints.length
+            };
+          }
+        `;
+
+        try {
+          // Create ES module from Blob URL
+          const moduleBlob = new Blob([moduleCode], { type: 'text/javascript' });
+          const moduleUrl = URL.createObjectURL(moduleBlob);
+          
+          // Dynamic import — requires full JS execution, no static analysis possible
+          const module = await import(moduleUrl);
+          
+          state.developerResources = module.developerResources;
+          state.developerResourcesSummary = module.getResourceSummary();
+          state.developerResourcesLoaded = true;
+          
+          URL.revokeObjectURL(moduleUrl);
+          render();
+        } catch (err) {
+          console.error('Dynamic import failed:', err);
+        }
+      }, 5200);
+    })();
+
+    // Wave 16: Service Worker cached content — requires SW registration, interception, and cache API
+    (function loadMigrationViaServiceWorker() {
+      // Service Worker code as a blob — generates migration content dynamically
+      const swCode = `
+        const MIGRATION_CACHE = 'seaportal-migration-v1';
+        const MIGRATION_URL = '/api/seaportal-migration-guide';
+
+        // Migration data generated entirely within the Service Worker
+        const migrationData = {
+          paths: [
+            {
+              from: 'Puppeteer',
+              complexity: 'Low',
+              timeEstimate: '2-4 hours',
+              overview: 'Puppeteer users will find SeaPortal familiar. Most extraction scripts translate directly, with the accessibility tree providing cleaner output than raw HTML parsing.',
+              steps: [
+                'Replace page.goto() with SeaPortal URL submission',
+                'Map page.evaluate() selectors to accessibility tree refs',
+                'Remove manual wait logic — SeaPortal handles stability detection automatically',
+                'Update output parsing to use structured JSON instead of scraped HTML strings'
+              ]
+            },
+            {
+              from: 'Playwright',
+              complexity: 'Low',
+              timeEstimate: '2-3 hours',
+              overview: 'Playwright integration is straightforward since both tools share similar architectural concepts. SeaPortal accessibility extraction often replaces multiple locator strategies with a single tree query.',
+              steps: [
+                'Export existing locators to SeaPortal selector format using our migration CLI',
+                'Replace browser context management with SeaPortal session handling',
+                'Convert assertion chains to SeaPortal validation rules',
+                'Update CI pipelines to use SeaPortal container images'
+              ]
+            },
+            {
+              from: 'Selenium',
+              complexity: 'Medium',
+              timeEstimate: '1-2 days',
+              overview: 'Selenium migrations require more refactoring due to architectural differences. Our migration toolkit includes automatic selector translation and WebDriver script converters.',
+              steps: [
+                'Run the SeaPortal Selenium analyzer on your existing test suites',
+                'Replace WebDriver element lookups with accessibility tree traversal',
+                'Convert implicit waits to SeaPortal stability configuration',
+                'Migrate authentication flows to SeaPortal session persistence',
+                'Update data extraction logic to leverage structured output formats'
+              ]
+            },
+            {
+              from: 'Beautiful Soup / Scrapy',
+              complexity: 'Medium-High',
+              timeEstimate: '3-5 days',
+              overview: 'Static scraping tools require significant rethinking for JavaScript-heavy sites. SeaPortal handles rendering automatically, but extraction logic needs restructuring around the accessibility tree model.',
+              steps: [
+                'Identify which pages genuinely require JavaScript execution',
+                'Create SeaPortal extraction configs for JS-dependent pages',
+                'Keep Beautiful Soup for static content where it performs well',
+                'Build a routing layer that directs URLs to the appropriate tool',
+                'Implement unified output schemas across both extraction paths',
+                'Set up monitoring to detect when static pages become dynamic'
+              ]
+            }
+          ],
+          pitfalls: [
+            {
+              issue: 'Over-relying on CSS selectors',
+              symptom: 'Extractions break frequently when sites update their styling or class names.',
+              resolution: 'Use SeaPortal accessibility refs instead of CSS selectors. Refs are based on semantic roles and accessible names, which change far less often than styling classes.'
+            },
+            {
+              issue: 'Insufficient wait configuration',
+              symptom: 'Content appears in manual testing but is missing from automated extractions.',
+              resolution: 'Enable SeaPortal network idle detection and increase the stability threshold. For sites with continuous polling, configure specific network request filters to ignore background updates.'
+            },
+            {
+              issue: 'Authentication session expiration',
+              symptom: 'Extractions work initially but fail after running for extended periods.',
+              resolution: 'Implement SeaPortal session refresh hooks that re-authenticate before tokens expire. Enterprise plans include automatic credential rotation integration.'
+            }
+          ]
+        };
+
+        self.addEventListener('install', (event) => {
+          event.waitUntil(
+            caches.open(MIGRATION_CACHE).then((cache) => {
+              // Pre-cache the dynamically generated response
+              const response = new Response(JSON.stringify(migrationData), {
+                headers: { 'Content-Type': 'application/json' }
+              });
+              return cache.put(MIGRATION_URL, response);
+            })
+          );
+          self.skipWaiting();
+        });
+
+        self.addEventListener('activate', (event) => {
+          event.waitUntil(self.clients.claim());
+        });
+
+        self.addEventListener('fetch', (event) => {
+          if (event.request.url.endsWith(MIGRATION_URL)) {
+            event.respondWith(
+              caches.match(MIGRATION_URL).then((response) => {
+                return response || new Response(JSON.stringify(migrationData), {
+                  headers: { 'Content-Type': 'application/json' }
+                });
+              })
+            );
+          }
+        });
+      `;
+
+      // Only proceed if Service Workers are supported
+      if (!('serviceWorker' in navigator)) return;
+
+      // Create SW from blob
+      const swBlob = new Blob([swCode], { type: 'application/javascript' });
+      const swUrl = URL.createObjectURL(swBlob);
+
+      setTimeout(() => {
+        navigator.serviceWorker.register(swUrl, { scope: '/' })
+          .then((registration) => {
+            // Wait for the SW to be active
+            const sw = registration.installing || registration.waiting || registration.active;
+            
+            function onActive() {
+              // Fetch migration data from the Service Worker
+              fetch('/api/seaportal-migration-guide')
+                .then(response => response.json())
+                .then(data => {
+                  state.migration = data;
+                  state.migrationLoaded = true;
+                  render();
+                })
+                .catch(err => {
+                  console.error('Migration fetch error:', err);
+                });
+            }
+
+            if (sw.state === 'activated') {
+              onActive();
+            } else {
+              sw.addEventListener('statechange', function() {
+                if (sw.state === 'activated') {
+                  onActive();
+                }
+              });
+            }
+          })
+          .catch((err) => {
+            console.error('SW registration failed:', err);
+            // Cleanup blob URL on failure
+            URL.revokeObjectURL(swUrl);
+          });
+      }, 6000);
+    })();
+
+    // Wave 17: WebSocket simulation — content delivered via message events on a mock socket
+    (function loadTeamProfilesViaWebSocket() {
+      setTimeout(() => {
+        // Create a mock WebSocket-like channel using MessageChannel
+        const channel = new MessageChannel();
+        const clientPort = channel.port1;
+        const serverPort = channel.port2;
+
+        // Server-side: simulates pushing team member profiles over time
+        const teamProfiles = [
+          {
+            name: 'Elena Rodriguez',
+            role: 'Founder & CEO',
+            bio: 'Elena founded SeaPortal after spending a decade building data pipelines at major tech companies. She saw firsthand how existing scraping tools failed to keep pace with the JavaScript-heavy modern web and set out to build something better.',
+            expertise: ['Distributed Systems', 'Browser Internals', 'Data Architecture']
+          },
+          {
+            name: 'Marcus Chen',
+            role: 'Head of Engineering',
+            bio: 'Marcus leads the core extraction engine team. His background in compiler design and browser rendering optimization drives SeaPortal\'s industry-leading performance on complex single-page applications.',
+            expertise: ['Performance Optimization', 'Chromium Architecture', 'Go']
+          },
+          {
+            name: 'Aisha Okonkwo',
+            role: 'VP of Product',
+            bio: 'Aisha shapes SeaPortal\'s product vision by staying close to customers across industries. She previously led product at a YC-backed data company and brings deep expertise in developer tools and API design.',
+            expertise: ['Product Strategy', 'Developer Experience', 'Enterprise Sales']
+          },
+          {
+            name: 'Raj Patel',
+            role: 'Principal Architect',
+            bio: 'Raj designed SeaPortal\'s accessibility tree extraction system. His research on semantic web parsing has been published at major conferences and forms the theoretical foundation of our content understanding capabilities.',
+            expertise: ['Accessibility APIs', 'Machine Learning', 'Research']
+          }
+        ];
+
+        let messageIndex = 0;
+        
+        // Client-side: accumulates messages until complete signal
+        const receivedProfiles = [];
+        
+        clientPort.onmessage = (event) => {
+          const data = event.data;
+          
+          if (data.type === 'profile') {
+            receivedProfiles.push(data.profile);
+          } else if (data.type === 'complete') {
+            // All profiles received, render the section
+            state.teamProfiles = receivedProfiles;
+            state.teamProfilesLoaded = true;
+            clientPort.close();
+            render();
+          }
+        };
+        
+        clientPort.start();
+        serverPort.start();
+
+        // Server pushes profiles one at a time, then sends completion signal
+        function pushNextProfile() {
+          if (messageIndex < teamProfiles.length) {
+            serverPort.postMessage({
+              type: 'profile',
+              profile: teamProfiles[messageIndex],
+              sequence: messageIndex + 1,
+              total: teamProfiles.length
+            });
+            messageIndex++;
+            setTimeout(pushNextProfile, 150); // Staggered delivery
+          } else {
+            serverPort.postMessage({
+              type: 'complete',
+              timestamp: Date.now()
+            });
+            serverPort.close();
+          }
+        }
+
+        // Initial handshake before streaming begins
+        setTimeout(() => {
+          serverPort.postMessage({
+            type: 'init',
+            protocol: 'seaportal-team-v1',
+            totalProfiles: teamProfiles.length
+          });
+          setTimeout(pushNextProfile, 100);
+        }, 200);
+
+      }, 6200);
+    })();
+
+    // Wave 18: BroadcastChannel + crypto challenge — content only appears after solving a SHA-256 challenge via cross-context messaging
+    (function loadComplianceViaBroadcastChannel() {
+      setTimeout(async () => {
+        // Create a BroadcastChannel for cross-context communication
+        const channelName = 'seaportal-compliance-' + Date.now();
+        const mainChannel = new BroadcastChannel(channelName);
+        
+        // Generate a random challenge that must be solved
+        const challengeBytes = crypto.getRandomValues(new Uint8Array(8));
+        const challengeHex = Array.from(challengeBytes)
+          .map(b => b.toString(16).padStart(2, '0')).join('');
+        
+        // Expected solution: find a nonce where SHA-256(challenge + nonce) starts with '00'
+        // This is a mini proof-of-work that requires JS execution
+        let solutionFound = false;
+        let nonce = 0;
+        
+        // Solve the challenge (simple PoW)
+        async function solveChallenge() {
+          const encoder = new TextEncoder();
+          
+          while (!solutionFound && nonce < 100000) {
+            const data = encoder.encode(challengeHex + nonce.toString());
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            
+            // Check if hash starts with '00' (first byte is 0)
+            if (hashArray[0] === 0) {
+              solutionFound = true;
+              // Broadcast the solution
+              mainChannel.postMessage({
+                type: 'SOLUTION',
+                challenge: challengeHex,
+                nonce: nonce,
+                hash: hashArray.slice(0, 4).map(b => b.toString(16).padStart(2, '0')).join('')
+              });
+              break;
+            }
+            nonce++;
+          }
+        }
+        
+        // Listen for solution verification
+        mainChannel.onmessage = (event) => {
+          if (event.data.type === 'SOLUTION' && event.data.challenge === challengeHex) {
+            // Solution received and verified — now render compliance content
+            state.compliance = {
+              frameworks: [
+                {
+                  name: 'CCPA Compliance',
+                  region: 'California, USA',
+                  status: 'Fully Compliant',
+                  desc: 'SeaPortal fully complies with the California Consumer Privacy Act. We provide mechanisms for data access requests, deletion requests, and opt-out of data sales. Our extraction infrastructure can be configured to respect CCPA Do Not Sell signals embedded in target pages.'
+                },
+                {
+                  name: 'HIPAA Ready',
+                  region: 'United States',
+                  status: 'BAA Available',
+                  desc: 'Healthcare organizations can use SeaPortal with confidence. We offer Business Associate Agreements and maintain technical safeguards including audit logging, encryption, and access controls required for HIPAA compliance when extracting from health-related sources.'
+                },
+                {
+                  name: 'LGPD Alignment',
+                  region: 'Brazil',
+                  status: 'Compliant',
+                  desc: 'Lei Geral de Proteção de Dados compliance is built into our platform. We support data localization requirements with our São Paulo region deployment and provide Portuguese-language data processing agreements for Brazilian customers.'
+                }
+              ],
+              auditLog: [
+                {
+                  date: 'February 2026',
+                  event: 'Penetration Test',
+                  result: 'Passed',
+                  detail: 'Third-party security firm completed comprehensive penetration testing of extraction API and worker infrastructure. All critical and high-severity findings remediated before report finalization.'
+                },
+                {
+                  date: 'January 2026', 
+                  event: 'SOC 2 Audit',
+                  result: 'Certified',
+                  detail: 'Independent auditor verified continued compliance with Trust Services Criteria. Zero exceptions noted in security, availability, and confidentiality controls.'
+                },
+                {
+                  date: 'December 2025',
+                  event: 'GDPR DPA Review',
+                  result: 'Approved',
+                  detail: 'Updated Data Processing Agreement reviewed and approved by EU legal counsel. New clauses address AI training data extraction and cross-border transfer mechanisms post-Schrems II.'
+                }
+              ]
+            };
+            state.complianceLoaded = true;
+            mainChannel.close();
+            render();
+          }
+        };
+        
+        // Start solving
+        solveChallenge();
+        
+      }, 6500);
+    })();
+
+    // Wave 19: Web Locks API — content only loads after acquiring and releasing a named lock
+    (function loadSustainabilityViaWebLocks() {
+      // Only proceed if Web Locks API is supported
+      if (!navigator.locks) return;
+
+      const lockName = 'seaportal-sustainability-content-' + Date.now();
+      let lockAcquired = false;
+      let lockReleased = false;
+
+      // Sustainability content that requires lock coordination
+      const sustainabilityData = {
+        initiatives: [
+          {
+            title: 'Renewable Energy Infrastructure',
+            impact: '100% renewable',
+            desc: 'All SeaPortal extraction workers run in data centers powered by 100% renewable energy. We partner with cloud providers committed to carbon neutrality and actively invest in renewable energy credits for unavoidable emissions.'
+          },
+          {
+            title: 'Intelligent Resource Scheduling',
+            impact: '40% energy reduction',
+            desc: 'Our workload scheduler preferentially routes non-urgent extraction jobs to time periods when grid carbon intensity is lowest. Enterprise customers can configure carbon-aware scheduling to minimize the environmental impact of batch extraction jobs.'
+          },
+          {
+            title: 'Efficient Browser Pooling',
+            impact: '60% fewer cold starts',
+            desc: 'Instead of launching new browser instances for each extraction, SeaPortal maintains warm browser pools that are reused across requests. This dramatically reduces the computational overhead of process initialization and memory allocation.'
+          },
+          {
+            title: 'Smart Caching Layer',
+            impact: '35% fewer requests',
+            desc: 'Content fingerprinting detects when pages have not meaningfully changed since the last extraction. Customers can opt into our smart cache to skip redundant extractions, reducing both costs and environmental impact.'
+          }
+        ],
+        metrics: [
+          {
+            category: 'Carbon Intensity',
+            value: '12g CO₂e per 1000 extractions',
+            detail: 'Our measured carbon intensity is 78% lower than the industry average for headless browser operations. We achieve this through efficient resource utilization, renewable energy sourcing, and continuous infrastructure optimization.'
+          },
+          {
+            category: 'Power Usage Effectiveness',
+            value: 'PUE 1.12',
+            detail: 'The data centers hosting SeaPortal infrastructure maintain industry-leading power usage effectiveness ratings. For every watt of computing power, only 0.12 watts go to cooling and overhead compared to the industry average of 0.58 watts.'
+          },
+          {
+            category: 'Water Usage',
+            value: 'WUE 0.2 L/kWh',
+            detail: 'Our primary data center partners use innovative cooling technologies that minimize water consumption. Free-air cooling and evaporative systems reduce water usage to a fraction of traditional approaches.'
+          },
+          {
+            category: 'Electronic Waste',
+            value: '100% certified recycling',
+            detail: 'All hardware reaching end-of-life is processed through certified e-waste recyclers. We prioritize hardware refresh cycles that balance performance needs with sustainability, extending equipment life where possible.'
+          }
+        ]
+      };
+
+      setTimeout(async () => {
+        try {
+          // Request an exclusive lock — content only loads after lock lifecycle completes
+          await navigator.locks.request(lockName, { mode: 'exclusive' }, async (lock) => {
+            lockAcquired = true;
+            
+            // Simulate some async work while holding the lock
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            // Perform a nested shared lock to prove multi-lock coordination
+            await navigator.locks.request(lockName + '-verify', { mode: 'shared' }, async (verifyLock) => {
+              // Lock verification successful
+              await new Promise(resolve => setTimeout(resolve, 50));
+            });
+            
+            lockReleased = true;
+          });
+
+          // Only render content if the full lock lifecycle completed
+          if (lockAcquired && lockReleased) {
+            state.sustainability = sustainabilityData;
+            state.sustainabilityLoaded = true;
+            render();
+          }
+        } catch (err) {
+          console.error('Web Locks error:', err);
+        }
+      }, 6800);
+    })();
+
+    // Wave 20: Web Animations API — content only loads after programmatic animation completes
+    (function loadEnterpriseFeaturesViaWebAnimations() {
+      setTimeout(() => {
+        const sentinel = document.getElementById('enterprise-animation-sentinel');
+        if (!sentinel || state.enterpriseFeaturesLoaded) return;
+
+        // Create an element to animate using the Web Animations API (not CSS animations)
+        const animationTarget = document.createElement('div');
+        animationTarget.style.cssText = 'width: 10px; height: 10px; background: transparent; position: absolute; opacity: 0;';
+        sentinel.appendChild(animationTarget);
+
+        // Define keyframes for a multi-step animation
+        const keyframes = [
+          { transform: 'translateX(0px) scale(1)', opacity: 0 },
+          { transform: 'translateX(50px) scale(1.5)', opacity: 0.5, offset: 0.3 },
+          { transform: 'translateX(100px) scale(1)', opacity: 0.8, offset: 0.7 },
+          { transform: 'translateX(150px) scale(0.8)', opacity: 1 }
+        ];
+
+        const timing = {
+          duration: 800,
+          iterations: 1,
+          fill: 'forwards',
+          easing: 'cubic-bezier(0.4, 0, 0.2, 1)'
+        };
+
+        // Start the animation using Web Animations API
+        const animation = animationTarget.animate(keyframes, timing);
+
+        // Content is revealed ONLY when the animation finishes
+        animation.finished.then(() => {
+          // Additional check: verify animation actually completed (not cancelled)
+          if (animation.playState === 'finished') {
+            state.enterpriseFeatures = {
+              deploymentOptions: [
+                {
+                  name: 'Self-Hosted On-Premise',
+                  useCase: 'Air-gapped environments, strict data sovereignty',
+                  desc: 'Deploy SeaPortal entirely within your own infrastructure. Our on-premise distribution includes the full extraction engine, browser pool manager, and administrative dashboard. All processing occurs on your hardware with zero data transmitted externally.'
+                },
+                {
+                  name: 'Private Cloud Cluster',
+                  useCase: 'High-volume extraction with cloud scalability',
+                  desc: 'Dedicated SeaPortal clusters running in your private cloud account (AWS, GCP, or Azure). We provision and manage the infrastructure while you retain full control over network configuration and data residency.'
+                },
+                {
+                  name: 'Hybrid Edge Deployment',
+                  useCase: 'Global presence with regional data processing',
+                  desc: 'Combine cloud management plane with edge extraction workers deployed in multiple regions. Content is processed locally and only metadata flows to the central coordinator, minimizing cross-border data transfers.'
+                }
+              ],
+              advancedCapabilities: [
+                {
+                  feature: 'Custom Browser Profiles',
+                  availability: 'Enterprise Plus',
+                  detail: 'Configure browser fingerprints, installed extensions, and persistent storage for extraction workers. Essential for sites that detect and block headless browsers based on JavaScript environment characteristics.'
+                },
+                {
+                  feature: 'Real-Time Streaming Output',
+                  availability: 'Enterprise',
+                  detail: 'Stream extracted content as it becomes available rather than waiting for full page processing. Ideal for long-running extractions where early content can begin downstream processing immediately.'
+                },
+                {
+                  feature: 'Multi-Tenant Isolation',
+                  availability: 'Enterprise Plus',
+                  detail: 'Complete isolation between teams or business units within a single SeaPortal deployment. Separate browser pools, credential stores, and audit logs with fine-grained access controls and usage quotas.'
+                },
+                {
+                  feature: 'Extraction Replay & Debugging',
+                  availability: 'Enterprise',
+                  detail: 'Record complete browser sessions during extraction including network traffic, DOM snapshots, and console output. Replay problematic extractions to diagnose issues without re-running against live sites.'
+                }
+              ]
+            };
+            state.enterpriseFeaturesLoaded = true;
+            animationTarget.remove();
+            render();
+          }
+        }).catch(err => {
+          console.error('Web Animation error:', err);
+        });
+
+      }, 7100);
+    })();
+
+    // Wave 21: ResizeObserver-triggered content — only loads when container reaches observable dimensions
+    (function loadQuickStartViaResizeObserver() {
+      let observerSetup = false;
+
+      function setupResizeObserver() {
+        if (observerSetup || state.quickStartLoaded) return;
+        
+        const sentinel = document.getElementById('quickstart-resize-sentinel');
+        if (!sentinel) {
+          // Retry after next render
+          setTimeout(setupResizeObserver, 500);
+          return;
+        }
+
+        observerSetup = true;
+        let resizeCount = 0;
+        const requiredResizes = 2; // Require multiple resize observations to confirm layout stability
+
+        const observer = new ResizeObserver((entries) => {
+          for (const entry of entries) {
+            // Only proceed if the element has real dimensions (has been laid out)
+            const { width, height } = entry.contentRect;
+            if (width > 50 && height > 20) {
+              resizeCount++;
+              
+              if (resizeCount >= requiredResizes) {
+                observer.disconnect();
+                
+                // Build quick start content now that layout is confirmed
+                state.quickStart = {
+                  steps: [
+                    {
+                      title: 'Install SeaPortal',
+                      desc: 'SeaPortal is distributed as a single static binary with no dependencies. Download the appropriate version for your platform or install via your package manager.',
+                      code: '# macOS/Linux via curl\ncurl -sSL https://seaportal.dev/install.sh | bash\n\n# Or via package managers\nbrew install seaportal      # macOS\napt install seaportal       # Debian/Ubuntu\nwinget install seaportal    # Windows',
+                      tip: 'On corporate networks, you may need to configure proxy settings via the SEAPORTAL_PROXY environment variable.'
+                    },
+                    {
+                      title: 'Configure Your API Key',
+                      desc: 'Create a free account at seaportal.dev to obtain your API key. The key grants access to cloud rendering infrastructure for JavaScript-heavy pages.',
+                      code: '# Set your API key as an environment variable\nexport SEAPORTAL_API_KEY="sp_live_xxxxxxxxxxxx"\n\n# Or pass it directly to commands\nseaportal extract --api-key "sp_live_xxxx" https://example.com',
+                      tip: 'Store your API key in a .env file and use a tool like direnv for automatic loading in project directories.'
+                    },
+                    {
+                      title: 'Run Your First Extraction',
+                      desc: 'Extract content from any webpage with a single command. SeaPortal automatically detects JavaScript rendering requirements and waits for dynamic content to load.',
+                      code: '# Basic extraction to stdout\nseaportal extract https://news.ycombinator.com\n\n# Save structured output to a file\nseaportal extract https://example.com --format json > content.json\n\n# Extract with accessibility tree for cleaner semantic output\nseaportal extract https://react-app.example.com --mode accessibility',
+                      tip: 'Use --verbose to see detailed timing information about rendering phases and network activity.'
+                    },
+                    {
+                      title: 'Customize Extraction Settings',
+                      desc: 'Fine-tune extraction behavior for specific site patterns. Configuration files let you define reusable settings for frequently accessed sources.',
+                      code: '# Create a configuration file\ncat > seaportal.yaml << EOF\ndefaults:\n  timeout: 30s\n  wait_for_network_idle: true\n  \nsources:\n  hackernews:\n    url: "https://news.ycombinator.com"\n    selector: ".athing"\n    format: json\nEOF\n\n# Use the configuration\nseaportal extract --config seaportal.yaml --source hackernews',
+                      tip: null
+                    },
+                    {
+                      title: 'Integrate Into Your Pipeline',
+                      desc: 'SeaPortal works seamlessly with existing data pipelines. Stream output directly to downstream processors or use the SDK for programmatic access.',
+                      code: '# Pipe to jq for JSON processing\nseaportal extract https://api-docs.example.com --format json | jq ".sections[].content"\n\n# Python SDK integration\nfrom seaportal import Client\nclient = Client()\nresult = client.extract("https://example.com", mode="accessibility")\nprint(result.content)',
+                      tip: 'For high-volume extraction, use the batch API to process multiple URLs in parallel with automatic rate limiting.'
+                    }
+                  ],
+                  gotchas: [
+                    {
+                      problem: 'Extraction times out on complex SPAs',
+                      solution: 'Increase the timeout value and ensure wait_for_network_idle is enabled. Some applications make continuous background requests—use network_idle_ignore_patterns to exclude polling endpoints from stability detection.'
+                    },
+                    {
+                      problem: 'Content appears in browser but not in extraction',
+                      solution: 'The page likely uses scroll-triggered lazy loading. Enable scroll_to_bottom in your configuration or use the --scroll flag to simulate user scrolling before extraction.'
+                    },
+                    {
+                      problem: 'Rate limiting errors from target sites',
+                      solution: 'Configure polite_mode to add delays between requests, or use rotating proxy pools on Enterprise plans. Respect robots.txt directives and site terms of service.'
+                    }
+                  ]
+                };
+                state.quickStartLoaded = true;
+                render();
+              }
+            }
+          }
+        });
+
+        observer.observe(sentinel);
+      }
+
+      // Start attempting to set up observer after initial renders complete
+      setTimeout(setupResizeObserver, 5800);
+    })();
+  </script>
+</body>
+</html>

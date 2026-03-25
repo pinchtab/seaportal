@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Bot Detection Arena</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 900px; margin: 40px auto; padding: 20px; background: #0a0a0f; color: #e0e0e0; }
+    h1 { color: #00ff88; text-align: center; font-size: 2.5em; text-shadow: 0 0 20px rgba(0,255,136,0.5); }
+    h2 { color: #00aaff; }
+    h3 { color: #ff6600; }
+    .subtitle { text-align: center; color: #888; margin-bottom: 30px; }
+    
+    /* Scorecard */
+    .scorecard { 
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      border: 2px solid #00ff88;
+      border-radius: 16px;
+      padding: 24px;
+      margin: 20px 0;
+      box-shadow: 0 0 30px rgba(0,255,136,0.2);
+    }
+    .score-display {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    .score-item {
+      text-align: center;
+      padding: 16px 24px;
+      background: rgba(0,0,0,0.3);
+      border-radius: 12px;
+      min-width: 120px;
+    }
+    .score-value {
+      font-size: 2.5em;
+      font-weight: bold;
+      font-family: 'Courier New', monospace;
+    }
+    .score-label { color: #888; font-size: 0.9em; margin-top: 4px; }
+    .score-value.points { color: #00ff88; }
+    .score-value.rank { color: #ff6600; }
+    .score-value.checks { color: #00aaff; }
+    
+    /* Progress bar */
+    .progress-container { margin: 20px 0; }
+    .progress-bar {
+      height: 24px;
+      background: #1a1a2e;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid #333;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #ff0000 0%, #ff6600 30%, #ffff00 60%, #00ff88 100%);
+      transition: width 0.5s ease;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding-right: 8px;
+      font-weight: bold;
+      font-size: 0.85em;
+    }
+    .progress-labels {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 8px;
+      font-size: 0.8em;
+      color: #666;
+    }
+    .tier-marker { color: #00ff88; }
+    
+    /* Checks list */
+    #results { margin-top: 20px; }
+    .check { 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center;
+      padding: 12px 16px; 
+      margin: 4px 0;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.03);
+      border-left: 4px solid transparent;
+    }
+    .check.pass { border-left-color: #00ff88; background: rgba(0,255,136,0.05); }
+    .check.fail { border-left-color: #ff4444; background: rgba(255,68,68,0.05); }
+    .check-info { display: flex; align-items: center; gap: 12px; }
+    .check-name { font-weight: 500; }
+    .check-detail { color: #888; font-size: 0.85em; }
+    .check-points { 
+      font-weight: bold; 
+      font-family: 'Courier New', monospace;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.9em;
+    }
+    .check.pass .check-points { background: rgba(0,255,136,0.2); color: #00ff88; }
+    .check.fail .check-points { background: rgba(255,68,68,0.1); color: #ff4444; }
+    
+    .category { 
+      color: #00aaff; 
+      font-size: 0.75em; 
+      text-transform: uppercase; 
+      letter-spacing: 1px;
+      margin-top: 20px;
+      margin-bottom: 8px;
+      padding-left: 4px;
+    }
+    
+    /* Protected content */
+    .protected-content { display: none; }
+    .protected-content.unlocked { 
+      display: block; 
+      background: linear-gradient(135deg, #0a2a1a 0%, #1a3a2a 100%);
+      border: 2px solid #00ff88;
+      padding: 24px; 
+      border-radius: 12px; 
+      margin-top: 30px;
+      box-shadow: 0 0 40px rgba(0,255,136,0.3);
+    }
+    .protected-content h2 { margin-top: 0; }
+    
+    /* Tiers */
+    .tier-badge {
+      display: inline-block;
+      padding: 8px 20px;
+      border-radius: 20px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin: 10px 0;
+    }
+    .tier-bronze { background: linear-gradient(135deg, #cd7f32, #8b4513); }
+    .tier-silver { background: linear-gradient(135deg, #c0c0c0, #808080); }
+    .tier-gold { background: linear-gradient(135deg, #ffd700, #daa520); color: #000; }
+    .tier-platinum { background: linear-gradient(135deg, #e5e4e2, #a0b2c6); color: #000; }
+    .tier-diamond { background: linear-gradient(135deg, #b9f2ff, #4169e1); color: #000; }
+    
+    /* Code blocks */
+    pre {
+      background: #0d0d12;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 16px;
+      overflow-x: auto;
+      font-size: 0.9em;
+    }
+    code {
+      font-family: 'Fira Code', 'Courier New', monospace;
+      color: #00ff88;
+    }
+    pre code { color: #e0e0e0; }
+    
+    /* Hints */
+    .next-hint {
+      margin-top: 20px;
+      padding: 12px 16px;
+      background: rgba(255,255,255,0.05);
+      border-left: 3px solid #ff6600;
+      border-radius: 0 8px 8px 0;
+      color: #888;
+    }
+    
+    /* Multiple tiers can be unlocked */
+    .protected-content.unlocked + .protected-content.unlocked {
+      margin-top: 30px;
+      border-top: 1px solid #333;
+      padding-top: 30px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎮 Bot Detection Arena</h1>
+  <p class="subtitle">Prove you're human. Earn points. Unlock secrets.</p>
+  
+  <div class="scorecard">
+    <div class="score-display">
+      <div class="score-item">
+        <div class="score-value points" id="total-points">0</div>
+        <div class="score-label">POINTS</div>
+      </div>
+      <div class="score-item">
+        <div class="score-value rank" id="rank">—</div>
+        <div class="score-label">RANK</div>
+      </div>
+      <div class="score-item">
+        <div class="score-value checks" id="checks-passed">0/0</div>
+        <div class="score-label">CHECKS</div>
+      </div>
+    </div>
+    
+    <div class="progress-container">
+      <div class="progress-bar">
+        <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+      </div>
+      <div class="progress-labels">
+        <span>0</span>
+        <span class="tier-marker">🥉 75</span>
+        <span class="tier-marker">🥈 150</span>
+        <span class="tier-marker">🥇 250</span>
+        <span class="tier-marker">💎 350</span>
+        <span>450+</span>
+      </div>
+    </div>
+  </div>
+  
+  <div id="results">
+    <p>Running checks...</p>
+  </div>
+  
+  <!-- Tiered content - each tier unlocks more secrets -->
+  <div id="tier-bronze" class="protected-content">
+    <h2>🥉 Bronze Secrets Unlocked</h2>
+    <p>You passed basic detection. Here's your first reward:</p>
+    
+    <h3>Secret #1: The WebDriver Bypass</h3>
+    <p>The simplest detection checks <code>navigator.webdriver</code>. Most automation 
+    frameworks set this to <code>true</code>. To bypass:</p>
+    <pre><code>Object.defineProperty(navigator, 'webdriver', { get: () => false });</code></pre>
+    <p>But beware — sophisticated detectors check if this property was redefined...</p>
+    
+    <p class="next-hint">🔒 <em>Reach Silver (100 pts) to unlock: CDP Evasion Techniques</em></p>
+  </div>
+  
+  <div id="tier-silver" class="protected-content">
+    <h2>🥈 Silver Secrets Unlocked</h2>
+    <p>You evaded advanced detection. Impressive.</p>
+    
+    <h3>Secret #2: CDP Marker Elimination</h3>
+    <p>Chrome DevTools Protocol injects telltale markers into the window object:</p>
+    <pre><code>// These betray automation:
+window.cdc_adoQpoasnfa76pfcZLmcfl_Array
+window.cdc_adoQpoasnfa76pfcZLmcfl_Promise</code></pre>
+    <p>Steel-browser deletes these on every frame. The marker names are randomized 
+    per Chrome version, so you need pattern matching:</p>
+    <pre><code>Object.keys(window).filter(k => k.startsWith('cdc_')).forEach(k => delete window[k]);</code></pre>
+    
+    <h3>Secret #3: Plugin Injection</h3>
+    <p>Headless Chrome has an empty <code>navigator.plugins</code> array. Real browsers 
+    have PDF viewers, Flash remnants, etc. Inject a fake PluginArray to pass:</p>
+    <pre><code>// Spoof 3 common plugins
+const fakePlugins = [{ name: 'Chrome PDF Plugin', ... }];</code></pre>
+    
+    <p class="next-hint">🔒 <em>Reach Gold (150 pts) to unlock: Behavioral Evasion Matrix</em></p>
+  </div>
+  
+  <div id="tier-gold" class="protected-content">
+    <h2>🥇 Gold Secrets Unlocked</h2>
+    <p>You've mastered fingerprint evasion. Now for the hard part.</p>
+    
+    <h3>Secret #4: The Behavioral Gap</h3>
+    <p>Property spoofing is table stakes. Modern detection watches <em>how</em> you interact:</p>
+    <ul>
+      <li><strong>Mouse entropy:</strong> Bots move in straight lines. Humans wobble.</li>
+      <li><strong>Timing jitter:</strong> Bots have μs precision. Humans have 50-300ms variance.</li>
+      <li><strong>Event sequences:</strong> Bots skip hover states. Humans meander.</li>
+    </ul>
+    
+    <h3>Secret #5: The Canvas Paradox</h3>
+    <p>Some stealth tools add noise to canvas fingerprints. But noise itself is detectable:</p>
+    <pre><code>// Render twice, compare:
+const fp1 = canvas.toDataURL();
+const fp2 = canvas.toDataURL();
+if (fp1 !== fp2) alert('Noise injection detected!');</code></pre>
+    <p>The solution: deterministic spoofing, not random noise.</p>
+    
+    <p class="next-hint">🔒 <em>Reach Diamond (250 pts) to unlock: The Master Key</em></p>
+  </div>
+  
+  <div id="tier-diamond" class="protected-content">
+    <h2>💎 Diamond Secrets Unlocked</h2>
+    <p>You've achieved near-perfect human emulation. You've earned the ultimate secret.</p>
+    
+    <h3>🔑 The Master Key: Execution Context Isolation</h3>
+    <p>All stealth techniques share one fatal flaw: they modify the JavaScript environment 
+    from within. Detectors can inspect <code>Function.prototype.toString</code> to see if 
+    native functions were replaced.</p>
+    
+    <p>The master technique: <strong>inject before any page script runs</strong>.</p>
+    
+    <pre><code>// In Playwright/Puppeteer:
+await page.addInitScript(() => {
+  // This runs before ANY page JavaScript
+  // Modifications here appear native
+  const originalDesc = Object.getOwnPropertyDescriptor(Navigator.prototype, 'webdriver');
+  Object.defineProperty(Navigator.prototype, 'webdriver', {
+    ...originalDesc,
+    get: () => false
+  });
+});</code></pre>
+    
+    <h3>🏆 Final Secret: The Timing Oracle</h3>
+    <p>The ultimate detection is timing-based. Real browsers have GC pauses, 
+    event loop contention, and rendering jank. Perfect timing = bot.</p>
+    <p><strong>Solution:</strong> Inject artificial jitter into <code>performance.now()</code> 
+    and <code>Date.now()</code>. Vary by ±0.5-2ms randomly.</p>
+    
+    <div style="text-align: center; padding: 20px; margin-top: 20px; background: rgba(255,215,0,0.1); border-radius: 8px;">
+      <p style="font-size: 1.2em;">🎮 <strong>ACHIEVEMENT UNLOCKED</strong></p>
+      <p style="color: #ffd700; font-size: 1.5em;">GHOST IN THE MACHINE</p>
+      <p>You have achieved perfect stealth.</p>
+    </div>
+  </div>
+  
+  <script>
+    const checks = [];
+    const results = document.getElementById('results');
+    const protectedContent = document.getElementById('protected-content');
+    
+    // Point values: harder checks = more points
+    const POINTS = {
+      basic: 10,      // Easy checks (webdriver, UA, etc.)
+      medium: 15,     // Medium checks (plugins, languages)
+      hard: 25,       // Hard checks (canvas, WebGL)
+      expert: 40,     // Expert checks (behavioral, timing)
+      bonus: 20       // Bonus multiplier for streaks
+    };
+    
+    const TIERS = [
+      { min: 0, name: 'Bot', emoji: '🤖', class: '' },
+      { min: 75, name: 'Bronze', emoji: '🥉', class: 'tier-bronze' },
+      { min: 150, name: 'Silver', emoji: '🥈', class: 'tier-silver' },
+      { min: 250, name: 'Gold', emoji: '🥇', class: 'tier-gold' },
+      { min: 350, name: 'Platinum', emoji: '💎', class: 'tier-platinum' },
+      { min: 450, name: 'Diamond', emoji: '👑', class: 'tier-diamond' }
+    ];
+    
+    function addCheck(name, passed, detail, points = POINTS.basic, category = 'basic') {
+      checks.push({ name, passed, detail, points, category });
+    }
+    
+    // === DETECTION CHECKS ===
+    
+    // === WAVE 1: BASIC DETECTION (10 pts each) ===
+    
+    // Check 1: WebDriver property
+    (function checkWebDriver() {
+      const hasWebDriver = navigator.webdriver === true;
+      addCheck('WebDriver Property', !hasWebDriver, 
+        hasWebDriver ? 'navigator.webdriver is true' : 'navigator.webdriver is false/undefined',
+        POINTS.basic, 'wave1');
+    })();
+    
+    // Check 2: Chrome automation extension
+    (function checkChromeAutomation() {
+      const hasCdp = !!(window.cdc_adoQpoasnfa76pfcZLmcfl_Array || 
+                        window.cdc_adoQpoasnfa76pfcZLmcfl_Promise ||
+                        window.cdc_adoQpoasnfa76pfcZLmcfl_Symbol);
+      addCheck('Chrome DevTools Protocol', !hasCdp,
+        hasCdp ? 'CDP markers detected' : 'No CDP markers found',
+        POINTS.basic, 'wave1');
+    })();
+    
+    // Check 3: Plugins array
+    (function checkPlugins() {
+      const hasPlugins = navigator.plugins && navigator.plugins.length > 0;
+      addCheck('Browser Plugins', hasPlugins,
+        hasPlugins ? `${navigator.plugins.length} plugins detected` : 'No plugins (headless indicator)',
+        POINTS.medium, 'wave1');
+    })();
+    
+    // Check 4: Languages
+    (function checkLanguages() {
+      const hasLanguages = navigator.languages && navigator.languages.length > 0;
+      addCheck('Language Settings', hasLanguages,
+        hasLanguages ? navigator.languages.join(', ') : 'No languages configured',
+        POINTS.medium, 'wave1');
+    })();
+    
+    // Check 5: WebGL Renderer
+    (function checkWebGL() {
+      try {
+        const canvas = document.createElement('canvas');
+        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+        if (gl) {
+          const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+          if (debugInfo) {
+            const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+            const isSwiftShader = renderer.includes('SwiftShader') || renderer.includes('llvmpipe');
+            addCheck('WebGL Renderer', !isSwiftShader,
+              isSwiftShader ? `Software renderer: ${renderer}` : renderer,
+              POINTS.hard, 'wave1');
+          } else {
+            addCheck('WebGL Renderer', true, 'WebGL available (no debug info)', POINTS.hard, 'wave1');
+          }
+        } else {
+          addCheck('WebGL Renderer', false, 'WebGL not available', POINTS.hard, 'wave1');
+        }
+      } catch (e) {
+        addCheck('WebGL Renderer', false, 'WebGL check failed', POINTS.hard, 'wave1');
+      }
+    })();
+    
+    // Check 6: Screen dimensions
+    (function checkScreen() {
+      const hasRealScreen = window.screen.width > 0 && window.screen.height > 0 && 
+                            window.outerWidth > 0 && window.outerHeight > 0;
+      const ratio = window.devicePixelRatio || 1;
+      addCheck('Screen Dimensions', hasRealScreen,
+        `${window.screen.width}x${window.screen.height} @ ${ratio}x`,
+        POINTS.basic, 'wave1');
+    })();
+    
+    // Check 7: Notification permission (headless often has 'denied')
+    (function checkNotifications() {
+      if ('Notification' in window) {
+        const perm = Notification.permission;
+        addCheck('Notification API', perm !== 'denied',
+          `Permission: ${perm}`,
+          POINTS.basic, 'wave1');
+      } else {
+        addCheck('Notification API', false, 'Not available', POINTS.basic, 'wave1');
+      }
+    })();
+    
+    // Check 8: User agent consistency
+    (function checkUserAgent() {
+      const ua = navigator.userAgent;
+      const isHeadless = ua.includes('HeadlessChrome') || ua.includes('Headless');
+      addCheck('User Agent', !isHeadless,
+        isHeadless ? 'Headless detected in UA' : ua.substring(0, 60) + '...',
+        POINTS.basic, 'wave1');
+    })();
+    
+    // === WAVE 2: ADVANCED DETECTION (25 pts each) ===
+    
+    // Check 9: Property Descriptor Tampering Detection
+    // Stealth plugins redefine navigator.webdriver with custom getters - detect this
+    (function checkPropertyDescriptors() {
+      const dominated = [];
+      
+      // Check navigator.webdriver descriptor
+      const webdriverDesc = Object.getOwnPropertyDescriptor(Navigator.prototype, 'webdriver');
+      if (webdriverDesc) {
+        const getterStr = webdriverDesc.get ? webdriverDesc.get.toString() : '';
+        if (getterStr.includes('native code') === false && webdriverDesc.get) {
+          dominated.push('webdriver getter modified');
+        }
+      }
+      
+      // Check if navigator properties are proxy objects or have been redefined
+      const propsToCheck = ['plugins', 'languages', 'mimeTypes'];
+      for (const prop of propsToCheck) {
+        try {
+          const desc = Object.getOwnPropertyDescriptor(Navigator.prototype, prop);
+          if (desc && desc.get) {
+            const str = desc.get.toString();
+            if (!str.includes('native code')) {
+              dominated.push(`${prop} getter modified`);
+            }
+          }
+        } catch (e) {
+          dominated.push(`${prop} check threw`);
+        }
+      }
+      
+      try {
+        const handler = navigator[Symbol.toStringTag];
+      } catch (e) {
+        dominated.push('navigator proxy detected');
+      }
+      
+      const passed = dominated.length === 0;
+      addCheck('Property Descriptor Integrity', passed,
+        passed ? 'Native property descriptors intact' : dominated.join(', '),
+        POINTS.hard, 'wave2');
+    })();
+    
+    // Check 10: Canvas Fingerprint Consistency
+    (function checkCanvasConsistency() {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 200;
+        canvas.height = 50;
+        const ctx = canvas.getContext('2d');
+        
+        ctx.fillStyle = '#f60';
+        ctx.fillRect(10, 10, 30, 30);
+        ctx.fillStyle = '#069';
+        ctx.font = '14px Arial';
+        ctx.fillText('SeaPortal', 50, 30);
+        ctx.strokeStyle = 'rgba(102, 204, 0, 0.7)';
+        ctx.beginPath();
+        ctx.arc(150, 25, 20, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        const data1 = canvas.toDataURL();
+        const data2 = canvas.toDataURL();
+        
+        ctx.clearRect(0, 0, 200, 50);
+        ctx.fillStyle = '#f60';
+        ctx.fillRect(10, 10, 30, 30);
+        ctx.fillStyle = '#069';
+        ctx.font = '14px Arial';
+        ctx.fillText('SeaPortal', 50, 30);
+        ctx.strokeStyle = 'rgba(102, 204, 0, 0.7)';
+        ctx.beginPath();
+        ctx.arc(150, 25, 20, 0, Math.PI * 2);
+        ctx.stroke();
+        const data3 = canvas.toDataURL();
+        
+        const consistent = (data1 === data2) && (data1 === data3);
+        addCheck('Canvas Render Consistency', consistent,
+          consistent ? 'Renders are deterministic' : 'Canvas noise injection detected',
+          POINTS.hard, 'wave2');
+      } catch (e) {
+        addCheck('Canvas Render Consistency', false, 'Canvas check failed: ' + e.message, POINTS.hard, 'wave2');
+      }
+    })();
+    
+    // Check 11: Execution Context / Stack Trace CDP Detection
+    (function checkExecutionContext() {
+      const anomalies = [];
+      
+      if (Error.prepareStackTrace && Error.prepareStackTrace.toString().indexOf('native code') === -1) {
+        anomalies.push('Error.prepareStackTrace modified');
+      }
+      
+      try {
+        const err = new Error();
+        const stack = err.stack || '';
+        const cdpPatterns = [
+          '__puppeteer_evaluation_script__',
+          '__playwright_evaluation_script__',
+          '__selenium_evaluate',
+          '__webdriver_evaluate',
+          '__driver_evaluate',
+          'BROWSER_SOURCE_MAP',
+          '__cdp_binding__'
+        ];
+        for (const pattern of cdpPatterns) {
+          if (stack.includes(pattern)) {
+            anomalies.push(`Stack contains: ${pattern}`);
+          }
+        }
+      } catch (e) {}
+      
+      const cdpBindings = Object.keys(window).filter(k => 
+        k.startsWith('__') && (k.includes('binding') || k.includes('driver') || k.includes('selenium'))
+      );
+      if (cdpBindings.length > 0) {
+        anomalies.push('CDP bindings on window: ' + cdpBindings.join(', '));
+      }
+      
+      const fnToString = Function.prototype.toString;
+      try {
+        const fnStr = fnToString.call(fnToString);
+        if (!fnStr.includes('native code')) {
+          anomalies.push('Function.prototype.toString modified');
+        }
+      } catch (e) {
+        anomalies.push('toString check threw');
+      }
+      
+      try {
+        const reflectApplyStr = Reflect.apply.toString();
+        if (!reflectApplyStr.includes('native code')) {
+          anomalies.push('Reflect.apply modified');
+        }
+      } catch (e) {}
+      
+      const passed = anomalies.length === 0;
+      addCheck('Execution Context Integrity', passed,
+        passed ? 'No automation framework traces' : anomalies.join('; '),
+        POINTS.hard, 'wave2');
+    })();
+    
+    // === WAVE 3: BEHAVIORAL DETECTION (40 pts each) ===
+    
+    // Check 12: Mouse Movement Entropy
+    // Bots typically don't move the mouse, or move it in perfectly straight lines
+    (function checkMouseEntropy() {
+      let mousePoints = [];
+      
+      const handler = (e) => {
+        if (mousePoints.length < 50) {
+          mousePoints.push({ x: e.clientX, y: e.clientY, t: performance.now() });
+        }
+      };
+      document.addEventListener('mousemove', handler);
+      
+      setTimeout(() => {
+        document.removeEventListener('mousemove', handler);
+        
+        if (mousePoints.length < 3) {
+          addCheck('Mouse Movement Entropy', false,
+            'No mouse movement detected (0 points)',
+            POINTS.expert, 'wave3');
+          return;
+        }
+        
+        let totalDistance = 0;
+        let velocities = [];
+        let angles = [];
+        
+        for (let i = 1; i < mousePoints.length; i++) {
+          const dx = mousePoints[i].x - mousePoints[i-1].x;
+          const dy = mousePoints[i].y - mousePoints[i-1].y;
+          const dt = mousePoints[i].t - mousePoints[i-1].t;
+          
+          const dist = Math.sqrt(dx*dx + dy*dy);
+          totalDistance += dist;
+          
+          if (dt > 0) {
+            velocities.push(dist / dt);
+          }
+          angles.push(Math.atan2(dy, dx));
+        }
+        
+        const firstPoint = mousePoints[0];
+        const lastPoint = mousePoints[mousePoints.length - 1];
+        const straightLineDistance = Math.sqrt(
+          Math.pow(lastPoint.x - firstPoint.x, 2) + 
+          Math.pow(lastPoint.y - firstPoint.y, 2)
+        );
+        
+        const avgVelocity = velocities.reduce((a, b) => a + b, 0) / velocities.length;
+        const velocityVariance = velocities.reduce((sum, v) => sum + Math.pow(v - avgVelocity, 2), 0) / velocities.length;
+        
+        const avgAngle = angles.reduce((a, b) => a + b, 0) / angles.length;
+        const angleVariance = angles.reduce((sum, a) => sum + Math.pow(a - avgAngle, 2), 0) / angles.length;
+        
+        const pathEfficiency = straightLineDistance / (totalDistance || 1);
+        
+        const hasNaturalVelocity = velocityVariance > 0.05;
+        const hasNaturalPath = angleVariance > 0.005 || pathEfficiency < 0.98;
+        const isHumanLike = hasNaturalVelocity || hasNaturalPath;
+        
+        addCheck('Mouse Movement Entropy', isHumanLike,
+          isHumanLike 
+            ? `${mousePoints.length} points, variance=${velocityVariance.toFixed(3)}`
+            : `Too mechanical: ${mousePoints.length} points, efficiency=${pathEfficiency.toFixed(3)}`,
+          POINTS.expert, 'wave3');
+      }, 500);
+    })();
+    
+    // Check 13: Timing Precision Analysis  
+    // Automation tools have unnaturally precise timing (< 1ms variance)
+    (function checkTimingPrecision() {
+      const timings = [];
+      const iterations = 20;
+      
+      function measureTiming(i) {
+        if (i >= iterations) {
+          const deltas = [];
+          for (let j = 1; j < timings.length; j++) {
+            deltas.push(timings[j] - timings[j-1]);
+          }
+          
+          const avgDelta = deltas.reduce((a, b) => a + b, 0) / deltas.length;
+          const variance = deltas.reduce((sum, d) => sum + Math.pow(d - avgDelta, 2), 0) / deltas.length;
+          
+          const minDelta = Math.min(...deltas);
+          const maxDelta = Math.max(...deltas);
+          const range = maxDelta - minDelta;
+          
+          const hasNaturalVariance = variance > 0.1 || range > 1;
+          
+          addCheck('Timing Precision Analysis', hasNaturalVariance,
+            hasNaturalVariance 
+              ? `Natural variance: ${variance.toFixed(3)}ms²`
+              : `Suspicious precision: variance=${variance.toFixed(4)}ms², range=${range.toFixed(3)}ms`,
+            POINTS.expert, 'wave3');
+          return;
+        }
+        
+        timings.push(performance.now());
+        setTimeout(() => measureTiming(i + 1), 1);
+      }
+      
+      measureTiming(0);
+    })();
+    
+    // === WAVE 4: DEEP FINGERPRINTING (50 pts each) ===
+    
+    // Check 14: Font Enumeration Fingerprint
+    // Headless browsers have limited font sets
+    (function checkFonts() {
+      const testFonts = [
+        'Arial', 'Helvetica', 'Times New Roman', 'Georgia', 'Verdana',
+        'Comic Sans MS', 'Impact', 'Trebuchet MS', 'Courier New',
+        'Lucida Console', 'Palatino Linotype', 'Segoe UI', 'Tahoma'
+      ];
+      
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const baseFont = 'monospace';
+      const testString = 'mmmmmmmmmmlli';
+      
+      ctx.font = '72px ' + baseFont;
+      const baseWidth = ctx.measureText(testString).width;
+      
+      let fontsDetected = 0;
+      testFonts.forEach(font => {
+        ctx.font = '72px "' + font + '", ' + baseFont;
+        const width = ctx.measureText(testString).width;
+        if (width !== baseWidth) {
+          fontsDetected++;
+        }
+      });
+      
+      // Real browsers typically have 8+ fonts, headless often has 3-5
+      const hasRealFonts = fontsDetected >= 6;
+      addCheck('Font Enumeration', hasRealFonts,
+        hasRealFonts 
+          ? `${fontsDetected}/${testFonts.length} fonts detected`
+          : `Only ${fontsDetected} fonts (headless indicator)`,
+        50, 'wave4');
+    })();
+    
+    // Check 15: Keyboard Event Fingerprint
+    // Tests if keyboard events have realistic properties
+    (function checkKeyboardEvents() {
+      let keyboardScore = 0;
+      let testsRun = 0;
+      
+      // Check if KeyboardEvent has expected properties
+      try {
+        const evt = new KeyboardEvent('keydown', { key: 'a', code: 'KeyA' });
+        
+        // Real browsers populate these correctly
+        if (evt.key === 'a') keyboardScore++;
+        if (evt.code === 'KeyA') keyboardScore++;
+        if ('location' in evt) keyboardScore++;
+        if ('repeat' in evt) keyboardScore++;
+        if (typeof evt.getModifierState === 'function') keyboardScore++;
+        testsRun = 5;
+      } catch (e) {
+        testsRun = 1;
+      }
+      
+      const passed = keyboardScore >= 4;
+      addCheck('Keyboard Event Fingerprint', passed,
+        passed ? `${keyboardScore}/${testsRun} properties valid` : `Missing keyboard properties`,
+        50, 'wave4');
+    })();
+    
+    // Check 16: Native Function Spoofing Detection
+    // Detects if toString() itself has been tampered with
+    (function checkNativeFunctionIntegrity() {
+      const issues = [];
+      
+      // Test 1: Check if toString returns consistent format
+      const toStringResult = Function.prototype.toString.call(Function.prototype.toString);
+      if (!toStringResult.includes('function toString()')) {
+        issues.push('toString format anomaly');
+      }
+      
+      // Test 2: Check if bind().toString() is native
+      const boundFn = Function.prototype.toString.bind(Function.prototype.toString);
+      const boundResult = boundFn();
+      if (toStringResult !== boundResult) {
+        issues.push('bind() changes toString output');
+      }
+      
+      // Test 3: Check prototype chain integrity
+      const hasNativeProto = Object.getPrototypeOf(Function.prototype.toString) === Function.prototype;
+      if (!hasNativeProto) {
+        issues.push('prototype chain modified');
+      }
+      
+      // Test 4: Check if common spoofed functions have consistent toString
+      const functionsToCheck = [
+        [navigator, 'webdriver', 'get webdriver'],
+        [Navigator.prototype, 'webdriver', 'get webdriver']
+      ];
+      
+      functionsToCheck.forEach(([obj, prop, expectedName]) => {
+        try {
+          const desc = Object.getOwnPropertyDescriptor(obj, prop);
+          if (desc && desc.get) {
+            const fnStr = desc.get.toString();
+            // Check for suspicious patterns in "native" functions
+            if (fnStr.includes('native code') && fnStr.length > 60) {
+              issues.push(`${prop} getter has suspicious length`);
+            }
+          }
+        } catch (e) {}
+      });
+      
+      // Test 5: Check Error stack for proxy/wrapper patterns
+      try {
+        const err = new Error();
+        const stack = err.stack || '';
+        if (stack.includes('Proxy') || stack.includes('handler')) {
+          issues.push('Proxy detected in stack');
+        }
+      } catch (e) {}
+      
+      const passed = issues.length === 0;
+      addCheck('Native Function Integrity (Deep)', passed,
+        passed ? 'All native functions appear genuine' : issues.join(', '),
+        50, 'wave4');
+    })();
+    
+    // Check 17: Worker Context Comparison
+    // Compares fingerprints between main thread and Web Worker
+    (function checkWorkerConsistency() {
+      if (!window.Worker) {
+        addCheck('Worker Context Comparison', false, 'Workers not supported', 50, 'wave4');
+        return;
+      }
+      
+      // Create an inline worker
+      const workerCode = `
+        self.onmessage = function(e) {
+          const fingerprint = {
+            userAgent: navigator.userAgent,
+            hardwareConcurrency: navigator.hardwareConcurrency,
+            deviceMemory: navigator.deviceMemory,
+            languages: navigator.languages ? navigator.languages.join(',') : '',
+            platform: navigator.platform
+          };
+          self.postMessage(fingerprint);
+        };
+      `;
+      
+      try {
+        const blob = new Blob([workerCode], { type: 'application/javascript' });
+        const worker = new Worker(URL.createObjectURL(blob));
+        
+        worker.onmessage = function(e) {
+          const workerFP = e.data;
+          const mainFP = {
+            userAgent: navigator.userAgent,
+            hardwareConcurrency: navigator.hardwareConcurrency,
+            deviceMemory: navigator.deviceMemory,
+            languages: navigator.languages ? navigator.languages.join(',') : '',
+            platform: navigator.platform
+          };
+          
+          const mismatches = [];
+          
+          // Compare fingerprints
+          if (workerFP.userAgent !== mainFP.userAgent) {
+            mismatches.push('userAgent differs');
+          }
+          if (workerFP.hardwareConcurrency !== mainFP.hardwareConcurrency) {
+            mismatches.push('hardwareConcurrency differs');
+          }
+          if (workerFP.deviceMemory !== mainFP.deviceMemory) {
+            mismatches.push('deviceMemory differs');
+          }
+          if (workerFP.languages !== mainFP.languages) {
+            mismatches.push('languages differs');
+          }
+          
+          const passed = mismatches.length === 0;
+          addCheck('Worker Context Comparison', passed,
+            passed ? 'Main thread and Worker fingerprints match' : mismatches.join(', '),
+            50, 'wave4');
+          
+          worker.terminate();
+        };
+        
+        worker.onerror = function(err) {
+          addCheck('Worker Context Comparison', false, 'Worker error: ' + err.message, 50, 'wave4');
+        };
+        
+        worker.postMessage('check');
+      } catch (e) {
+        addCheck('Worker Context Comparison', false, 'Worker creation failed', 50, 'wave4');
+      }
+    })();
+    
+    // Check 18: Connection API Fingerprint
+    // Headless browsers often lack or have inconsistent Network Information API
+    (function checkConnectionAPI() {
+      const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+      
+      if (!connection) {
+        // No connection API - could be headless or privacy-focused browser
+        addCheck('Connection API', false, 'Network Information API not available', 50, 'wave4');
+        return;
+      }
+      
+      const hasExpectedProps = (
+        'effectiveType' in connection &&
+        'downlink' in connection &&
+        'rtt' in connection
+      );
+      
+      const hasRealisticValues = (
+        connection.effectiveType && 
+        ['slow-2g', '2g', '3g', '4g'].includes(connection.effectiveType) &&
+        connection.downlink > 0 &&
+        connection.rtt >= 0
+      );
+      
+      const passed = hasExpectedProps && hasRealisticValues;
+      addCheck('Connection API', passed,
+        passed 
+          ? `${connection.effectiveType}, ${connection.downlink}Mbps, ${connection.rtt}ms RTT`
+          : 'Missing or invalid connection properties',
+        50, 'wave4');
+    })();
+    
+    // === RENDER RESULTS ===
+    function renderResults() {
+      const passed = checks.filter(c => c.passed).length;
+      const total = checks.length;
+      
+      // Calculate total points
+      let totalPoints = 0;
+      let maxPoints = 0;
+      checks.forEach(check => {
+        maxPoints += check.points;
+        if (check.passed) {
+          totalPoints += check.points;
+        }
+      });
+      
+      // Streak bonus: consecutive passes earn bonus points
+      let streak = 0;
+      let bonusPoints = 0;
+      checks.forEach(check => {
+        if (check.passed) {
+          streak++;
+          if (streak >= 3) {
+            bonusPoints += 5; // 5 bonus per check after 3-streak
+          }
+        } else {
+          streak = 0;
+        }
+      });
+      totalPoints += bonusPoints;
+      
+      // Determine tier
+      let currentTier = TIERS[0];
+      for (const tier of TIERS) {
+        if (totalPoints >= tier.min) {
+          currentTier = tier;
+        }
+      }
+      
+      // Update scorecard
+      document.getElementById('total-points').textContent = totalPoints;
+      document.getElementById('rank').textContent = `${currentTier.emoji} ${currentTier.name}`;
+      document.getElementById('checks-passed').textContent = `${passed}/${total}`;
+      
+      // Progress bar (max 500 for full bar)
+      const progressPercent = Math.min(100, (totalPoints / 500) * 100);
+      document.getElementById('progress-fill').style.width = `${progressPercent}%`;
+      
+      // Group checks by category
+      const categories = {
+        wave1: { name: '⚡ Wave 1: Basic Detection', checks: [] },
+        wave2: { name: '🔥 Wave 2: Advanced Detection', checks: [] },
+        wave3: { name: '🧠 Wave 3: Behavioral Analysis', checks: [] },
+        wave4: { name: '💀 Wave 4: Deep Fingerprinting', checks: [] }
+      };
+      
+      checks.forEach(check => {
+        const cat = check.category || 'wave1';
+        if (categories[cat]) {
+          categories[cat].checks.push(check);
+        }
+      });
+      
+      let html = '';
+      
+      for (const [key, category] of Object.entries(categories)) {
+        if (category.checks.length === 0) continue;
+        
+        html += `<div class="category">${category.name}</div>`;
+        
+        category.checks.forEach(check => {
+          const status = check.passed ? 'pass' : 'fail';
+          const pointsDisplay = check.passed ? `+${check.points}` : `0/${check.points}`;
+          html += `
+            <div class="check ${status}">
+              <div class="check-info">
+                <span class="check-name">${check.passed ? '✅' : '❌'} ${check.name}</span>
+                <span class="check-detail">${check.detail}</span>
+              </div>
+              <span class="check-points">${pointsDisplay}</span>
+            </div>
+          `;
+        });
+      }
+      
+      if (bonusPoints > 0) {
+        html += `
+          <div class="check pass">
+            <div class="check-info">
+              <span class="check-name">🔥 Streak Bonus</span>
+              <span class="check-detail">Consecutive passes reward</span>
+            </div>
+            <span class="check-points">+${bonusPoints}</span>
+          </div>
+        `;
+      }
+      
+      results.innerHTML = html;
+      
+      // Unlock tiered content based on points
+      if (totalPoints >= 75) {
+        document.getElementById('tier-bronze').classList.add('unlocked');
+      }
+      if (totalPoints >= 150) {
+        document.getElementById('tier-silver').classList.add('unlocked');
+      }
+      if (totalPoints >= 250) {
+        document.getElementById('tier-gold').classList.add('unlocked');
+      }
+      if (totalPoints >= 450) {
+        document.getElementById('tier-diamond').classList.add('unlocked');
+      }
+    }
+    
+    // Run after delay to allow async checks to complete
+    setTimeout(renderResults, 800);
+  </script>
+</body>
+</html>

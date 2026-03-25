@@ -1,0 +1,36 @@
+{
+  "$schema": "https://smithery.ai/schema/plugin.json",
+  "name": "seaportal",
+  "version": "0.1.0",
+  "description": "Web content extraction for AI agents. Extract markdown/JSON from URLs, get accessibility tree snapshots with element refs.",
+  "author": "pinchtab",
+  "license": "MIT",
+  "repository": "https://github.com/pinchtab/seaportal",
+  "keywords": [
+    "web-extraction",
+    "markdown",
+    "accessibility",
+    "snapshot",
+    "scraper",
+    "ai-agent"
+  ],
+  "runtime": "python",
+  "entrypoint": "cli.py",
+  "commands": [
+    {
+      "name": "extract",
+      "description": "Extract content from URL as markdown or JSON"
+    },
+    {
+      "name": "snapshot",
+      "description": "Get accessibility tree snapshot from URL"
+    },
+    {
+      "name": "version",
+      "description": "Get seaportal version"
+    }
+  ],
+  "dependencies": {
+    "seaportal": ">=0.1.0"
+  }
+}

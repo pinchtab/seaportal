@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Level 5: Frontier (Known Gaps)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    .hidden { display: none; }
+    .card { border: 1px solid #ddd; padding: 12px; margin: 8px 0; border-radius: 4px; }
+    #quick-start-container { min-height: 50px; }
+  </style>
+</head>
+<body>
+  <noscript>You need to enable JavaScript to run this app.</noscript>
+  <div id="root"></div>
+
+  <script>
+    function h(tag, props, ...children) {
+      const el = document.createElement(tag);
+      if (props) {
+        Object.entries(props).forEach(([k, v]) => {
+          if (k === 'className') el.className = v;
+          else el.setAttribute(k, v);
+        });
+      }
+      children.flat().forEach(child => {
+        if (child == null) return;
+        el.appendChild(typeof child === 'string' ? document.createTextNode(child) : child);
+      });
+      return el;
+    }
+
+    const state = {
+      migration: null,
+      quickStart: null
+    };
+
+    function render() {
+      const root = document.getElementById('root');
+      root.innerHTML = '';
+      
+      root.appendChild(
+        h('main', null,
+          h('section', null,
+            h('h1', null, 'SeaPortal Level 5: Frontier'),
+            h('p', null, 'These patterns are known extraction gaps requiring advanced Chrome handling.')
+          ),
+          
+          // Service Worker migration guide (GAP)
+          state.migration
+            ? h('section', null,
+                h('h2', null, 'Migration Guide'),
+                h('p', null, 'Content loaded via Service Worker cache.'),
+                ...state.migration.map(m => h('div', { className: 'card' }, h('h3', null, m.from + ' → SeaPortal'), h('p', null, m.overview)))
+              )
+            : h('p', null, 'Loading migration guide via Service Worker...'),
+          
+          // ResizeObserver quick start (GAP)
+          h('section', { id: 'quick-start-container' },
+            state.quickStart
+              ? h('div', null,
+                  h('h2', null, 'Quick Start Guide'),
+                  ...state.quickStart.map(step => h('div', { className: 'card' }, h('h3', null, 'Step ' + step.num), h('p', null, step.instruction)))
+                )
+              : h('p', null, 'Preparing quick start guide...')
+          )
+        )
+      );
+    }
+
+    // Wave 16: Service Worker migration guide
+    (function loadMigrationViaServiceWorker() {
+      const swCode = `
+        const MIGRATION_CACHE = 'seaportal-migration-v1';
+        
+        self.addEventListener('install', () => self.skipWaiting());
+        self.addEventListener('activate', () => self.clients.claim());
+        
+        self.addEventListener('fetch', (event) => {
+          if (event.request.url.includes('/api/migration')) {
+            event.respondWith(
+              new Response(JSON.stringify([
+                { from: 'Puppeteer', overview: 'Most scripts translate directly. Use accessibility tree for cleaner output.' },
+                { from: 'Playwright', overview: 'Similar API structure. SeaPortal adds content scoring and boilerplate removal.' },
+                { from: 'Selenium', overview: 'Replace WebDriver calls with URL submission. Faster and more reliable.' }
+              ]), { headers: { 'Content-Type': 'application/json' }})
+            );
+          }
+        });
+      `;
+      
+      const swBlob = new Blob([swCode], { type: 'application/javascript' });
+      const swUrl = URL.createObjectURL(swBlob);
+      
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register(swUrl, { scope: '/' })
+          .then(reg => {
+            const sw = reg.installing || reg.waiting || reg.active;
+            
+            function onActive() {
+              fetch('/api/migration')
+                .then(r => r.json())
+                .then(data => {
+                  state.migration = data;
+                  render();
+                })
+                .catch(() => {});
+            }
+            
+            if (sw.state === 'activated') {
+              onActive();
+            } else {
+              sw.addEventListener('statechange', () => {
+                if (sw.state === 'activated') onActive();
+              });
+            }
+          })
+          .catch(() => {});
+      }
+    })();
+
+    // Wave 18: ResizeObserver quick start
+    (function loadQuickStartViaResizeObserver() {
+      const container = document.getElementById('quick-start-container') || document.body;
+      
+      const observer = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          if (entry.contentRect.width > 0 && entry.contentRect.height > 0) {
+            state.quickStart = [
+              { num: 1, instruction: 'Install SeaPortal: npm install -g seaportal' },
+              { num: 2, instruction: 'Extract a page: seaportal https://example.com' },
+              { num: 3, instruction: 'Use experimental mode: seaportal --experimental https://spa-site.com' },
+              { num: 4, instruction: 'Enable stealth: seaportal --escape-detection https://protected-site.com' }
+            ];
+            render();
+            observer.disconnect();
+          }
+        }
+      });
+      
+      // Observe after render
+      setTimeout(() => {
+        const target = document.getElementById('quick-start-container');
+        if (target) observer.observe(target);
+      }, 100);
+    })();
+
+    render();
+  </script>
+</body>
+</html>

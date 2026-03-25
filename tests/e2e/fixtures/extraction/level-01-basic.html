@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Level 1: Basic React Rendering</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    .hidden { display: none; }
+    .card { border: 1px solid #ddd; padding: 12px; margin: 8px 0; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <noscript>You need to enable JavaScript to run this app.</noscript>
+  <div id="root"></div>
+
+  <script>
+    // Minimal React-like renderer
+    function h(tag, props, ...children) {
+      const el = document.createElement(tag);
+      if (props) {
+        Object.entries(props).forEach(([k, v]) => {
+          if (k === 'className') el.className = v;
+          else if (k.startsWith('on')) el.addEventListener(k.slice(2).toLowerCase(), v);
+          else el.setAttribute(k, v);
+        });
+      }
+      children.flat().forEach(child => {
+        if (child == null) return;
+        el.appendChild(typeof child === 'string' ? document.createTextNode(child) : child);
+      });
+      return el;
+    }
+
+    const state = {
+      articles: [],
+      pricing: null
+    };
+
+    function render() {
+      const root = document.getElementById('root');
+      root.innerHTML = '';
+      
+      root.appendChild(
+        h('main', null,
+          // Static header
+          h('section', null,
+            h('h1', null, 'Welcome to SeaPortal'),
+            h('p', null, 'The intelligent web content extraction tool designed for the age of AI agents and automation.'),
+            h('p', null, 'SeaPortal handles everything from simple blogs to complex single-page applications.')
+          ),
+          
+          // Wave 1: Immediate content
+          h('section', null,
+            h('h2', null, 'Features'),
+            h('ul', null,
+              h('li', null, 'JavaScript rendering with headless Chrome'),
+              h('li', null, 'Accessibility tree extraction'),
+              h('li', null, 'Shadow DOM support'),
+              h('li', null, 'Configurable wait strategies')
+            )
+          ),
+          
+          // Wave 2 (1s): Async loaded articles
+          state.articles.length > 0
+            ? h('section', null,
+                h('h2', null, 'Latest Articles'),
+                ...state.articles.map(a => 
+                  h('div', { className: 'card' },
+                    h('h3', null, a.title),
+                    h('p', null, a.summary)
+                  )
+                )
+              )
+            : h('p', null, 'Loading articles...'),
+          
+          // Wave 3 (2s): Computed pricing
+          state.pricing
+            ? h('section', null,
+                h('h2', null, 'Pricing'),
+                ...state.pricing.map(p =>
+                  h('div', { className: 'card' },
+                    h('h3', null, p.name),
+                    h('p', null, '$' + p.price + '/month'),
+                    h('p', null, p.features)
+                  )
+                )
+              )
+            : h('p', null, 'Calculating pricing...')
+        )
+      );
+    }
+
+    // Wave 2: Load articles after 1s
+    setTimeout(() => {
+      state.articles = [
+        { title: 'Understanding Neural Networks', summary: 'A deep dive into how artificial neural networks process information and learn patterns from data.' },
+        { title: 'The Future of Renewable Energy', summary: 'Solar and wind power are reshaping the global energy landscape.' },
+        { title: 'Ocean Conservation Efforts', summary: 'Marine biologists develop new strategies to protect coral reefs.' }
+      ];
+      render();
+    }, 1000);
+
+    // Wave 3: Compute pricing after 2s
+    setTimeout(() => {
+      const base = 29;
+      state.pricing = [
+        { name: 'Starter', price: base, features: '1000 pages/month, community support' },
+        { name: 'Professional', price: Math.round(base * 3), features: '5000 pages/month, priority support' },
+        { name: 'Enterprise', price: Math.round(base * 8), features: 'Unlimited pages, dedicated support' }
+      ];
+      render();
+    }, 2000);
+
+    // Initial render
+    render();
+  </script>
+</body>
+</html>

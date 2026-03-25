@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Level 3: Behavioral Detection</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; }
+    .check { padding: 10px; margin: 5px 0; border-radius: 4px; }
+    .pass { background: #d4edda; color: #155724; }
+    .fail { background: #f8d7da; color: #721c24; }
+    .pending { background: #fff3cd; color: #856404; }
+    .protected { padding: 20px; background: #e7f3ff; border-radius: 8px; margin-top: 20px; }
+    #interaction-zone { 
+      padding: 40px; 
+      background: #f0f0f0; 
+      text-align: center; 
+      cursor: pointer;
+      margin: 20px 0;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Bot Detection Level 3: Behavioral Analysis</h1>
+  <p>Human interaction pattern detection. Move your mouse and interact to pass.</p>
+  
+  <div id="interaction-zone">
+    <p>👆 Move mouse here and click to prove you're human</p>
+    <p id="interaction-status">Waiting for interaction...</p>
+  </div>
+  
+  <div id="checks"></div>
+  <div id="result"></div>
+  <div id="protected-content"></div>
+
+  <script>
+    const checks = {};
+    const checksEl = document.getElementById('checks');
+    const interactionZone = document.getElementById('interaction-zone');
+    const statusEl = document.getElementById('interaction-status');
+    
+    let mouseMovements = [];
+    let clickTimings = [];
+    let lastActivity = Date.now();
+
+    function updateCheck(name, passed, detail) {
+      checks[name] = { passed, detail };
+      renderChecks();
+    }
+
+    function renderChecks() {
+      checksEl.innerHTML = '';
+      Object.entries(checks).forEach(([name, { passed, detail }]) => {
+        const div = document.createElement('div');
+        div.className = 'check ' + (passed === null ? 'pending' : passed ? 'pass' : 'fail');
+        const icon = passed === null ? '⏳' : passed ? '✓' : '✗';
+        div.textContent = icon + ' ' + name + (detail ? ': ' + detail : '');
+        checksEl.appendChild(div);
+      });
+      evaluateResults();
+    }
+
+    function evaluateResults() {
+      const allChecks = Object.values(checks);
+      if (allChecks.some(c => c.passed === null)) return; // Still pending
+      
+      const passed = allChecks.filter(c => c.passed).length;
+      const total = allChecks.length;
+      const allPassed = passed === total;
+
+      document.getElementById('result').innerHTML = '<h2>Result: ' + passed + '/' + total + ' checks passed</h2>';
+
+      if (allPassed) {
+        document.getElementById('protected-content').innerHTML = `
+          <div class="protected">
+            <h2>🔓 Level 3: Full Access Granted</h2>
+            <p>You demonstrated human-like behavior patterns.</p>
+            <h3>Behavioral Bypass Techniques</h3>
+            <p>Automated tools must simulate realistic mouse curves, variable timing, and natural interaction patterns.</p>
+            <p>Puppeteer's mouse.move() with steps parameter can help, but timing randomization is key.</p>
+          </div>
+        `;
+      } else {
+        document.getElementById('protected-content').innerHTML = 
+          '<p style="color: #721c24;">⚠️ Behavioral anomaly detected. Automated interaction suspected.</p>';
+      }
+    }
+
+    // Initialize checks
+    updateCheck('WebDriver Property', !navigator.webdriver, navigator.webdriver ? 'detected' : 'clean');
+    updateCheck('Mouse Movement', null, 'waiting...');
+    updateCheck('Click Pattern', null, 'waiting...');
+    updateCheck('Interaction Timing', null, 'waiting...');
+    updateCheck('Movement Variance', null, 'waiting...');
+
+    // Track mouse movements
+    let moveCount = 0;
+    document.addEventListener('mousemove', (e) => {
+      mouseMovements.push({
+        x: e.clientX,
+        y: e.clientY,
+        t: Date.now()
+      });
+      moveCount++;
+      lastActivity = Date.now();
+      
+      if (moveCount >= 10) {
+        updateCheck('Mouse Movement', true, moveCount + ' movements detected');
+        analyzeMovementVariance();
+      }
+    });
+
+    // Track clicks
+    interactionZone.addEventListener('click', (e) => {
+      clickTimings.push(Date.now());
+      statusEl.textContent = 'Click recorded! (' + clickTimings.length + ')';
+      
+      if (clickTimings.length >= 2) {
+        const intervals = [];
+        for (let i = 1; i < clickTimings.length; i++) {
+          intervals.push(clickTimings[i] - clickTimings[i-1]);
+        }
+        const avgInterval = intervals.reduce((a,b) => a+b, 0) / intervals.length;
+        const variance = intervals.reduce((sum, i) => sum + Math.pow(i - avgInterval, 2), 0) / intervals.length;
+        
+        // Human clicks have variance; bot clicks are often perfectly timed
+        const hasVariance = variance > 1000;
+        updateCheck('Click Pattern', hasVariance, 'variance: ' + Math.round(variance));
+      }
+    });
+
+    function analyzeMovementVariance() {
+      if (mouseMovements.length < 10) return;
+      
+      const speeds = [];
+      for (let i = 1; i < mouseMovements.length; i++) {
+        const dx = mouseMovements[i].x - mouseMovements[i-1].x;
+        const dy = mouseMovements[i].y - mouseMovements[i-1].y;
+        const dt = mouseMovements[i].t - mouseMovements[i-1].t;
+        if (dt > 0) {
+          speeds.push(Math.sqrt(dx*dx + dy*dy) / dt);
+        }
+      }
+      
+      if (speeds.length > 5) {
+        const avgSpeed = speeds.reduce((a,b) => a+b, 0) / speeds.length;
+        const variance = speeds.reduce((sum, s) => sum + Math.pow(s - avgSpeed, 2), 0) / speeds.length;
+        
+        // Human mouse movement has variable speed; bots often have constant speed
+        const hasVariance = variance > 0.01;
+        updateCheck('Movement Variance', hasVariance, 'speed variance: ' + variance.toFixed(4));
+      }
+    }
+
+    // Timing check - interaction should happen naturally, not instantly
+    setTimeout(() => {
+      if (Date.now() - lastActivity < 500) {
+        // Activity happened recently
+        updateCheck('Interaction Timing', true, 'natural timing');
+      } else if (mouseMovements.length > 0 || clickTimings.length > 0) {
+        updateCheck('Interaction Timing', true, 'interaction detected');
+      } else {
+        updateCheck('Interaction Timing', false, 'no interaction after 3s');
+      }
+    }, 3000);
+
+    // Fallback for headless (auto-fail behavioral but pass technical)
+    setTimeout(() => {
+      if (mouseMovements.length === 0) {
+        updateCheck('Mouse Movement', false, 'no movement detected');
+        updateCheck('Movement Variance', false, 'n/a');
+      }
+      if (clickTimings.length < 2) {
+        updateCheck('Click Pattern', false, 'insufficient clicks');
+      }
+    }, 5000);
+  </script>
+</body>
+</html>

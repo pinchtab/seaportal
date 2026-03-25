@@ -574,3 +574,19 @@ func decompressBody(data []byte, encoding string) ([]byte, error) {
 		return data, nil
 	}
 }
+
+// ExtractFromHTML runs readability + markdown conversion on raw HTML string
+func ExtractFromHTML(html string, targetURL string) (string, error) {
+	html = PreprocessHTML(html)
+	parsedURL, _ := url.Parse(targetURL)
+	article, err := readability.FromReader(strings.NewReader(html), parsedURL)
+	if err != nil {
+		return "", err
+	}
+
+	markdown, err := htmltomarkdown.ConvertString(article.Content)
+	if err != nil {
+		return article.TextContent, nil
+	}
+	return markdown, nil
+}

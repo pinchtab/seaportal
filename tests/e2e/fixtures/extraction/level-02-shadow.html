@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Level 2: Shadow DOM + Observers</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    .hidden { display: none; }
+    .card { border: 1px solid #ddd; padding: 12px; margin: 8px 0; border-radius: 4px; }
+    faq-section { display: block; margin: 16px 0; }
+    .lazy-section { min-height: 100px; }
+  </style>
+</head>
+<body>
+  <noscript>You need to enable JavaScript to run this app.</noscript>
+  <div id="root"></div>
+
+  <script>
+    function h(tag, props, ...children) {
+      const el = document.createElement(tag);
+      if (props) {
+        Object.entries(props).forEach(([k, v]) => {
+          if (k === 'className') el.className = v;
+          else if (k.startsWith('on')) el.addEventListener(k.slice(2).toLowerCase(), v);
+          else el.setAttribute(k, v);
+        });
+      }
+      children.flat().forEach(child => {
+        if (child == null) return;
+        el.appendChild(typeof child === 'string' ? document.createTextNode(child) : child);
+      });
+      return el;
+    }
+
+    const state = {
+      articles: [],
+      pricing: null,
+      lazyContent: null
+    };
+
+    // Shadow DOM FAQ Component
+    class FAQSection extends HTMLElement {
+      connectedCallback() {
+        const shadow = this.attachShadow({ mode: 'open' });
+        shadow.innerHTML = `
+          <style>
+            .faq-container { padding: 16px; background: #f9f9f9; border-radius: 8px; }
+            .faq-item { margin: 12px 0; }
+            .question { font-weight: bold; color: #333; }
+            .answer { margin-top: 4px; color: #666; }
+          </style>
+          <div class="faq-container">
+            <h2>Frequently Asked Questions</h2>
+            <div class="faq-item">
+              <div class="question">How does SeaPortal handle JavaScript-rendered content?</div>
+              <div class="answer">SeaPortal uses a headless browser engine to fully execute JavaScript, waiting for dynamic content to load before extraction.</div>
+            </div>
+            <div class="faq-item">
+              <div class="question">Can I extract content from pages behind authentication?</div>
+              <div class="answer">Yes. SeaPortal supports cookie injection and session management for authenticated pages.</div>
+            </div>
+            <div class="faq-item">
+              <div class="question">What makes the accessibility tree approach unique?</div>
+              <div class="answer">Unlike raw HTML parsing, accessibility tree extraction captures semantic meaning as perceived by assistive technologies.</div>
+            </div>
+          </div>
+        `;
+      }
+    }
+    customElements.define('faq-section', FAQSection);
+
+    function render() {
+      const root = document.getElementById('root');
+      root.innerHTML = '';
+      
+      root.appendChild(
+        h('main', null,
+          h('section', null,
+            h('h1', null, 'Welcome to SeaPortal'),
+            h('p', null, 'The intelligent web content extraction tool for AI agents.')
+          ),
+          
+          state.articles.length > 0
+            ? h('section', null,
+                h('h2', null, 'Latest Articles'),
+                ...state.articles.map(a => h('div', { className: 'card' }, h('h3', null, a.title), h('p', null, a.summary)))
+              )
+            : h('p', null, 'Loading articles...'),
+          
+          state.pricing
+            ? h('section', null,
+                h('h2', null, 'Pricing'),
+                ...state.pricing.map(p => h('div', { className: 'card' }, h('h3', null, p.name), h('p', null, '$' + p.price + '/month')))
+              )
+            : h('p', null, 'Calculating pricing...'),
+          
+          // Shadow DOM FAQ
+          document.createElement('faq-section'),
+          
+          // IntersectionObserver lazy section
+          h('section', { className: 'lazy-section', id: 'use-cases' },
+            state.lazyContent
+              ? h('div', null,
+                  h('h2', null, 'Use Cases'),
+                  ...state.lazyContent.map(uc => h('div', { className: 'card' }, h('h3', null, uc.title), h('p', null, uc.desc)))
+                )
+              : h('p', null, 'Scroll to load use cases...')
+          )
+        )
+      );
+    }
+
+    // Wave 2: Articles
+    setTimeout(() => {
+      state.articles = [
+        { title: 'Neural Networks', summary: 'Deep dive into AI pattern recognition.' },
+        { title: 'Renewable Energy', summary: 'Solar and wind reshaping energy.' }
+      ];
+      render();
+    }, 1000);
+
+    // Wave 3: Pricing
+    setTimeout(() => {
+      state.pricing = [
+        { name: 'Starter', price: 29 },
+        { name: 'Pro', price: 87 },
+        { name: 'Enterprise', price: 232 }
+      ];
+      render();
+    }, 2000);
+
+    // Wave 5: IntersectionObserver lazy load
+    setTimeout(() => {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            state.lazyContent = [
+              { title: 'AI Training Data', desc: 'Extract clean text from thousands of pages for training datasets.' },
+              { title: 'Competitive Intelligence', desc: 'Monitor competitor websites for pricing and product changes.' },
+              { title: 'Academic Research', desc: 'Gather structured data from journals and conferences.' }
+            ];
+            render();
+            observer.disconnect();
+          }
+        });
+      }, { threshold: 0.1 });
+      
+      const section = document.getElementById('use-cases');
+      if (section) observer.observe(section);
+      
+      // Auto-trigger for headless (simulate scroll)
+      setTimeout(() => {
+        if (!state.lazyContent) {
+          state.lazyContent = [
+            { title: 'AI Training Data', desc: 'Extract clean text from thousands of pages for training datasets.' },
+            { title: 'Competitive Intelligence', desc: 'Monitor competitor websites for pricing and product changes.' },
+            { title: 'Academic Research', desc: 'Gather structured data from journals and conferences.' }
+          ];
+          render();
+        }
+      }, 1500);
+    }, 500);
+
+    render();
+  </script>
+</body>
+</html>
