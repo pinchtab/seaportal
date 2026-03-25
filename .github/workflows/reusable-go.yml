@@ -83,7 +83,7 @@ jobs:
           go-version-file: go.mod
 
       - name: Install gosec
-        run: go install github.com/securego/gosec/v2/cmd/gosec@latest
+        run: go install github.com/securego/gosec/v2/cmd/gosec@v2.22.4
 
       - name: Run gosec
         run: gosec -exclude=G301,G302,G304,G306,G404,G107 -fmt=json -out=gosec-results.json ./... || true
