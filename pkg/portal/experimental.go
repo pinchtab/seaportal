@@ -261,11 +261,11 @@ const stealthScript = `
   // NATIVE FUNCTION WRAPPER UTILITY
   // CreepJS checks: prototype, descriptor keys, own properties
   // Native functions have ONLY length,name as own keys
-  // We avoid overriding Function.prototype.toString as that gets detected
+  // KEY INSIGHT: bound functions don't have 'prototype' property!
   // ============================================
   const makeNativeFunction = (fn, name) => {
-    // Use a proper function expression, not arrow, so we can detect 'new' calls
-    const wrapped = function() {
+    // Use a proper function expression that throws on 'new'
+    const implementation = function() {
       // Detect if called with 'new' - native functions like chrome.runtime.connect throw TypeError
       if (new.target) {
         throw new TypeError("Illegal constructor");
@@ -273,8 +273,9 @@ const stealthScript = `
       return fn.apply(this, arguments);
     };
     
-    // Remove prototype property - native functions like chrome.csi don't have it
-    delete wrapped.prototype;
+    // CRITICAL: Bound functions don't have 'prototype' property
+    // This passes the 'prototype' in chrome.runtime.connect check
+    const wrapped = implementation.bind(null);
     
     // Set name and length - these are the ONLY properties native functions have
     Object.defineProperty(wrapped, 'name', { value: name, writable: false, enumerable: false, configurable: true });
@@ -314,18 +315,25 @@ const stealthScript = `
   // 1. NAVIGATOR PROPERTIES
   // ============================================
   
-  // webdriver - must be undefined AND property must not exist
-  // Delete from prototype first, then make non-configurable
-  const navProto = Object.getPrototypeOf(navigator);
-  try { delete navProto.webdriver; } catch(e) {}
-  try { delete navigator.webdriver; } catch(e) {}
-  
-  // Only redefine if it still exists (shouldn't with enable-automation=false)
-  if ('webdriver' in navigator) {
-    Object.defineProperty(navigator, 'webdriver', {
-      get: makeNativeFunction(() => undefined, 'get webdriver'),
-      configurable: false
-    });
+  // webdriver - With enable-automation=false flag, webdriver should already be
+  // missing from navigator. If it's true, we need to fix it.
+  // IMPORTANT: Don't add a getter if it doesn't exist - that's detectable!
+  // CreepJS checks: CSS.supports('border-end-end-radius: initial') && navigator.webdriver === undefined
+  // This passes if webdriver property doesn't exist AND returns undefined
+  if (navigator.webdriver === true) {
+    // Only fix if it's actually set to true (automation mode)
+    const navProto = Object.getPrototypeOf(navigator);
+    try { delete navProto.webdriver; } catch(e) {}
+    try { delete navigator.webdriver; } catch(e) {}
+    
+    // If deletion failed, override with undefined
+    if (navigator.webdriver !== undefined) {
+      Object.defineProperty(navigator, 'webdriver', {
+        get: () => undefined,
+        configurable: true,
+        enumerable: true
+      });
+    }
   }
   
   // Hardware concurrency (headless often has 1-2)
@@ -574,21 +582,22 @@ const stealthScript = `
   
   // ============================================
   // 6. WEBGL VENDOR/RENDERER SPOOFING
+  // Uses WEBGL_VENDOR and WEBGL_RENDERER constants defined above
   // ============================================
   const originalGetParameter = WebGLRenderingContext.prototype.getParameter;
   WebGLRenderingContext.prototype.getParameter = makeNativeFunction(function(param) {
     // UNMASKED_VENDOR_WEBGL
-    if (param === 37445) return 'Google Inc. (Apple)';
+    if (param === 37445) return WEBGL_VENDOR;
     // UNMASKED_RENDERER_WEBGL
-    if (param === 37446) return 'ANGLE (Apple, Apple M1, OpenGL 4.1)';
+    if (param === 37446) return WEBGL_RENDERER;
     return originalGetParameter.call(this, param);
   }, 'getParameter');
   
   const originalGetParameter2 = WebGL2RenderingContext?.prototype?.getParameter;
   if (originalGetParameter2) {
     WebGL2RenderingContext.prototype.getParameter = makeNativeFunction(function(param) {
-      if (param === 37445) return 'Google Inc. (Apple)';
-      if (param === 37446) return 'ANGLE (Apple, Apple M1, OpenGL 4.1)';
+      if (param === 37445) return WEBGL_VENDOR;
+      if (param === 37446) return WEBGL_RENDERER;
       return originalGetParameter2.call(this, param);
     }, 'getParameter');
   }
@@ -662,6 +671,10 @@ const stealthScript = `
   // 12. WORKER CONTEXT CONSISTENCY
   // Intercept Blob creation to inject spoofs into Worker scripts
   // ============================================
+  // Define WebGL renderer string as a constant for consistency
+  const WEBGL_VENDOR = 'Google Inc. (Apple)';
+  const WEBGL_RENDERER = 'ANGLE (Apple, Apple M1, OpenGL 4.1)';
+  
   const workerSpoofScript = ` + "`" + `
     // Spoof navigator properties to match main thread
     Object.defineProperty(navigator, 'languages', {
@@ -680,7 +693,25 @@ const stealthScript = `
       get: () => 'MacIntel',
       configurable: true
     });
-  ` + "`" + `;
+    
+    // WebGL spoofing in workers (must match main thread)
+    // Workers can create OffscreenCanvas with WebGL context
+    if (typeof OffscreenCanvas !== 'undefined') {
+      const origGetContext = OffscreenCanvas.prototype.getContext;
+      OffscreenCanvas.prototype.getContext = function(type, options) {
+        const ctx = origGetContext.call(this, type, options);
+        if (ctx && (type === 'webgl' || type === 'webgl2' || type === 'experimental-webgl')) {
+          const origGetParam = ctx.getParameter.bind(ctx);
+          ctx.getParameter = function(param) {
+            if (param === 37445) return '${WEBGL_VENDOR}';  // UNMASKED_VENDOR_WEBGL
+            if (param === 37446) return '${WEBGL_RENDERER}'; // UNMASKED_RENDERER_WEBGL
+            return origGetParam(param);
+          };
+        }
+        return ctx;
+      };
+    }
+  ` + "`" + `.replace(/\$\{WEBGL_VENDOR\}/g, WEBGL_VENDOR).replace(/\$\{WEBGL_RENDERER\}/g, WEBGL_RENDERER);
   
   // Track JavaScript blobs so we can intercept their URLs
   const jsBlobMap = new WeakMap();
