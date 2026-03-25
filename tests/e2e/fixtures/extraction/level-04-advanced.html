@@ -22,9 +22,13 @@
           else el.setAttribute(k, v);
         });
       }
-      children.flat().forEach(child => { // lgtm[js/xss]
+      children.flat().forEach(child => {
         if (child == null) return;
-        el.appendChild(typeof child === 'string' ? document.createTextNode(child) : child); // lgtm[js/xss]
+        if (typeof child === 'string') {
+          el.insertAdjacentText('beforeend', child);
+        } else {
+          el.appendChild(child);
+        }
       });
       return el;
     }
