@@ -24,6 +24,17 @@ Test bot detection evasion with increasing sophistication.
 | 2 | `level-02-fingerprint.html` | + canvas, WebGL, property descriptors | ⚠️ Partial (WebGL) |
 | 3 | `level-03-behavioral.html` | + mouse movement, click patterns, timing | ❌ Gap |
 
+## Security Fixtures (`security/`)
+
+Test detection of malicious/hidden content that could trick AI extractors.
+
+| File | Purpose |
+|------|---------|
+| `unicode-bypass.html` | Unicode homoglyphs, zero-width chars, fullwidth chars, RTL override |
+| `hidden-content.html` | CSS hiding tricks, off-screen content, data attributes, aria-labels |
+
+These test the extractor's ability to flag or sanitize potentially malicious hidden content.
+
 ## Usage
 
 Test specific level:
@@ -44,5 +55,6 @@ done
 
 - `react-app.html` - Evolving mega-fixture (all features combined)
 - `bot-detection.html` - Original detection fixture (all checks)
+- `bot-detect.html` - Focused bot detection checks (16 critical + 14 warning tests)
 
 These are kept for backwards compatibility and continuous iteration.
