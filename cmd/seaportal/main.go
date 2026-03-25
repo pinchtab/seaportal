@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pinchtab/seaportal/pkg/portal"
+	"github.com/pinchtab/seaportal"
 )
 
 var version = "dev"
@@ -61,12 +61,12 @@ func main() {
 			os.Exit(1)
 		}
 
-		opts := portal.SnapshotOptions{
+		opts := seaportal.SnapshotOptions{
 			FilterInteractive: *snapshotFilter == "interactive",
 			MaxTokens:         *maxTokens,
 		}
 
-		tree, err := portal.BuildSnapshotWithOptions(htmlContent, opts)
+		tree, err := seaportal.BuildSnapshotWithOptions(htmlContent, opts)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error building snapshot: %v\n", err)
 			os.Exit(1)
@@ -86,8 +86,8 @@ func main() {
 	}
 
 	dedupe := !*noDedupe
-	opts := portal.Options{Dedupe: dedupe, FastMode: *fast}
-	result := portal.FromURLWithOptions(targetURL, opts)
+	opts := seaportal.Options{Dedupe: dedupe, FastMode: *fast}
+	result := seaportal.FromURLWithOptions(targetURL, opts)
 
 	if *jsonOut {
 		enc := json.NewEncoder(os.Stdout)
