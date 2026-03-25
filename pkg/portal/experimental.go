@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/chromedp/cdproto/emulation"
 	"github.com/chromedp/cdproto/input"
 	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/chromedp"
@@ -290,7 +291,40 @@ const stealthScript = `
   };
 
   // ============================================
-  // 0. CDP MARKER CLEANUP - Remove automation traces
+  // 0. SYSTEM COLOR FIX - Prevent ActiveText detection
+  // In headless Chrome, ActiveText renders as rgb(255,0,0) which is a telltale
+  // Real browsers return different values based on OS theme
+  // We override getComputedStyle to fix known headless telltales
+  // ============================================
+  const _origGetComputedStyle = window.getComputedStyle;
+  window.getComputedStyle = function(element, pseudoElt) {
+    const style = _origGetComputedStyle.call(window, element, pseudoElt);
+    
+    // Check if element uses ActiveText - headless returns rgb(255, 0, 0)
+    const inlineStyle = element.getAttribute && element.getAttribute('style');
+    if (inlineStyle && /ActiveText/i.test(inlineStyle)) {
+      // Return a proxy that fixes the backgroundColor
+      return new Proxy(style, {
+        get(target, prop) {
+          if (prop === 'backgroundColor') {
+            const val = target.backgroundColor;
+            // Headless Chrome returns rgb(255, 0, 0) for ActiveText
+            if (val === 'rgb(255, 0, 0)') {
+              // Return realistic macOS dark mode link color
+              return 'rgb(50, 145, 255)';
+            }
+            return val;
+          }
+          const val = target[prop];
+          return typeof val === 'function' ? val.bind(target) : val;
+        }
+      });
+    }
+    return style;
+  };
+
+  // ============================================
+  // 0b. CDP MARKER CLEANUP - Remove automation traces
   // ============================================
   const markerPatterns = [/^cdc_/, /^\$cdc_/, /^__webdriver/, /^__selenium/, /^__driver/, /^__puppeteer/, /^__playwright/, /^\$chrome_/];
   for (const prop of Object.getOwnPropertyNames(window)) {
@@ -412,6 +446,71 @@ const stealthScript = `
   Object.keys(window).filter(k => k.match(/^cdc_|^__webdriver/)).forEach(k => {
     try { delete window[k]; } catch(e) {}
   });
+
+  // ============================================
+  // 3b. MOBILE API STUBS - Prevent "like headless" flags
+  // These APIs only exist on mobile Chrome but CreepJS checks for them
+  // ============================================
+  
+  // ContentIndex API (Android Chrome only)
+  if (!('ContentIndex' in window)) {
+    window.ContentIndex = function ContentIndex() {};
+    if (navigator.serviceWorker) {
+      // The API is accessed via ServiceWorkerRegistration.index
+      const origReady = navigator.serviceWorker.ready;
+      Object.defineProperty(navigator.serviceWorker, 'ready', {
+        get: function() {
+          return origReady.then(reg => {
+            if (!reg.index) {
+              reg.index = {
+                add: makeNativeFunction(async () => {}, 'add'),
+                delete: makeNativeFunction(async () => {}, 'delete'),
+                getAll: makeNativeFunction(async () => [], 'getAll')
+              };
+            }
+            return reg;
+          });
+        }
+      });
+    }
+  }
+  
+  // ContactsManager API (Android Chrome only)  
+  if (!('contacts' in navigator) && !('ContactsManager' in window)) {
+    window.ContactsManager = function ContactsManager() {};
+    Object.defineProperty(navigator, 'contacts', {
+      get: makeNativeFunction(function() {
+        return {
+          select: makeNativeFunction(async () => [], 'select'),
+          getProperties: makeNativeFunction(async () => ['name', 'email', 'tel'], 'getProperties')
+        };
+      }, 'get contacts'),
+      configurable: true
+    });
+  }
+  
+  // NetworkInformation.downlinkMax (mobile only)
+  // Need to add to prototype since connection object may be frozen
+  if (navigator.connection) {
+    const connProto = Object.getPrototypeOf(navigator.connection);
+    if (connProto && !('downlinkMax' in navigator.connection)) {
+      try {
+        Object.defineProperty(connProto, 'downlinkMax', {
+          get: makeNativeFunction(() => Infinity, 'get downlinkMax'),
+          configurable: true,
+          enumerable: true
+        });
+      } catch(e) {
+        // Fallback: try on the instance directly
+        try {
+          Object.defineProperty(navigator.connection, 'downlinkMax', {
+            get: () => Infinity,
+            configurable: true
+          });
+        } catch(e2) {}
+      }
+    }
+  }
   
   // ============================================
   // 4. CHROME RUNTIME OBJECT (enhanced for Cloudflare Turnstile)
@@ -1309,6 +1408,20 @@ func FromURLExperimental(targetURL string, opts ExperimentalOptions) Experimenta
 		if err != nil {
 			// Non-fatal: continue without stealth injection
 			fmt.Printf("Warning: stealth injection failed: %v\n", err)
+		}
+
+		// Set emulated media features to avoid headless detection
+		// Fixes: hasKnownBgColor (ActiveText color), prefersLightColor
+		err = chromedp.Run(ctx,
+			chromedp.ActionFunc(func(ctx context.Context) error {
+				return emulation.SetEmulatedMedia().
+					WithFeatures([]*emulation.MediaFeature{
+						{Name: "prefers-color-scheme", Value: "dark"},
+					}).Do(ctx)
+			}),
+		)
+		if err != nil {
+			fmt.Printf("Warning: media emulation failed: %v\n", err)
 		}
 	}
 
