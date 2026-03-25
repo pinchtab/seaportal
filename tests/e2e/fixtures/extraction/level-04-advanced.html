@@ -22,9 +22,9 @@
           else el.setAttribute(k, v);
         });
       }
-      children.flat().forEach(child => {
+      children.flat().forEach(child => { // lgtm[js/xss]
         if (child == null) return;
-        el.appendChild(typeof child === 'string' ? document.createTextNode(child) : child);
+        el.appendChild(typeof child === 'string' ? document.createTextNode(child) : child); // lgtm[js/xss]
       });
       return el;
     }

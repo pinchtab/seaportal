@@ -1,0 +1,7 @@
+name: "SeaPortal CodeQL Config"
+
+paths-ignore:
+  - testdata
+  - tests/e2e/fixtures
+  - examples
+  - benchmark
