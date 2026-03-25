@@ -259,12 +259,32 @@ const stealthScript = `
 (function() {
   // ============================================
   // NATIVE FUNCTION WRAPPER UTILITY
-  // Makes spoofed functions appear native in toString()
+  // CreepJS checks: prototype, descriptor keys, own properties
+  // Native functions have ONLY length,name as own keys
+  // We avoid overriding Function.prototype.toString as that gets detected
   // ============================================
   const makeNativeFunction = (fn, name) => {
-    const wrapped = function() { return fn.apply(this, arguments); };
-    wrapped.toString = () => 'function ' + name + '() { [native code] }';
-    Object.defineProperty(wrapped, 'name', { value: name });
+    // Use a proper function expression, not arrow, so we can detect 'new' calls
+    const wrapped = function() {
+      // Detect if called with 'new' - native functions like chrome.runtime.connect throw TypeError
+      if (new.target) {
+        throw new TypeError("Illegal constructor");
+      }
+      return fn.apply(this, arguments);
+    };
+    
+    // Remove prototype property - native functions like chrome.csi don't have it
+    delete wrapped.prototype;
+    
+    // Set name and length - these are the ONLY properties native functions have
+    Object.defineProperty(wrapped, 'name', { value: name, writable: false, enumerable: false, configurable: true });
+    Object.defineProperty(wrapped, 'length', { value: fn.length, writable: false, enumerable: false, configurable: true });
+    
+    // NOTE: We're NOT overriding toString anymore because CreepJS detects that
+    // The function's default toString will return the actual code, which is a tradeoff:
+    // - Some basic bot detectors that only check toString will catch us
+    // - But CreepJS's lie detector won't flag us for toString manipulation
+    
     return wrapped;
   };
 
@@ -387,8 +407,17 @@ const stealthScript = `
   
   // ============================================
   // 4. CHROME RUNTIME OBJECT (enhanced for Cloudflare Turnstile)
+  // CreepJS checks: Object.keys(window).slice(-50).includes('chrome')
+  // If chrome is in last 50 keys, it's flagged as injected (hasHighChromeIndex)
+  // Real Chrome has 'chrome' early in the key order
   // ============================================
-  if (!window.chrome) window.chrome = {};
+  // Only create if missing - if it exists, don't touch the position
+  const chromeExists = 'chrome' in window;
+  if (!chromeExists) {
+    // Create chrome object - position in keys() depends on when we run
+    // AddScriptToEvaluateOnNewDocument runs early enough that this should be fine
+    window.chrome = {};
+  }
   
   // chrome.runtime with full connect() API - required by Cloudflare Turnstile
   window.chrome.runtime = {
@@ -623,13 +652,11 @@ const stealthScript = `
   
   // ============================================
   // 11. CONSOLE IFRAME DETECTION BYPASS
+  // CreepJS checks: iframe.srcdoc = x; !!iframe.contentWindow
+  // We must NOT break contentWindow - just ensure it returns null for srcdoc before load
   // ============================================
-  const originalFrame = HTMLIFrameElement.prototype;
-  Object.defineProperty(originalFrame, 'contentWindow', {
-    get: function() {
-      return this.contentDocument?.defaultView;
-    }
-  });
+  // NOTE: Removed broken contentWindow override - it was causing hasIframeProxy detection
+  // The original behavior (contentWindow returns null before load) is correct
   
   // ============================================
   // 12. WORKER CONTEXT CONSISTENCY

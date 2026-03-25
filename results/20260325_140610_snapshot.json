@@ -1,0 +1,1981 @@
+{
+  "role": "document",
+  "children": [
+    {
+      "role": "heading",
+      "name": "Intoli.com tests + additions",
+      "tag": "h1",
+      "ref": "e1",
+      "selector": "h1:nth-of-type(1)",
+      "level": 1
+    },
+    {
+      "role": "table",
+      "name": "Test Name Result User Agent (Old) Mozilla/5.0 (Macintosh; Intel Mac OS X 10_1...",
+      "tag": "table",
+      "ref": "e2",
+      "selector": "table:nth-of-type(1)",
+      "children": [
+        {
+          "role": "rowgroup",
+          "name": "Test Name Result User Agent (Old) Mozilla/5.0 (Macintosh; Intel Mac OS X 10_1...",
+          "tag": "tbody",
+          "ref": "e3",
+          "selector": "tbody:nth-of-type(1)",
+          "depth": 1,
+          "children": [
+            {
+              "role": "row",
+              "name": "Test Name Result",
+              "tag": "tr",
+              "ref": "e4",
+              "selector": "tr:nth-of-type(1)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "columnheader",
+                  "name": "Test Name",
+                  "tag": "th",
+                  "ref": "e5",
+                  "selector": "th:nth-of-type(1)",
+                  "depth": 3
+                },
+                {
+                  "role": "columnheader",
+                  "name": "Result",
+                  "tag": "th",
+                  "ref": "e6",
+                  "selector": "th:nth-of-type(2)",
+                  "depth": 3
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "User Agent (Old) Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/...",
+              "tag": "tr",
+              "ref": "e7",
+              "selector": "tr:nth-of-type(2)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "User Agent (Old)",
+                  "tag": "td",
+                  "ref": "e8",
+                  "selector": "td:nth-of-type(1)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, li...",
+                  "tag": "td",
+                  "ref": "e9",
+                  "selector": "#user-agent-result",
+                  "depth": 3
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "WebDriver (New) missing (passed)",
+              "tag": "tr",
+              "ref": "e10",
+              "selector": "tr:nth-of-type(3)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "WebDriver (New)",
+                  "tag": "td",
+                  "ref": "e11",
+                  "selector": "td:nth-of-type(2)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "missing (passed)",
+                  "tag": "td",
+                  "ref": "e12",
+                  "selector": "#webdriver-result",
+                  "depth": 3
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "WebDriver Advanced passed",
+              "tag": "tr",
+              "ref": "e13",
+              "selector": "tr:nth-of-type(4)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "WebDriver Advanced",
+                  "tag": "td",
+                  "ref": "e14",
+                  "selector": "td:nth-of-type(3)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "passed",
+                  "tag": "td",
+                  "ref": "e15",
+                  "selector": "#advanced-webdriver-result",
+                  "depth": 3
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "Chrome (New) present (passed)",
+              "tag": "tr",
+              "ref": "e16",
+              "selector": "tr:nth-of-type(5)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "Chrome (New)",
+                  "tag": "td",
+                  "ref": "e17",
+                  "selector": "td:nth-of-type(4)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "present (passed)",
+                  "tag": "td",
+                  "ref": "e18",
+                  "selector": "#chrome-result",
+                  "depth": 3
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "Permissions (New) prompt",
+              "tag": "tr",
+              "ref": "e19",
+              "selector": "tr:nth-of-type(6)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "Permissions (New)",
+                  "tag": "td",
+                  "ref": "e20",
+                  "selector": "td:nth-of-type(5)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "prompt",
+                  "tag": "td",
+                  "ref": "e21",
+                  "selector": "#permissions-result",
+                  "depth": 3
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "Plugins Length (Old) 3",
+              "tag": "tr",
+              "ref": "e22",
+              "selector": "tr:nth-of-type(7)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "Plugins Length (Old)",
+                  "tag": "td",
+                  "ref": "e23",
+                  "selector": "td:nth-of-type(6)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "3",
+                  "tag": "td",
+                  "ref": "e24",
+                  "selector": "#plugins-length-result",
+                  "depth": 3
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "Plugins is of type PluginArray passed",
+              "tag": "tr",
+              "ref": "e25",
+              "selector": "tr:nth-of-type(8)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "Plugins is of type PluginArray",
+                  "tag": "td",
+                  "ref": "e26",
+                  "selector": "td:nth-of-type(7)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "passed",
+                  "tag": "td",
+                  "ref": "e27",
+                  "selector": "#plugins-type-result",
+                  "depth": 3
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "Languages (Old) en-US,en",
+              "tag": "tr",
+              "ref": "e28",
+              "selector": "tr:nth-of-type(9)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "Languages (Old)",
+                  "tag": "td",
+                  "ref": "e29",
+                  "selector": "td:nth-of-type(8)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "en-US,en",
+                  "tag": "td",
+                  "ref": "e30",
+                  "selector": "#languages-result",
+                  "depth": 3
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "WebGL Vendor Google Inc. (Apple)",
+              "tag": "tr",
+              "ref": "e31",
+              "selector": "tr:nth-of-type(10)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "WebGL Vendor",
+                  "tag": "td",
+                  "ref": "e32",
+                  "selector": "td:nth-of-type(9)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "Google Inc. (Apple)",
+                  "tag": "td",
+                  "ref": "e33",
+                  "selector": "#webgl-vendor",
+                  "depth": 3
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "WebGL Renderer ANGLE (Apple, Apple M1, OpenGL 4.1)",
+              "tag": "tr",
+              "ref": "e34",
+              "selector": "tr:nth-of-type(11)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "WebGL Renderer",
+                  "tag": "td",
+                  "ref": "e35",
+                  "selector": "td:nth-of-type(10)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "ANGLE (Apple, Apple M1, OpenGL 4.1)",
+                  "tag": "td",
+                  "ref": "e36",
+                  "selector": "#webgl-renderer",
+                  "depth": 3
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "Broken Image Dimensions 16x16",
+              "tag": "tr",
+              "ref": "e37",
+              "selector": "tr:nth-of-type(12)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "Broken Image Dimensions",
+                  "tag": "td",
+                  "ref": "e38",
+                  "selector": "td:nth-of-type(11)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "16x16",
+                  "tag": "td",
+                  "ref": "e39",
+                  "selector": "#broken-image-dimensions",
+                  "depth": 3
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "role": "heading",
+      "name": "Fingerprint Scanner tests",
+      "tag": "h1",
+      "ref": "e40",
+      "selector": "h1:nth-of-type(2)",
+      "level": 1,
+      "children": [
+        {
+          "role": "link",
+          "name": "Fingerprint Scanner",
+          "tag": "a",
+          "ref": "e41",
+          "selector": "a:nth-of-type(1)",
+          "depth": 1,
+          "interactive": true,
+          "href": "https://github.com/antoinevastel/fpscanner"
+        }
+      ]
+    },
+    {
+      "role": "table",
+      "name": "PHANTOM_UAok{ \"userAgent\": \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) A...",
+      "tag": "table",
+      "ref": "e42",
+      "selector": "#fp2",
+      "children": [
+        {
+          "role": "rowgroup",
+          "name": "PHANTOM_UAok{ \"userAgent\": \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) A...",
+          "tag": "tbody",
+          "ref": "e43",
+          "selector": "tbody:nth-of-type(2)",
+          "depth": 1,
+          "children": [
+            {
+              "role": "row",
+              "name": "PHANTOM_UAok{ \"userAgent\": \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) A...",
+              "tag": "tr",
+              "ref": "e44",
+              "selector": "tr:nth-of-type(13)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "PHANTOM_UA",
+                  "tag": "td",
+                  "ref": "e45",
+                  "selector": "td:nth-of-type(12)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "ok",
+                  "tag": "td",
+                  "ref": "e46",
+                  "selector": "td.passed",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "{ \"userAgent\": \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/5...",
+                  "tag": "td",
+                  "ref": "e47",
+                  "selector": "td:nth-of-type(13)",
+                  "depth": 3,
+                  "children": [
+                    {
+                      "role": "code",
+                      "name": "{ \"userAgent\": \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/5...",
+                      "tag": "pre",
+                      "ref": "e48",
+                      "selector": "pre:nth-of-type(1)",
+                      "depth": 4
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "PHANTOM_PROPERTIESok{ \"attributesFound\": [ false, false, false ] }",
+              "tag": "tr",
+              "ref": "e49",
+              "selector": "tr:nth-of-type(14)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "PHANTOM_PROPERTIES",
+                  "tag": "td",
+                  "ref": "e50",
+                  "selector": "td:nth-of-type(14)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "ok",
+                  "tag": "td",
+                  "ref": "e51",
+                  "selector": "td.passed",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "{ \"attributesFound\": [ false, false, false ] }",
+                  "tag": "td",
+                  "ref": "e52",
+                  "selector": "td:nth-of-type(15)",
+                  "depth": 3,
+                  "children": [
+                    {
+                      "role": "code",
+                      "name": "{ \"attributesFound\": [ false, false, false ] }",
+                      "tag": "pre",
+                      "ref": "e53",
+                      "selector": "pre:nth-of-type(2)",
+                      "depth": 4
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "PHANTOM_ETSLok{ \"etsl\": 33 }",
+              "tag": "tr",
+              "ref": "e54",
+              "selector": "tr:nth-of-type(15)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "PHANTOM_ETSL",
+                  "tag": "td",
+                  "ref": "e55",
+                  "selector": "td:nth-of-type(16)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "ok",
+                  "tag": "td",
+                  "ref": "e56",
+                  "selector": "td.passed",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "{ \"etsl\": 33 }",
+                  "tag": "td",
+                  "ref": "e57",
+                  "selector": "td:nth-of-type(17)",
+                  "depth": 3,
+                  "children": [
+                    {
+                      "role": "code",
+                      "name": "{ \"etsl\": 33 }",
+                      "tag": "pre",
+                      "ref": "e58",
+                      "selector": "pre:nth-of-type(3)",
+                      "depth": 4
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "PHANTOM_LANGUAGEok{ \"languages\": [ \"en-US\", \"en\" ] }",
+              "tag": "tr",
+              "ref": "e59",
+              "selector": "tr:nth-of-type(16)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "PHANTOM_LANGUAGE",
+                  "tag": "td",
+                  "ref": "e60",
+                  "selector": "td:nth-of-type(18)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "ok",
+                  "tag": "td",
+                  "ref": "e61",
+                  "selector": "td.passed",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "{ \"languages\": [ \"en-US\", \"en\" ] }",
+                  "tag": "td",
+                  "ref": "e62",
+                  "selector": "td:nth-of-type(19)",
+                  "depth": 3,
+                  "children": [
+                    {
+                      "role": "code",
+                      "name": "{ \"languages\": [ \"en-US\", \"en\" ] }",
+                      "tag": "pre",
+                      "ref": "e63",
+                      "selector": "pre:nth-of-type(4)",
+                      "depth": 4
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "PHANTOM_WEBSOCKETok{}",
+              "tag": "tr",
+              "ref": "e64",
+              "selector": "tr:nth-of-type(17)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "PHANTOM_WEBSOCKET",
+                  "tag": "td",
+                  "ref": "e65",
+                  "selector": "td:nth-of-type(20)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "ok",
+                  "tag": "td",
+                  "ref": "e66",
+                  "selector": "td.passed",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "{}",
+                  "tag": "td",
+                  "ref": "e67",
+                  "selector": "td:nth-of-type(21)",
+                  "depth": 3,
+                  "children": [
+                    {
+                      "role": "code",
+                      "name": "{}",
+                      "tag": "pre",
+                      "ref": "e68",
+                      "selector": "pre:nth-of-type(5)",
+                      "depth": 4
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "MQ_SCREENok{}",
+              "tag": "tr",
+              "ref": "e69",
+              "selector": "tr:nth-of-type(18)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "MQ_SCREEN",
+                  "tag": "td",
+                  "ref": "e70",
+                  "selector": "td:nth-of-type(22)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "ok",
+                  "tag": "td",
+                  "ref": "e71",
+                  "selector": "td.passed",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "{}",
+                  "tag": "td",
+                  "ref": "e72",
+                  "selector": "td:nth-of-type(23)",
+                  "depth": 3,
+                  "children": [
+                    {
+                      "role": "code",
+                      "name": "{}",
+                      "tag": "pre",
+                      "ref": "e73",
+                      "selector": "pre:nth-of-type(6)",
+                      "depth": 4
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "PHANTOM_OVERFLOWok{ \"depth\": 8859, \"errorMessage\": \"Maximum call stack size e...",
+              "tag": "tr",
+              "ref": "e74",
+              "selector": "tr:nth-of-type(19)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "PHANTOM_OVERFLOW",
+                  "tag": "td",
+                  "ref": "e75",
+                  "selector": "td:nth-of-type(24)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "ok",
+                  "tag": "td",
+                  "ref": "e76",
+                  "selector": "td.passed",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "{ \"depth\": 8859, \"errorMessage\": \"Maximum call stack size exceeded\", \"errorNa...",
+                  "tag": "td",
+                  "ref": "e77",
+                  "selector": "td:nth-of-type(25)",
+                  "depth": 3,
+                  "children": [
+                    {
+                      "role": "code",
+                      "name": "{ \"depth\": 8859, \"errorMessage\": \"Maximum call stack size exceeded\", \"errorNa...",
+                      "tag": "pre",
+                      "ref": "e78",
+                      "selector": "pre:nth-of-type(7)",
+                      "depth": 4
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "PHANTOM_WINDOW_HEIGHTok{ \"wInnerHeight\": 469, \"wOuterHeight\": 556, \"wOuterWid...",
+              "tag": "tr",
+              "ref": "e79",
+              "selector": "tr:nth-of-type(20)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "PHANTOM_WINDOW_HEIGHT",
+                  "tag": "td",
+                  "ref": "e80",
+                  "selector": "td:nth-of-type(26)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "ok",
+                  "tag": "td",
+                  "ref": "e81",
+                  "selector": "td.passed",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "{ \"wInnerHeight\": 469, \"wOuterHeight\": 556, \"wOuterWidth\": 756, \"wInnerWidth\"...",
+                  "tag": "td",
+                  "ref": "e82",
+                  "selector": "td:nth-of-type(27)",
+                  "depth": 3,
+                  "children": [
+                    {
+                      "role": "code",
+                      "name": "{ \"wInnerHeight\": 469, \"wOuterHeight\": 556, \"wOuterWidth\": 756, \"wInnerWidth\"...",
+                      "tag": "pre",
+                      "ref": "e83",
+                      "selector": "pre:nth-of-type(8)",
+                      "depth": 4
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "HEADCHR_UAok{ \"userAgent\": \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) A...",
+              "tag": "tr",
+              "ref": "e84",
+              "selector": "tr:nth-of-type(21)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "HEADCHR_UA",
+                  "tag": "td",
+                  "ref": "e85",
+                  "selector": "td:nth-of-type(28)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "ok",
+                  "tag": "td",
+                  "ref": "e86",
+                  "selector": "td.passed",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "{ \"userAgent\": \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/5...",
+                  "tag": "td",
+                  "ref": "e87",
+                  "selector": "td:nth-of-type(29)",
+                  "depth": 3,
+                  "children": [
+                    {
+                      "role": "code",
+                      "name": "{ \"userAgent\": \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/5...",
+                      "tag": "pre",
+                      "ref": "e88",
+                      "selector": "pre:nth-of-type(9)",
+                      "depth": 4
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "HEADCHR_CHROME_OBJok{}",
+              "tag": "tr",
+              "ref": "e89",
+              "selector": "tr:nth-of-type(22)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "HEADCHR_CHROME_OBJ",
+                  "tag": "td",
+                  "ref": "e90",
+                  "selector": "td:nth-of-type(30)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "ok",
+                  "tag": "td",
+                  "ref": "e91",
+                  "selector": "td.passed",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "{}",
+                  "tag": "td",
+                  "ref": "e92",
+                  "selector": "td:nth-of-type(31)",
+                  "depth": 3,
+                  "children": [
+                    {
+                      "role": "code",
+                      "name": "{}",
+                      "tag": "pre",
+                      "ref": "e93",
+                      "selector": "pre:nth-of-type(10)",
+                      "depth": 4
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "HEADCHR_PERMISSIONSok{}",
+              "tag": "tr",
+              "ref": "e94",
+              "selector": "tr:nth-of-type(23)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "HEADCHR_PERMISSIONS",
+                  "tag": "td",
+                  "ref": "e95",
+                  "selector": "td:nth-of-type(32)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "ok",
+                  "tag": "td",
+                  "ref": "e96",
+                  "selector": "td.passed",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "{}",
+                  "tag": "td",
+                  "ref": "e97",
+                  "selector": "td:nth-of-type(33)",
+                  "depth": 3,
+                  "children": [
+                    {
+                      "role": "code",
+                      "name": "{}",
+                      "tag": "pre",
+                      "ref": "e98",
+                      "selector": "pre:nth-of-type(11)",
+                      "depth": 4
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "HEADCHR_PLUGINSok{ \"plugins\": [ \"Chrome PDF Plugin::Portable Document Format:...",
+              "tag": "tr",
+              "ref": "e99",
+              "selector": "tr:nth-of-type(24)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "HEADCHR_PLUGINS",
+                  "tag": "td",
+                  "ref": "e100",
+                  "selector": "td:nth-of-type(34)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "ok",
+                  "tag": "td",
+                  "ref": "e101",
+                  "selector": "td.passed",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "{ \"plugins\": [ \"Chrome PDF Plugin::Portable Document Format::internal-pdf-vie...",
+                  "tag": "td",
+                  "ref": "e102",
+                  "selector": "td:nth-of-type(35)",
+                  "depth": 3,
+                  "children": [
+                    {
+                      "role": "code",
+                      "name": "{ \"plugins\": [ \"Chrome PDF Plugin::Portable Document Format::internal-pdf-vie...",
+                      "tag": "pre",
+                      "ref": "e103",
+                      "selector": "pre:nth-of-type(12)",
+                      "depth": 4
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "HEADCHR_IFRAMEok{}",
+              "tag": "tr",
+              "ref": "e104",
+              "selector": "tr:nth-of-type(25)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "HEADCHR_IFRAME",
+                  "tag": "td",
+                  "ref": "e105",
+                  "selector": "td:nth-of-type(36)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "ok",
+                  "tag": "td",
+                  "ref": "e106",
+                  "selector": "td.passed",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "{}",
+                  "tag": "td",
+                  "ref": "e107",
+                  "selector": "td:nth-of-type(37)",
+                  "depth": 3,
+                  "children": [
+                    {
+                      "role": "code",
+                      "name": "{}",
+                      "tag": "pre",
+                      "ref": "e108",
+                      "selector": "pre:nth-of-type(13)",
+                      "depth": 4
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "CHR_DEBUG_TOOLSok{}",
+              "tag": "tr",
+              "ref": "e109",
+              "selector": "tr:nth-of-type(26)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "CHR_DEBUG_TOOLS",
+                  "tag": "td",
+                  "ref": "e110",
+                  "selector": "td:nth-of-type(38)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "ok",
+                  "tag": "td",
+                  "ref": "e111",
+                  "selector": "td.passed",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "{}",
+                  "tag": "td",
+                  "ref": "e112",
+                  "selector": "td:nth-of-type(39)",
+                  "depth": 3,
+                  "children": [
+                    {
+                      "role": "code",
+                      "name": "{}",
+                      "tag": "pre",
+                      "ref": "e113",
+                      "selector": "pre:nth-of-type(14)",
+                      "depth": 4
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "SELENIUM_DRIVERok{ \"attributesFound\": [ false, false, false, false, false, fa...",
+              "tag": "tr",
+              "ref": "e114",
+              "selector": "tr:nth-of-type(27)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "SELENIUM_DRIVER",
+                  "tag": "td",
+                  "ref": "e115",
+                  "selector": "td:nth-of-type(40)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "ok",
+                  "tag": "td",
+                  "ref": "e116",
+                  "selector": "td.passed",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "{ \"attributesFound\": [ false, false, false, false, false, false, false, false...",
+                  "tag": "td",
+                  "ref": "e117",
+                  "selector": "td:nth-of-type(41)",
+                  "depth": 3,
+                  "children": [
+                    {
+                      "role": "code",
+                      "name": "{ \"attributesFound\": [ false, false, false, false, false, false, false, false...",
+                      "tag": "pre",
+                      "ref": "e118",
+                      "selector": "pre:nth-of-type(15)",
+                      "depth": 4
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "CHR_BATTERYok{}",
+              "tag": "tr",
+              "ref": "e119",
+              "selector": "tr:nth-of-type(28)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "CHR_BATTERY",
+                  "tag": "td",
+                  "ref": "e120",
+                  "selector": "td:nth-of-type(42)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "ok",
+                  "tag": "td",
+                  "ref": "e121",
+                  "selector": "td.passed",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "{}",
+                  "tag": "td",
+                  "ref": "e122",
+                  "selector": "td:nth-of-type(43)",
+                  "depth": 3,
+                  "children": [
+                    {
+                      "role": "code",
+                      "name": "{}",
+                      "tag": "pre",
+                      "ref": "e123",
+                      "selector": "pre:nth-of-type(16)",
+                      "depth": 4
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "CHR_MEMORYok{}",
+              "tag": "tr",
+              "ref": "e124",
+              "selector": "tr:nth-of-type(29)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "CHR_MEMORY",
+                  "tag": "td",
+                  "ref": "e125",
+                  "selector": "td:nth-of-type(44)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "ok",
+                  "tag": "td",
+                  "ref": "e126",
+                  "selector": "td.passed",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "{}",
+                  "tag": "td",
+                  "ref": "e127",
+                  "selector": "td:nth-of-type(45)",
+                  "depth": 3,
+                  "children": [
+                    {
+                      "role": "code",
+                      "name": "{}",
+                      "tag": "pre",
+                      "ref": "e128",
+                      "selector": "pre:nth-of-type(17)",
+                      "depth": 4
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "TRANSPARENT_PIXELok{ \"0\": 0, \"1\": 0, \"2\": 0, \"3\": 0 }",
+              "tag": "tr",
+              "ref": "e129",
+              "selector": "tr:nth-of-type(30)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "TRANSPARENT_PIXEL",
+                  "tag": "td",
+                  "ref": "e130",
+                  "selector": "td:nth-of-type(46)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "ok",
+                  "tag": "td",
+                  "ref": "e131",
+                  "selector": "td.passed",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "{ \"0\": 0, \"1\": 0, \"2\": 0, \"3\": 0 }",
+                  "tag": "td",
+                  "ref": "e132",
+                  "selector": "td:nth-of-type(47)",
+                  "depth": 3,
+                  "children": [
+                    {
+                      "role": "code",
+                      "name": "{ \"0\": 0, \"1\": 0, \"2\": 0, \"3\": 0 }",
+                      "tag": "pre",
+                      "ref": "e133",
+                      "selector": "pre:nth-of-type(18)",
+                      "depth": 4
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "SEQUENTUMok{}",
+              "tag": "tr",
+              "ref": "e134",
+              "selector": "tr:nth-of-type(31)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "SEQUENTUM",
+                  "tag": "td",
+                  "ref": "e135",
+                  "selector": "td:nth-of-type(48)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "ok",
+                  "tag": "td",
+                  "ref": "e136",
+                  "selector": "td.passed",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "{}",
+                  "tag": "td",
+                  "ref": "e137",
+                  "selector": "td:nth-of-type(49)",
+                  "depth": 3,
+                  "children": [
+                    {
+                      "role": "code",
+                      "name": "{}",
+                      "tag": "pre",
+                      "ref": "e138",
+                      "selector": "pre:nth-of-type(19)",
+                      "depth": 4
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "VIDEO_CODECSok{ \"h264\": \"probably\" }",
+              "tag": "tr",
+              "ref": "e139",
+              "selector": "tr:nth-of-type(32)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "VIDEO_CODECS",
+                  "tag": "td",
+                  "ref": "e140",
+                  "selector": "td:nth-of-type(50)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "ok",
+                  "tag": "td",
+                  "ref": "e141",
+                  "selector": "td.passed",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "{ \"h264\": \"probably\" }",
+                  "tag": "td",
+                  "ref": "e142",
+                  "selector": "td:nth-of-type(51)",
+                  "depth": 3,
+                  "children": [
+                    {
+                      "role": "code",
+                      "name": "{ \"h264\": \"probably\" }",
+                      "tag": "pre",
+                      "ref": "e143",
+                      "selector": "pre:nth-of-type(20)",
+                      "depth": 4
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "role": "heading",
+      "name": "Some details",
+      "tag": "h1",
+      "ref": "e144",
+      "selector": "h1:nth-of-type(3)",
+      "level": 1
+    },
+    {
+      "role": "table",
+      "name": "navigator.cookieEnabled document.write(navigator.cookieEnabled); true navigat...",
+      "tag": "table",
+      "ref": "e145",
+      "selector": "table:nth-of-type(2)",
+      "children": [
+        {
+          "role": "rowgroup",
+          "name": "navigator.cookieEnabled document.write(navigator.cookieEnabled); true navigat...",
+          "tag": "tbody",
+          "ref": "e146",
+          "selector": "tbody:nth-of-type(3)",
+          "depth": 1,
+          "children": [
+            {
+              "role": "row",
+              "name": "navigator.cookieEnabled document.write(navigator.cookieEnabled); true",
+              "tag": "tr",
+              "ref": "e147",
+              "selector": "tr:nth-of-type(33)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "navigator.cookieEnabled",
+                  "tag": "td",
+                  "ref": "e148",
+                  "selector": "td:nth-of-type(52)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "document.write(navigator.cookieEnabled); true",
+                  "tag": "td",
+                  "ref": "e149",
+                  "selector": "td:nth-of-type(53)",
+                  "depth": 3
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "navigator.doNotTrack document.write(navigator.doNotTrack); null",
+              "tag": "tr",
+              "ref": "e150",
+              "selector": "tr:nth-of-type(34)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "navigator.doNotTrack",
+                  "tag": "td",
+                  "ref": "e151",
+                  "selector": "td:nth-of-type(54)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "document.write(navigator.doNotTrack); null",
+                  "tag": "td",
+                  "ref": "e152",
+                  "selector": "td:nth-of-type(55)",
+                  "depth": 3
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "navigator.msDoNotTrack document.write(navigator.msDoNotTrack); undefined",
+              "tag": "tr",
+              "ref": "e153",
+              "selector": "tr:nth-of-type(35)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "navigator.msDoNotTrack",
+                  "tag": "td",
+                  "ref": "e154",
+                  "selector": "td:nth-of-type(56)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "document.write(navigator.msDoNotTrack); undefined",
+                  "tag": "td",
+                  "ref": "e155",
+                  "selector": "td:nth-of-type(57)",
+                  "depth": 3
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "navigator.sendBeacon document.write(navigator.sendBeacon());",
+              "tag": "tr",
+              "ref": "e156",
+              "selector": "tr:nth-of-type(36)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "navigator.sendBeacon",
+                  "tag": "td",
+                  "ref": "e157",
+                  "selector": "td:nth-of-type(58)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "document.write(navigator.sendBeacon());",
+                  "tag": "td",
+                  "ref": "e158",
+                  "selector": "td:nth-of-type(59)",
+                  "depth": 3
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "navigator.cookieEnabled document.write(navigator.cookieEnabled); true",
+              "tag": "tr",
+              "ref": "e159",
+              "selector": "tr:nth-of-type(37)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "navigator.cookieEnabled",
+                  "tag": "td",
+                  "ref": "e160",
+                  "selector": "td:nth-of-type(60)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "document.write(navigator.cookieEnabled); true",
+                  "tag": "td",
+                  "ref": "e161",
+                  "selector": "td:nth-of-type(61)",
+                  "depth": 3
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "navigator.userAgent document.write(navigator.userAgent); Mozilla/5.0 (Macinto...",
+              "tag": "tr",
+              "ref": "e162",
+              "selector": "tr:nth-of-type(38)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "navigator.userAgent",
+                  "tag": "td",
+                  "ref": "e163",
+                  "selector": "td:nth-of-type(62)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "document.write(navigator.userAgent); Mozilla/5.0 (Macintosh; Intel Mac OS X 1...",
+                  "tag": "td",
+                  "ref": "e164",
+                  "selector": "td:nth-of-type(63)",
+                  "depth": 3
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "navigator.appName document.write(navigator.appName); Netscape",
+              "tag": "tr",
+              "ref": "e165",
+              "selector": "tr:nth-of-type(39)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "navigator.appName",
+                  "tag": "td",
+                  "ref": "e166",
+                  "selector": "td:nth-of-type(64)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "document.write(navigator.appName); Netscape",
+                  "tag": "td",
+                  "ref": "e167",
+                  "selector": "td:nth-of-type(65)",
+                  "depth": 3
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "navigator.vendor document.write(navigator.vendor); Google Inc.",
+              "tag": "tr",
+              "ref": "e168",
+              "selector": "tr:nth-of-type(40)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "navigator.vendor",
+                  "tag": "td",
+                  "ref": "e169",
+                  "selector": "td:nth-of-type(66)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "document.write(navigator.vendor); Google Inc.",
+                  "tag": "td",
+                  "ref": "e170",
+                  "selector": "td:nth-of-type(67)",
+                  "depth": 3
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "navigator.appCodeName document.write(navigator.appCodeName); Mozilla",
+              "tag": "tr",
+              "ref": "e171",
+              "selector": "tr:nth-of-type(41)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "navigator.appCodeName",
+                  "tag": "td",
+                  "ref": "e172",
+                  "selector": "td:nth-of-type(68)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "document.write(navigator.appCodeName); Mozilla",
+                  "tag": "td",
+                  "ref": "e173",
+                  "selector": "td:nth-of-type(69)",
+                  "depth": 3
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "navigator.getUserMedia document.write(navigator.getUserMedia());",
+              "tag": "tr",
+              "ref": "e174",
+              "selector": "tr:nth-of-type(42)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "navigator.getUserMedia",
+                  "tag": "td",
+                  "ref": "e175",
+                  "selector": "td:nth-of-type(70)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "document.write(navigator.getUserMedia());",
+                  "tag": "td",
+                  "ref": "e176",
+                  "selector": "td:nth-of-type(71)",
+                  "depth": 3
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "navigator.sayswho document.write(navigator.sayswho); undefined",
+              "tag": "tr",
+              "ref": "e177",
+              "selector": "tr:nth-of-type(43)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "navigator.sayswho",
+                  "tag": "td",
+                  "ref": "e178",
+                  "selector": "td:nth-of-type(72)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "document.write(navigator.sayswho); undefined",
+                  "tag": "td",
+                  "ref": "e179",
+                  "selector": "td:nth-of-type(73)",
+                  "depth": 3
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "navigator.javaEnabled document.write(navigator.javaEnabled()); false",
+              "tag": "tr",
+              "ref": "e180",
+              "selector": "tr:nth-of-type(44)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "navigator.javaEnabled",
+                  "tag": "td",
+                  "ref": "e181",
+                  "selector": "td:nth-of-type(74)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "document.write(navigator.javaEnabled()); false",
+                  "tag": "td",
+                  "ref": "e182",
+                  "selector": "td:nth-of-type(75)",
+                  "depth": 3
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "navigator.plugins document.write(JSON.stringify(navigator.plugins)); {\"0\":{\"n...",
+              "tag": "tr",
+              "ref": "e183",
+              "selector": "tr:nth-of-type(45)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "navigator.plugins",
+                  "tag": "td",
+                  "ref": "e184",
+                  "selector": "td:nth-of-type(76)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "document.write(JSON.stringify(navigator.plugins)); {\"0\":{\"name\":\"Chrome PDF P...",
+                  "tag": "td",
+                  "ref": "e185",
+                  "selector": "td:nth-of-type(77)",
+                  "depth": 3
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "screen.width document.write(screen.width); 1920",
+              "tag": "tr",
+              "ref": "e186",
+              "selector": "tr:nth-of-type(46)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "screen.width",
+                  "tag": "td",
+                  "ref": "e187",
+                  "selector": "td:nth-of-type(78)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "document.write(screen.width); 1920",
+                  "tag": "td",
+                  "ref": "e188",
+                  "selector": "td:nth-of-type(79)",
+                  "depth": 3
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "screen.height document.write(screen.height); 1080",
+              "tag": "tr",
+              "ref": "e189",
+              "selector": "tr:nth-of-type(47)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "screen.height",
+                  "tag": "td",
+                  "ref": "e190",
+                  "selector": "td:nth-of-type(80)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "document.write(screen.height); 1080",
+                  "tag": "td",
+                  "ref": "e191",
+                  "selector": "td:nth-of-type(81)",
+                  "depth": 3
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "screen.colorDepth document.write(screen.colorDepth); 24",
+              "tag": "tr",
+              "ref": "e192",
+              "selector": "tr:nth-of-type(48)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "screen.colorDepth",
+                  "tag": "td",
+                  "ref": "e193",
+                  "selector": "td:nth-of-type(82)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "document.write(screen.colorDepth); 24",
+                  "tag": "td",
+                  "ref": "e194",
+                  "selector": "td:nth-of-type(83)",
+                  "depth": 3
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "navigator.language document.write(navigator.language); en-GB",
+              "tag": "tr",
+              "ref": "e195",
+              "selector": "tr:nth-of-type(49)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "navigator.language",
+                  "tag": "td",
+                  "ref": "e196",
+                  "selector": "td:nth-of-type(84)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "document.write(navigator.language); en-GB",
+                  "tag": "td",
+                  "ref": "e197",
+                  "selector": "td:nth-of-type(85)",
+                  "depth": 3
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "navigator.loadPurpose document.write(navigator.loadPurpose); undefined",
+              "tag": "tr",
+              "ref": "e198",
+              "selector": "tr:nth-of-type(50)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "navigator.loadPurpose",
+                  "tag": "td",
+                  "ref": "e199",
+                  "selector": "td:nth-of-type(86)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "document.write(navigator.loadPurpose); undefined",
+                  "tag": "td",
+                  "ref": "e200",
+                  "selector": "td:nth-of-type(87)",
+                  "depth": 3
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "navigator.platform document.write(navigator.platform); MacIntel",
+              "tag": "tr",
+              "ref": "e201",
+              "selector": "tr:nth-of-type(51)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "navigator.platform",
+                  "tag": "td",
+                  "ref": "e202",
+                  "selector": "td:nth-of-type(88)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "document.write(navigator.platform); MacIntel",
+                  "tag": "td",
+                  "ref": "e203",
+                  "selector": "td:nth-of-type(89)",
+                  "depth": 3
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "navigator.mediaDevices audioinput: id = videoinput: id = audiooutput: id =",
+              "tag": "tr",
+              "ref": "e204",
+              "selector": "tr:nth-of-type(52)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "navigator.mediaDevices",
+                  "tag": "td",
+                  "ref": "e205",
+                  "selector": "td:nth-of-type(90)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "audioinput: id = videoinput: id = audiooutput: id =",
+                  "tag": "td",
+                  "ref": "e206",
+                  "selector": "#media1",
+                  "depth": 3
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "navigator.getBattery details Charging: trueLevel: 0.8",
+              "tag": "tr",
+              "ref": "e207",
+              "selector": "tr:nth-of-type(53)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "navigator.getBattery details",
+                  "tag": "td",
+                  "ref": "e208",
+                  "selector": "td:nth-of-type(91)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "Charging: trueLevel: 0.8",
+                  "tag": "td",
+                  "ref": "e209",
+                  "selector": "#battery1",
+                  "depth": 3
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "Canvas1 Hash: -1941328102",
+              "tag": "tr",
+              "ref": "e210",
+              "selector": "tr:nth-of-type(54)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "Canvas1",
+                  "tag": "td",
+                  "ref": "e211",
+                  "selector": "td:nth-of-type(92)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "Hash: -1941328102",
+                  "tag": "td",
+                  "ref": "e212",
+                  "selector": "#canvas1",
+                  "depth": 3
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "Canvas2 Hash: -1941328102",
+              "tag": "tr",
+              "ref": "e213",
+              "selector": "tr:nth-of-type(55)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "Canvas2",
+                  "tag": "td",
+                  "ref": "e214",
+                  "selector": "td:nth-of-type(93)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "Hash: -1941328102",
+                  "tag": "td",
+                  "ref": "e215",
+                  "selector": "#canvas2",
+                  "depth": 3
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "Canvas3 (iframe sandbox) Hash: -1941328102",
+              "tag": "tr",
+              "ref": "e216",
+              "selector": "tr:nth-of-type(56)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "Canvas3 (iframe sandbox)",
+                  "tag": "td",
+                  "ref": "e217",
+                  "selector": "td:nth-of-type(94)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "Hash: -1941328102",
+                  "tag": "td",
+                  "ref": "e218",
+                  "selector": "#canvas3",
+                  "depth": 3
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "Canvas4 (iframe sandbox) Hash: -1941328102",
+              "tag": "tr",
+              "ref": "e219",
+              "selector": "tr:nth-of-type(57)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "Canvas4 (iframe sandbox)",
+                  "tag": "td",
+                  "ref": "e220",
+                  "selector": "td:nth-of-type(95)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "Hash: -1941328102",
+                  "tag": "td",
+                  "ref": "e221",
+                  "selector": "#canvas4",
+                  "depth": 3
+                }
+              ]
+            },
+            {
+              "role": "row",
+              "name": "Canvas5 (iframe) Hash: -1941328102",
+              "tag": "tr",
+              "ref": "e222",
+              "selector": "tr:nth-of-type(58)",
+              "depth": 2,
+              "children": [
+                {
+                  "role": "cell",
+                  "name": "Canvas5 (iframe)",
+                  "tag": "td",
+                  "ref": "e223",
+                  "selector": "td:nth-of-type(96)",
+                  "depth": 3
+                },
+                {
+                  "role": "cell",
+                  "name": "Hash: -1941328102",
+                  "tag": "td",
+                  "ref": "e224",
+                  "selector": "#canvas5",
+                  "depth": 3
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "role": "heading",
+      "name": "Fp-collect info",
+      "tag": "h1",
+      "ref": "e225",
+      "selector": "h1:nth-of-type(4)",
+      "level": 1
+    },
+    {
+      "role": "code",
+      "name": "{ \"plugins\": [ \"Chrome PDF Plugin::Portable Document Format::internal-pdf-vie...",
+      "tag": "pre",
+      "ref": "e226",
+      "selector": "#fp"
+    }
+  ]
+}
