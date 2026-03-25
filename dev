@@ -18,8 +18,16 @@ NC=$'\033[0m'
 COMMANDS=(
   "build:🚀:Build binary"
   "run:🏃:Build & run with test URL"
-  "check:🧪:All checks (format, vet, lint)"
+  "check:🧪:All checks (format, vet, lint, test)"
   "test:🔬:Run tests"
+  "test race:🏁:Run tests with race detector"
+  "coverage:📊:Run tests with coverage"
+  "lint:🔍:Run golangci-lint"
+  "fmt:✨:Format code"
+  "vet:🩺:Run go vet"
+  "fuzz:🎲:Run fuzz tests (30s)"
+  "benchmark:⚡:Run benchmarks"
+  "doctor:🏥:Check dev environment"
   "e2e:🐳:E2E tests (Docker)"
 )
 
@@ -64,7 +72,79 @@ run_command() {
     "test")
       echo "  ${ACCENT}${BOLD}🔬 Running tests${NC}"
       echo ""
-      exec bash scripts/test.sh
+      shift_args="${2:-}"
+      if [ "$shift_args" = "race" ]; then
+        go test ./... -count=1 -race -v
+      else
+        exec bash scripts/test.sh
+      fi
+      ;;
+    "test race")
+      echo "  ${ACCENT}${BOLD}🏁 Tests with race detector${NC}"
+      echo ""
+      go test ./... -count=1 -race -v
+      ;;
+    "coverage")
+      echo "  ${ACCENT}${BOLD}📊 Coverage${NC}"
+      echo ""
+      go test ./... -count=1 -coverprofile=coverage.out -covermode=atomic
+      go tool cover -func=coverage.out | tail -1
+      echo ""
+      echo "  ${MUTED}Full report: go tool cover -html=coverage.out${NC}"
+      ;;
+    "lint")
+      echo "  ${ACCENT}${BOLD}🔍 Linting${NC}"
+      echo ""
+      if command -v golangci-lint &>/dev/null; then
+        golangci-lint run ./...
+        echo "  ${SUCCESS}✓${NC} golangci-lint"
+      else
+        echo "  ${ERROR}✗ golangci-lint not installed${NC}"
+        echo "  ${MUTED}Install: brew install golangci-lint${NC}"
+        exit 1
+      fi
+      ;;
+    "fmt")
+      echo "  ${ACCENT}${BOLD}✨ Formatting${NC}"
+      echo ""
+      gofmt -w .
+      echo "  ${SUCCESS}✓${NC} gofmt"
+      ;;
+    "vet")
+      echo "  ${ACCENT}${BOLD}🩺 Vet${NC}"
+      echo ""
+      go vet ./...
+      echo "  ${SUCCESS}✓${NC} go vet"
+      ;;
+    "fuzz")
+      echo "  ${ACCENT}${BOLD}🎲 Fuzz tests${NC}"
+      echo ""
+      FUZZTIME="${2:-30s}"
+      echo "  ${MUTED}Duration: $FUZZTIME${NC}"
+      echo ""
+      for f in $(grep -rl 'func Fuzz' --include='*_test.go' . 2>/dev/null | head -20); do
+        pkg=$(dirname "$f")
+        for fn in $(grep -oP 'func \KFuzz\w+' "$f"); do
+          echo "  Running $fn in $pkg..."
+          go test "$pkg" -fuzz="$fn" -fuzztime="$FUZZTIME"
+        done
+      done
+      echo ""
+      echo "  ${SUCCESS}✓${NC} Fuzz complete"
+      ;;
+    "benchmark")
+      echo "  ${ACCENT}${BOLD}⚡ Benchmarks${NC}"
+      echo ""
+      if [ -d benchmark ]; then
+        go test ./benchmark/ -bench=. -benchmem -count=1
+      else
+        echo "  ${MUTED}No benchmark/ directory found${NC}"
+      fi
+      ;;
+    "doctor")
+      echo "  ${ACCENT}${BOLD}🏥 Doctor${NC}"
+      echo ""
+      exec bash scripts/doctor.sh
       ;;
     "e2e")
       echo "  ${ACCENT}${BOLD}🐳 E2E tests (Docker)${NC}"
