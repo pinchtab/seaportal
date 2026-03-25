@@ -13,7 +13,27 @@ linters:
     - misspell
     - unconvert
 
+  exclusions:
+    paths:
+      - testdata
+      - examples
+      - tests
+      - benchmark
+
+  exclusions:
+    paths:
+      - testdata
+      - benchmark
+      - examples
+      - tests
+
 formatters:
   enable:
     - gofmt
     - goimports
+  exclusions:
+    paths:
+      - testdata
+  exclusions:
+    paths:
+      - testdata

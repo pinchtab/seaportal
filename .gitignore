@@ -16,4 +16,8 @@ renders/
 .idea/
 .vscode/
 
+# Test/build artifacts
 coverage.out
+dist/
+*.swp
+.DS_Store
