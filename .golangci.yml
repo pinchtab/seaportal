@@ -12,8 +12,17 @@ linters:
     - ineffassign
     - misspell
     - unconvert
+  exclusions:
+    paths:
+      - testdata
+      - benchmark
+      - examples
+      - tests
 
 formatters:
   enable:
     - gofmt
     - goimports
+  exclusions:
+    paths:
+      - testdata

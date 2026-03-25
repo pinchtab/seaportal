@@ -1,0 +1,59 @@
+name: Reusable / Validate Release
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+      ref:
+        required: false
+        type: string
+        default: 'main'
+    outputs:
+      version:
+        value: ${{ jobs.validate.outputs.version }}
+      tag:
+        value: ${{ jobs.validate.outputs.tag }}
+      sha:
+        value: ${{ jobs.validate.outputs.sha }}
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate Release Input
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      tag: ${{ steps.meta.outputs.tag }}
+      sha: ${{ steps.meta.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.ref }}
+
+      - name: Validate version
+        id: meta
+        run: |
+          VERSION="${{ inputs.version }}"
+          VERSION="${VERSION#v}"
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "version must be semver (e.g. 0.1.0)" >&2
+            exit 1
+          fi
+
+          TAG="v$VERSION"
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "tag $TAG already exists" >&2
+            exit 1
+          fi
+
+          SHA="$(git rev-parse HEAD)"
+          {
+            echo "version=$VERSION"
+            echo "tag=$TAG"
+            echo "sha=$SHA"
+          } >> "$GITHUB_OUTPUT"

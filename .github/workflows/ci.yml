@@ -7,98 +7,24 @@ on:
       - '**.md'
       - 'docs/**'
       - 'LICENSE'
+      - '.gitignore'
+      - 'testdata/**'
   pull_request:
     branches: [main]
     paths-ignore:
       - '**.md'
       - 'docs/**'
       - 'LICENSE'
+      - '.gitignore'
+      - 'testdata/**'
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  build:
-    name: Build & Test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-
-      - uses: actions/setup-go@v6
-        with:
-          go-version: '1.24'
-          cache: false
-
-      - name: Download deps
-        run: go mod download
-
-      - name: Format check
-        run: |
-          unformatted=$(gofmt -l .)
-          if [ -n "$unformatted" ]; then
-            echo "Files not formatted:"
-            echo "$unformatted"
-            exit 1
-          fi
-
-      - name: Vet
-        run: go vet ./...
-
-      - name: Build
-        run: go build -o seaportal ./cmd/seaportal
-
-      - name: Test with coverage
-        run: go test ./... -v -count=1 -race -coverprofile=coverage.out -covermode=atomic
-
-      - name: Coverage summary
-        run: |
-          coverage=$(go tool cover -func=coverage.out | tail -1)
-          echo "### Coverage" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          echo "$coverage" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-
-      - uses: actions/setup-go@v6
-        with:
-          go-version: '1.24'
-          cache: false
-
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v9
-        with:
-          version: v2.1.6
-          args: --timeout=5m
-
-  security:
-    name: Security Scan
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-
-      - uses: actions/setup-go@v6
-        with:
-          go-version: '1.24'
-          cache: false
-
-      - name: Install gosec
-        run: go install github.com/securego/gosec/v2/cmd/gosec@v2.22.4
-
-      - name: Run gosec
-        run: gosec -exclude=G301,G302,G304,G306,G404,G107 -fmt=json -out=gosec-results.json ./... || true
-
-      - name: Check critical findings
-        run: |
-          if [ -f gosec-results.json ]; then
-            ISSUES=$(cat gosec-results.json | jq '[.Issues[] | select(.rule_id == "G112" or .rule_id == "G204")] | length')
-            echo "Critical issues: $ISSUES"
-            if [ "$ISSUES" -gt 0 ]; then
-              cat gosec-results.json | jq '.Issues[] | select(.rule_id == "G112" or .rule_id == "G204")'
-              exit 1
-            fi
-          fi
+  go:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    uses: ./.github/workflows/reusable-go.yml
+    with:
+      ref: ${{ github.sha }}

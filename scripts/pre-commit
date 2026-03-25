@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+staged_go=$(git diff --cached --name-only --diff-filter=ACM | grep '\.go$' || true)
+[ -z "$staged_go" ] && exit 0
+
+# gofmt
+unformatted=$(gofmt -l $staged_go 2>/dev/null || true)
+if [ -n "$unformatted" ]; then
+  echo "gofmt: files not formatted:"
+  echo "$unformatted"
+  exit 1
+fi
+
+# golangci-lint (skip files in sub-modules)
+if command -v golangci-lint &>/dev/null; then
+  dirs=""
+  for d in $(echo "$staged_go" | xargs -n1 dirname | sort -u); do
+    check="$d"
+    in_main=true
+    while [ "$check" != "." ] && [ "$check" != "/" ]; do
+      [ -f "$check/go.mod" ] && in_main=false && break
+      check=$(dirname "$check")
+    done
+    $in_main && dirs="$dirs $d/..."
+  done
+  [ -n "$dirs" ] && golangci-lint run --timeout=5m $dirs
+fi

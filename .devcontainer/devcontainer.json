@@ -1,0 +1,10 @@
+{
+  "name": "SeaPortal",
+  "image": "mcr.microsoft.com/devcontainers/go:1.24",
+  "postCreateCommand": "go mod download && go build ./... && echo 'Ready! Run: ./dev check'",
+  "customizations": {
+    "vscode": {
+      "extensions": ["golang.go"]
+    }
+  }
+}
