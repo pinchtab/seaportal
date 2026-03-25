@@ -1,31 +1,91 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g. 0.1.0)'
+        required: true
+      ref:
+        description: 'Git ref to release (default: main)'
+        required: false
+        default: 'main'
 
 permissions:
   contents: write
 
+concurrency:
+  group: prepare-release-${{ inputs.version }}
+  cancel-in-progress: false
+
 jobs:
-  release:
-    name: Release
+  validate:
+    uses: ./.github/workflows/reusable-validate-release.yml
+    with:
+      version: ${{ inputs.version }}
+      ref: ${{ inputs.ref }}
+
+  go-checks:
+    needs: validate
+    uses: ./.github/workflows/reusable-go.yml
+    with:
+      ref: ${{ needs.validate.outputs.sha }}
+
+  dry-run:
+    name: GoReleaser Dry Run
+    needs: validate
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-
+          ref: ${{ needs.validate.outputs.sha }}
       - uses: actions/setup-go@v6
         with:
-          go-version: '1.24'
-
-      - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v6
-        with:
-          distribution: goreleaser
-          version: latest
-          args: release --clean
+          go-version-file: go.mod
+      - run: |
+          curl -sfL https://goreleaser.com/static/run | VERSION="v2.14.3" bash -s -- release --clean --snapshot
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  approval:
+    name: Manual Approval
+    needs: [validate, go-checks, dry-run]
+    if: >-
+      always() && !cancelled()
+      && needs.validate.result == 'success'
+      && needs.go-checks.result == 'success'
+      && needs.dry-run.result == 'success'
+    runs-on: ubuntu-latest
+    environment:
+      name: release-approval
+    steps:
+      - run: echo "Approved"
+
+  create-tag:
+    name: Create Tag
+    needs: [validate, approval]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.validate.outputs.sha }}
+      - run: |
+          TAG="${{ needs.validate.outputs.tag }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "Release $TAG"
+          git push origin "refs/tags/$TAG"
+
+  publish:
+    needs: [validate, create-tag]
+    permissions:
+      contents: write
+    uses: ./.github/workflows/reusable-release-publish.yml
+    with:
+      ref: refs/tags/${{ needs.validate.outputs.tag }}
+      tag: ${{ needs.validate.outputs.tag }}
+    secrets: inherit
