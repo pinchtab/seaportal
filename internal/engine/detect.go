@@ -168,32 +168,63 @@ func CountMarkdownHeadings(content string) int {
 	return len(headingRe.FindAllString(content, -1))
 }
 
-// extractMarkdownTitle returns the first heading or the YAML title from markdown frontmatter.
+// extractMarkdownTitle returns the first heading or the YAML title from
+// markdown frontmatter.
 func extractMarkdownTitle(content string) string {
-	// Try YAML frontmatter title: field
-	if strings.HasPrefix(content, "---") {
-		endIdx := strings.Index(content[3:], "---")
-		if endIdx > 0 {
-			fm := content[3 : 3+endIdx]
-			for _, line := range strings.Split(fm, "\n") {
-				line = strings.TrimSpace(line)
-				if strings.HasPrefix(line, "title:") {
-					title := strings.TrimSpace(strings.TrimPrefix(line, "title:"))
-					title = strings.Trim(title, `"'`)
-					if title != "" {
-						return title
-					}
-				}
+	if fm, ok := readYAMLFrontmatter(content); ok {
+		for _, line := range strings.Split(fm, "\n") {
+			line = strings.TrimSpace(line)
+			if !strings.HasPrefix(line, "title:") {
+				continue
+			}
+			title := strings.TrimSpace(strings.TrimPrefix(line, "title:"))
+			title = strings.Trim(title, `"'`)
+			if title != "" {
+				return title
 			}
 		}
 	}
-	// Fall back to first heading
 	headingRe := regexp.MustCompile(`(?m)^#{1,6}\s+(.+)$`)
-	m := headingRe.FindStringSubmatch(content)
-	if len(m) > 1 {
+	if m := headingRe.FindStringSubmatch(content); len(m) > 1 {
 		return strings.TrimSpace(m[1])
 	}
 	return ""
+}
+
+// readYAMLFrontmatter returns the body between a leading "---" delimiter
+// line and a subsequent closing "---" delimiter line, and reports whether
+// the block was properly closed. Walks line-by-line so a "---" substring
+// inside a quoted value (e.g. title: "Hello --- world") does not terminate
+// the block — a substring search would.
+func readYAMLFrontmatter(content string) (string, bool) {
+	switch {
+	case strings.HasPrefix(content, "---\n"):
+		content = content[4:]
+	case strings.HasPrefix(content, "---\r\n"):
+		content = content[5:]
+	default:
+		return "", false
+	}
+	var fm strings.Builder
+	for content != "" {
+		nl := strings.IndexByte(content, '\n')
+		var line string
+		if nl < 0 {
+			line = content
+			content = ""
+		} else {
+			line = content[:nl]
+			content = content[nl+1:]
+		}
+		if strings.TrimRight(line, "\r") == "---" {
+			return fm.String(), true
+		}
+		if fm.Len() > 0 {
+			fm.WriteByte('\n')
+		}
+		fm.WriteString(line)
+	}
+	return "", false
 }
 
 // countMarkdownParagraphs counts non-empty, non-heading, non-list text blocks.
