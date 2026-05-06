@@ -351,31 +351,53 @@ func FromURLWithOptions(targetURL string, opts Options) Result {
 		respContentType = resp.Header.Get("Content-Type")
 	}
 
-	// If server returned markdown directly, use it as-is
+	// If server returned markdown directly, use it as-is.
+	// Only treat as a successful extraction on 200 OK — non-2xx markdown bodies
+	// are still error pages and must not get Confidence=100 / OutcomeExtract.
 	if strings.Contains(respContentType, "text/markdown") {
-		result.Content = CleanupMarkdown(html)
-		result.Length = len(result.Content)
+		content := CleanupMarkdown(html)
+
+		// Apply dedupe before computing derived metrics so fingerprint, counts,
+		// quality, and validation all reflect the final content.
+		if opts.Dedupe && content != "" {
+			dedupeResult := Dedupe(content)
+			content = dedupeResult.Content
+			result.DedupeApplied = true
+			result.DuplicatesRemoved = dedupeResult.DuplicatesFound
+			result.DuplicateSignals = dedupeResult.DuplicateSignals
+			result.OriginalBlockCount = dedupeResult.OriginalBlocks
+			result.UniqueBlockCount = dedupeResult.UniqueBlocks
+		}
+
+		result.Content = content
+		result.Length = len(content)
 		result.TimeMs = time.Since(start).Milliseconds()
 		result.FetchTimeMs = fetchTimeMs
 		result.StatusCode = resp.StatusCode
 		result.ContentLength = contentLength
-		result.Confidence = 100
 		result.ResponseContentType = respContentType
-		result.Profile = PageProfile{
-			Class:       PageSSR,
-			Outcome:     OutcomeExtract,
-			Reasons:     []string{"content-negotiation-markdown"},
-			Confidence:  100,
-			Trustworthy: true,
-		}
-		// Extract title from markdown frontmatter or first heading
-		result.Title = extractMarkdownTitle(result.Content)
-		result.HeadingCount = CountMarkdownHeadings(result.Content)
-		result.LinkCount = CountMarkdownLinks(result.Content)
-		result.ParagraphCount = countMarkdownParagraphs(result.Content)
-		result.QualityInfo = ComputeQuality(result.Content)
+		result.Title = extractMarkdownTitle(content)
+		result.HeadingCount = CountMarkdownHeadings(content)
+		result.LinkCount = CountMarkdownLinks(content)
+		result.ParagraphCount = countMarkdownParagraphs(content)
+		result.QualityInfo = ComputeQuality(content)
 		result.Quality = result.QualityInfo.Score
-		result.Fingerprint = SemanticFingerprint(result.Content)
+		result.Fingerprint = SemanticFingerprint(content)
+		result.HasLLMContent = detectLLMContent(content)
+
+		if resp.StatusCode == http.StatusOK {
+			result.Confidence = 100
+			result.Profile = PageProfile{
+				Class:       PageSSR,
+				Outcome:     OutcomeExtract,
+				Reasons:     []string{"content-negotiation-markdown"},
+				Confidence:  100,
+				Trustworthy: true,
+			}
+		} else {
+			result.Confidence = ComputeConfidence(result.Length, result.HeadingCount, result.ParagraphCount, 0, false)
+		}
+
 		result.Validation = ValidateExtraction(&result)
 
 		// Capture LLMs.txt link if present
@@ -389,9 +411,6 @@ func FromURLWithOptions(targetURL string, opts Options) Result {
 			result.LLMsTxtURL = xLLMsTxt
 		}
 
-		// Detect LLM-specific content.
-		result.HasLLMContent = detectLLMContent(result.Content)
-
 		populateResponseHeaders(&result, resp)
 		result.TraceFormats, result.TraceCorrelation = computeTraceInfo(result)
 		result.CDNProvider, result.CDNSignals = fingerprintCDN(result)
@@ -401,22 +420,16 @@ func FromURLWithOptions(targetURL string, opts Options) Result {
 		result.RequestID = opts.RequestID
 		result.TTFBMs = ttfbMs
 		result.DownloadMs = downloadMs
+		result.RetryCount = retryCount
+		result.TotalRetryWait = totalRetryWait
+		result.HeadPreflightStatus = headPreflightStatus
 		result.RedirectCount = len(tracker.chain)
 		result.RedirectChain = tracker.chain
 		if resp.Request != nil && resp.Request.URL != nil {
 			result.FinalURL = resp.Request.URL.String()
 		}
 
-		if opts.Dedupe && result.Content != "" {
-			dedupeResult := Dedupe(result.Content)
-			result.Content = dedupeResult.Content
-			result.Length = len(result.Content)
-			result.DedupeApplied = true
-			result.DuplicatesRemoved = dedupeResult.DuplicatesFound
-			result.DuplicateSignals = dedupeResult.DuplicateSignals
-			result.OriginalBlockCount = dedupeResult.OriginalBlocks
-			result.UniqueBlockCount = dedupeResult.UniqueBlocks
-		}
+		applyStatusBlockedProfile(&result, resp.StatusCode)
 
 		return result
 	}
@@ -477,34 +490,37 @@ func FromURLWithOptions(targetURL string, opts Options) Result {
 		result.Soft404Hints = soft404Hints
 	}
 
-	// HTTP status code awareness: 401/403/429/502/503/504 are strong blocked signals
-	// (502/504 only after retries exhausted - they reach here if still failing)
-	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden ||
-		resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode == http.StatusBadGateway ||
-		resp.StatusCode == http.StatusServiceUnavailable || resp.StatusCode == http.StatusGatewayTimeout {
-		result.IsBlocked = true
-		result.Profile.Class = PageBlocked
-		result.Profile.Outcome = OutcomeNeedsBrowser
-		result.Profile.Trustworthy = false
-		var statusReason string
-		switch resp.StatusCode {
-		case http.StatusUnauthorized:
-			statusReason = "http-401-unauthorized"
-		case http.StatusForbidden:
-			statusReason = "http-403-forbidden"
-		case http.StatusTooManyRequests:
-			statusReason = "http-429-rate-limited"
-		case http.StatusBadGateway:
-			statusReason = "http-502-bad-gateway"
-		case http.StatusServiceUnavailable:
-			statusReason = "http-503-service-unavailable"
-		case http.StatusGatewayTimeout:
-			statusReason = "http-504-gateway-timeout"
-		}
-		result.Profile.Reasons = append(result.Profile.Reasons, statusReason)
-	}
+	applyStatusBlockedProfile(&result, resp.StatusCode)
 
 	return result
+}
+
+// applyStatusBlockedProfile marks the result as blocked when the HTTP status
+// is a strong blocked signal (401/403/429/502/503/504). No-op for other
+// statuses, so callers can apply it unconditionally on any extraction path.
+func applyStatusBlockedProfile(result *Result, statusCode int) {
+	var reason string
+	switch statusCode {
+	case http.StatusUnauthorized:
+		reason = "http-401-unauthorized"
+	case http.StatusForbidden:
+		reason = "http-403-forbidden"
+	case http.StatusTooManyRequests:
+		reason = "http-429-rate-limited"
+	case http.StatusBadGateway:
+		reason = "http-502-bad-gateway"
+	case http.StatusServiceUnavailable:
+		reason = "http-503-service-unavailable"
+	case http.StatusGatewayTimeout:
+		reason = "http-504-gateway-timeout"
+	default:
+		return
+	}
+	result.IsBlocked = true
+	result.Profile.Class = PageBlocked
+	result.Profile.Outcome = OutcomeNeedsBrowser
+	result.Profile.Trustworthy = false
+	result.Profile.Reasons = append(result.Profile.Reasons, reason)
 }
 
 func FromHTML(html string, targetURL string) Result {

@@ -168,6 +168,105 @@ func TestDedupe(t *testing.T) {
 	}
 }
 
+// TestFromURL_Markdown404NotSuccess is a regression test for the bug where
+// any text/markdown response was treated as a successful extraction with
+// Confidence=100 / Profile.Outcome=extract, regardless of HTTP status. A
+// 404 + text/markdown is still an error page and must not be classified
+// as a trustworthy extraction.
+func TestFromURL_Markdown404NotSuccess(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/markdown")
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = w.Write([]byte("# Not Found\n\nThe requested resource does not exist on this server.\n"))
+	}))
+	defer server.Close()
+
+	result := FromURL(server.URL)
+
+	if result.StatusCode != http.StatusNotFound {
+		t.Errorf("StatusCode = %d, want 404", result.StatusCode)
+	}
+	if result.Confidence == 100 {
+		t.Errorf("Confidence = 100 on a 404 response — must not be hardcoded to max for non-2xx markdown")
+	}
+	if result.Profile.Outcome == OutcomeExtract {
+		t.Errorf("Profile.Outcome = %q on 404, must not be %q", result.Profile.Outcome, OutcomeExtract)
+	}
+	if result.Profile.Class == PageSSR {
+		t.Errorf("Profile.Class = %q on 404, must not be %q", result.Profile.Class, PageSSR)
+	}
+	if result.Profile.Trustworthy {
+		t.Error("Profile.Trustworthy = true on 404 — must be false for error responses")
+	}
+}
+
+// TestFromURL_Markdown503Blocked verifies that markdown responses with a
+// blocked-status code (503 here) still get the blocked-profile classification.
+func TestFromURL_Markdown503Blocked(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/markdown")
+		w.WriteHeader(http.StatusServiceUnavailable)
+		_, _ = w.Write([]byte("# Service Unavailable\n\nPlease retry later.\n"))
+	}))
+	defer server.Close()
+
+	result := FromURLWithOptions(server.URL, Options{MaxRetries: 0})
+
+	if !result.IsBlocked {
+		t.Error("IsBlocked = false on 503 markdown response, want true")
+	}
+	if result.Profile.Class != PageBlocked {
+		t.Errorf("Profile.Class = %q on 503, want %q", result.Profile.Class, PageBlocked)
+	}
+	if result.Profile.Outcome != OutcomeNeedsBrowser {
+		t.Errorf("Profile.Outcome = %q on 503, want %q", result.Profile.Outcome, OutcomeNeedsBrowser)
+	}
+}
+
+// TestFromURL_MarkdownDedupeRecomputes is a regression test for the bug where
+// the markdown fast-path applied dedupe AFTER computing fingerprint /
+// paragraph count / quality, so derived fields drifted from the actual
+// returned content. With the fix, dedupe runs before metric computation and
+// every derived field reflects the final deduped content.
+func TestFromURL_MarkdownDedupeRecomputes(t *testing.T) {
+	body := "# Title\n\n" +
+		"This duplicate paragraph appears multiple times in this fixture content body.\n\n" +
+		"This duplicate paragraph appears multiple times in this fixture content body.\n\n" +
+		"This duplicate paragraph appears multiple times in this fixture content body.\n\n" +
+		"A genuinely unique closing paragraph that should remain after dedupe.\n"
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/markdown")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(body))
+	}))
+	defer server.Close()
+
+	result := FromURLWithOptions(server.URL, Options{Dedupe: true})
+
+	if !result.DedupeApplied {
+		t.Fatal("DedupeApplied = false, expected true")
+	}
+	if result.DuplicatesRemoved == 0 {
+		t.Fatal("DuplicatesRemoved = 0, expected duplicates to be removed for this fixture")
+	}
+	if result.Length != len(result.Content) {
+		t.Errorf("Length (%d) != len(Content) (%d) — Length not recomputed after dedupe", result.Length, len(result.Content))
+	}
+	if got, want := result.Fingerprint, SemanticFingerprint(result.Content); got != want {
+		t.Errorf("Fingerprint not recomputed after dedupe:\n  got:  %s\n  want: %s", got, want)
+	}
+	if got, want := result.ParagraphCount, countMarkdownParagraphs(result.Content); got != want {
+		t.Errorf("ParagraphCount = %d, want %d (countMarkdownParagraphs of final Content)", got, want)
+	}
+	if got, want := result.HeadingCount, CountMarkdownHeadings(result.Content); got != want {
+		t.Errorf("HeadingCount = %d, want %d", got, want)
+	}
+	if got, want := result.LinkCount, CountMarkdownLinks(result.Content); got != want {
+		t.Errorf("LinkCount = %d, want %d", got, want)
+	}
+}
+
 func TestFastMode(t *testing.T) {
 	// SPA-like page that should trigger fast bailout
 	html := `<!DOCTYPE html>

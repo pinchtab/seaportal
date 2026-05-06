@@ -55,58 +55,168 @@ func init() {
 	}
 }
 
-// removeAttrElements removes elements where an opening tag contains a specific attribute pattern.
-// Since Go regexp doesn't support backreferences, we find the opening tag, extract the tag name,
-// then find the matching closing tag. Collects all ranges first, then removes in one pass.
+// removeAttrElements removes elements (and their content) whose opening tag
+// matches attrPattern. Walks the input once, tracking nesting depth so the
+// close tag belongs to the matched opening tag — naive `strings.Index` of
+// `</tag` would match the first inner close on nested same-tag markup and
+// leave the outer close behind as broken HTML.
 func removeAttrElements(html string, attrPattern *regexp.Regexp) string {
 	reOpenTag := regexp.MustCompile(`(?i)<([a-z][a-z0-9]*)\b[^>]*` + attrPattern.String() + `[^>]*>`)
 
-	// Quick check: if the pattern can't possibly match, skip.
-	matches := reOpenTag.FindAllStringSubmatchIndex(html, -1)
-	if len(matches) == 0 {
-		return html
-	}
+	var sb strings.Builder
+	sb.Grow(len(html))
 
-	// Collect removal ranges (start, end) — process from last to first to avoid index shifts.
-	type removeRange struct{ start, end int }
-	var ranges []removeRange
+	pos := 0
+	for pos < len(html) {
+		loc := reOpenTag.FindStringSubmatchIndex(html[pos:])
+		if loc == nil {
+			sb.WriteString(html[pos:])
+			return sb.String()
+		}
+		matchStart := pos + loc[0]
+		matchEnd := pos + loc[1]
+		tagName := strings.ToLower(html[pos+loc[2] : pos+loc[3]])
 
-	for _, loc := range matches {
-		tagName := strings.ToLower(html[loc[2]:loc[3]])
-		openEnd := loc[1]
+		sb.WriteString(html[pos:matchStart])
 
-		closeTag := "</" + tagName
-		closeIdx := strings.Index(strings.ToLower(html[openEnd:]), closeTag)
-		if closeIdx == -1 {
-			ranges = append(ranges, removeRange{loc[0], openEnd})
+		// Self-closing (`<tag … />`) or void element: no close tag to find.
+		if (matchEnd-matchStart >= 2 && html[matchEnd-2] == '/') || isVoidElement(tagName) {
+			pos = matchEnd
 			continue
 		}
 
-		closeAbsIdx := openEnd + closeIdx
-		closeEnd := strings.Index(html[closeAbsIdx:], ">")
-		if closeEnd == -1 {
-			closeEnd = len(html[closeAbsIdx:])
+		closeEnd := findMatchingClose(html, matchEnd, tagName)
+		if closeEnd < 0 {
+			// Unclosed: drop just the opening tag.
+			pos = matchEnd
+			continue
 		}
-		ranges = append(ranges, removeRange{loc[0], closeAbsIdx + closeEnd + 1})
+		pos = closeEnd
 	}
 
-	if len(ranges) == 0 {
-		return html
-	}
-
-	// Build result by copying non-removed segments.
-	var sb strings.Builder
-	sb.Grow(len(html))
-	pos := 0
-	for _, r := range ranges {
-		if r.start < pos {
-			continue // Overlapping range, skip.
-		}
-		sb.WriteString(html[pos:r.start])
-		pos = r.end
-	}
-	sb.WriteString(html[pos:])
 	return sb.String()
+}
+
+// findMatchingClose returns the absolute index just past the '>' of the
+// </tagName> close that balances an opening tag at openEnd, or -1 if no
+// balanced close exists before end-of-input.
+//
+// Tracks nesting depth so `<div><div>x</div></div>` resolves to the outer
+// close. Self-closing forms (`<tag/>`) do not push depth. Quoted attribute
+// values are skipped so `>` characters inside attributes are ignored.
+func findMatchingClose(html string, openEnd int, tagName string) int {
+	depth := 1
+	i := openEnd
+	n := len(html)
+	for i < n {
+		lt := strings.IndexByte(html[i:], '<')
+		if lt < 0 {
+			return -1
+		}
+		i += lt
+		if i+1 >= n {
+			return -1
+		}
+		if html[i+1] == '/' {
+			if hasTagPrefix(html[i+2:], tagName) {
+				gt := strings.IndexByte(html[i:], '>')
+				if gt < 0 {
+					return -1
+				}
+				depth--
+				if depth == 0 {
+					return i + gt + 1
+				}
+				i += gt + 1
+				continue
+			}
+			gt := strings.IndexByte(html[i:], '>')
+			if gt < 0 {
+				return -1
+			}
+			i += gt + 1
+			continue
+		}
+		if hasTagPrefix(html[i+1:], tagName) {
+			tagEnd, selfClosing := scanTagEnd(html, i)
+			if tagEnd < 0 {
+				return -1
+			}
+			if !selfClosing && !isVoidElement(tagName) {
+				depth++
+			}
+			i = tagEnd
+			continue
+		}
+		gt := strings.IndexByte(html[i:], '>')
+		if gt < 0 {
+			return -1
+		}
+		i += gt + 1
+	}
+	return -1
+}
+
+// hasTagPrefix reports whether s begins with tagName followed by an HTML
+// tag-name terminator (whitespace, '/', or '>'). Case-insensitive.
+func hasTagPrefix(s, tagName string) bool {
+	if len(s) < len(tagName) {
+		return false
+	}
+	if !strings.EqualFold(s[:len(tagName)], tagName) {
+		return false
+	}
+	if len(s) == len(tagName) {
+		return true
+	}
+	return isAttrTerminator(s[len(tagName)])
+}
+
+// scanTagEnd returns the absolute index just past the '>' of the tag opening
+// at i, and whether the tag is self-closing ('/>'). Skips '>' bytes inside
+// quoted attribute values.
+func scanTagEnd(html string, i int) (int, bool) {
+	j := i + 1
+	n := len(html)
+	for j < n {
+		switch c := html[j]; c {
+		case '"', '\'':
+			k := strings.IndexByte(html[j+1:], c)
+			if k < 0 {
+				return -1, false
+			}
+			j += k + 2
+		case '>':
+			selfClosing := j > i+1 && html[j-1] == '/'
+			return j + 1, selfClosing
+		default:
+			j++
+		}
+	}
+	return -1, false
+}
+
+// HTML void elements have no closing tag.
+// https://html.spec.whatwg.org/multipage/syntax.html#void-elements
+var voidElements = map[string]bool{
+	"area":   true,
+	"base":   true,
+	"br":     true,
+	"col":    true,
+	"embed":  true,
+	"hr":     true,
+	"img":    true,
+	"input":  true,
+	"link":   true,
+	"meta":   true,
+	"param":  true,
+	"source": true,
+	"track":  true,
+	"wbr":    true,
+}
+
+func isVoidElement(tag string) bool {
+	return voidElements[tag]
 }
 
 // Pre-compiled attribute patterns for element removal.
@@ -229,9 +339,10 @@ func isAttrTerminator(b byte) bool {
 	return b == ' ' || b == '\t' || b == '\n' || b == '\r' || b == '/' || b == '>'
 }
 
-// removeHiddenAttrElements removes elements with the HTML hidden attribute.
-// Uses a quote-aware attribute scanner to avoid matching "hidden" inside
-// attribute values (e.g. class="visually-hidden").
+// removeHiddenAttrElements removes elements with the HTML hidden boolean
+// attribute. Uses a quote-aware attribute scanner so "hidden" inside
+// attribute values (e.g. class="visually-hidden") is not matched, and
+// findMatchingClose so nested same-tag markup resolves to the right close.
 func removeHiddenAttrElements(html string) string {
 	var out strings.Builder
 	out.Grow(len(html))
@@ -259,22 +370,20 @@ func removeHiddenAttrElements(html string) string {
 		}
 
 		tagName := strings.ToLower(html[tagStart:tagEnd])
-		closeTag := "</" + tagName
-		closeIdx := strings.Index(strings.ToLower(html[matchEnd:]), closeTag)
-		if closeIdx == -1 {
-			// Void or unclosed tag — drop just the open tag.
-			out.WriteString(html[pos:matchStart])
+
+		out.WriteString(html[pos:matchStart])
+
+		if (matchEnd-matchStart >= 2 && html[matchEnd-2] == '/') || isVoidElement(tagName) {
 			pos = matchEnd
 			continue
 		}
-		closeAbsIdx := matchEnd + closeIdx
-		closeGtIdx := strings.Index(html[closeAbsIdx:], ">")
-		if closeGtIdx == -1 {
-			out.WriteString(html[pos:matchStart])
-			break
+
+		closeEnd := findMatchingClose(html, matchEnd, tagName)
+		if closeEnd < 0 {
+			pos = matchEnd
+			continue
 		}
-		out.WriteString(html[pos:matchStart])
-		pos = closeAbsIdx + closeGtIdx + 1
+		pos = closeEnd
 	}
 	return out.String()
 }
