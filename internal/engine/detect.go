@@ -213,24 +213,40 @@ func countMarkdownParagraphs(content string) int {
 	return count
 }
 
-// extractLLMsTxtURL parses a Link header for rel="llms-txt" or rel="llms-full-txt".
+var (
+	reLinkURL = regexp.MustCompile(`<([^>]+)>`)
+	reLinkRel = regexp.MustCompile(`(?i)\brel\s*=\s*["']?([a-zA-Z0-9_-]+)["']?`)
+)
+
+// extractLLMsTxtURL parses a Link header and returns the URL whose rel is
+// "llms-full-txt" if present, falling back to "llms-txt". The earlier
+// implementation OR'd both and returned whichever appeared first, so a
+// header listing llms-txt before llms-full-txt would yield the smaller doc
+// despite the comment claiming preference.
+//
+// Example: `</llms.txt>; rel="llms-txt", </llms-full.txt>; rel="llms-full-txt"`
+// returns `/llms-full.txt` regardless of order.
 func extractLLMsTxtURL(linkHeader string) string {
-	// Parse Link: </llms.txt>; rel="llms-txt", </llms-full.txt>; rel="llms-full-txt"
-	for _, part := range strings.Split(linkHeader, ",") {
-		part = strings.TrimSpace(part)
-		if !strings.Contains(part, "llms") {
-			continue
-		}
-		// Prefer llms-full-txt over llms-txt
-		if strings.Contains(part, "llms-full-txt") || strings.Contains(part, "llms-txt") {
-			urlRe := regexp.MustCompile(`<([^>]+)>`)
-			m := urlRe.FindStringSubmatch(part)
-			if len(m) > 1 {
+	parts := strings.Split(linkHeader, ",")
+
+	findRel := func(want string) string {
+		for _, part := range parts {
+			part = strings.TrimSpace(part)
+			rel := reLinkRel.FindStringSubmatch(part)
+			if len(rel) < 2 || !strings.EqualFold(rel[1], want) {
+				continue
+			}
+			if m := reLinkURL.FindStringSubmatch(part); len(m) > 1 {
 				return m[1]
 			}
 		}
+		return ""
 	}
-	return ""
+
+	if u := findRel("llms-full-txt"); u != "" {
+		return u
+	}
+	return findRel("llms-txt")
 }
 
 // CountMarkdownLinks counts Markdown-style links [text](url) in content.

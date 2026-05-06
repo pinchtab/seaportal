@@ -317,10 +317,14 @@ func FromURLWithOptions(targetURL string, opts Options) Result {
 	contentLength := int64(len(bodyBytes))
 	fetchTimeMs := time.Since(start).Milliseconds()
 
-	// Content negotiation fallback: some servers (e.g., Next.js) return 404/error
-	// when text/markdown is the primary Accept type. Retry with HTML-only accept.
+	// Content negotiation fallback: some servers reject `Accept: text/markdown`
+	// outright — Next.js etc. 404 the request, spec-compliant servers return
+	// 406 Not Acceptable. Retry with an HTML-only Accept so we still get a
+	// usable response. Skip when the body actually IS markdown (server
+	// understood the request, the error is about the resource itself).
 	respContentType := resp.Header.Get("Content-Type")
-	if resp.StatusCode == http.StatusNotFound && !strings.Contains(respContentType, "text/markdown") {
+	negotiationFailed := resp.StatusCode == http.StatusNotFound || resp.StatusCode == http.StatusNotAcceptable
+	if negotiationFailed && !strings.Contains(respContentType, "text/markdown") {
 		// Close current response and retry with standard HTML accept header
 		_ = resp.Body.Close()
 		req = newGETRequest(targetURL, userAgent, opts.RequestID, opts.SendRequestID)

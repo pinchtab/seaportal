@@ -200,6 +200,53 @@ func TestFromURL_Markdown404NotSuccess(t *testing.T) {
 	}
 }
 
+// TestFromURL_Markdown406RetriesAsHTML is a regression test for the bug where
+// the content-negotiation retry only fired on 404. Spec-compliant servers
+// return 406 Not Acceptable when they cannot satisfy `Accept: text/markdown`,
+// and SeaPortal was extracting the 406 error body as content instead of
+// retrying with an HTML-only Accept.
+func TestFromURL_Markdown406RetriesAsHTML(t *testing.T) {
+	var attempts int
+	var firstAccept, secondAccept string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		attempts++
+		accept := r.Header.Get("Accept")
+		if strings.Contains(accept, "text/markdown") {
+			firstAccept = accept
+			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+			w.WriteHeader(http.StatusNotAcceptable)
+			_, _ = w.Write([]byte("not acceptable"))
+			return
+		}
+		secondAccept = accept
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`<html><body><article><h1>Recovered</h1>` +
+			`<p>This paragraph is intentionally long enough to clear readability's body-length floor ` +
+			`so the test does not depend on borderline scoring inside the extraction pipeline.</p>` +
+			`</article></body></html>`))
+	}))
+	defer server.Close()
+
+	result := FromURL(server.URL)
+
+	if attempts != 2 {
+		t.Fatalf("attempts = %d, want 2 (initial 406 + HTML retry)", attempts)
+	}
+	if !strings.Contains(firstAccept, "text/markdown") {
+		t.Errorf("first request Accept missing markdown: %q", firstAccept)
+	}
+	if strings.Contains(secondAccept, "text/markdown") {
+		t.Errorf("retry Accept should not include markdown: %q", secondAccept)
+	}
+	if result.StatusCode != http.StatusOK {
+		t.Errorf("StatusCode = %d, want 200 after retry", result.StatusCode)
+	}
+	if !strings.Contains(result.Content, "Recovered") {
+		t.Errorf("retry HTML not extracted; content = %q", result.Content)
+	}
+}
+
 // TestFromURL_Markdown503Blocked verifies that markdown responses with a
 // blocked-status code (503 here) still get the blocked-profile classification.
 func TestFromURL_Markdown503Blocked(t *testing.T) {
