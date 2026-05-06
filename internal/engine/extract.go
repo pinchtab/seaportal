@@ -39,6 +39,11 @@ const DefaultUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleW
 
 const DefaultAcceptEncoding = "gzip, deflate, br"
 
+// DefaultAccept is the Accept header used for standard requests.
+// Prefers markdown (for content-negotiation-aware servers like Mintlify/Cloudflare),
+// then falls through to standard HTML extraction.
+const DefaultAccept = "text/markdown, text/html;q=0.9, application/xhtml+xml;q=0.8, application/xml;q=0.7, */*;q=0.1"
+
 // newGETRequest creates a standard GET request with common headers.
 // If userAgent is empty, DefaultUserAgent is used.
 // If requestID is non-empty and sendRequestID is true, adds X-Request-ID header.
@@ -48,7 +53,7 @@ func newGETRequest(targetURL string, userAgent string, requestID string, sendReq
 		userAgent = DefaultUserAgent
 	}
 	req.Header.Set("User-Agent", userAgent)
-	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8")
+	req.Header.Set("Accept", DefaultAccept)
 	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
 	req.Header.Set("Accept-Encoding", DefaultAcceptEncoding)
 	// Sec-* headers for Cloudflare bypass — modern browsers always send these
@@ -312,6 +317,127 @@ func FromURLWithOptions(targetURL string, opts Options) Result {
 	contentLength := int64(len(bodyBytes))
 	fetchTimeMs := time.Since(start).Milliseconds()
 
+	// Content negotiation fallback: some servers reject `Accept: text/markdown`
+	// outright — Next.js etc. 404 the request, spec-compliant servers return
+	// 406 Not Acceptable. Retry with an HTML-only Accept so we still get a
+	// usable response. Skip when the body actually IS markdown (server
+	// understood the request, the error is about the resource itself).
+	respContentType := resp.Header.Get("Content-Type")
+	negotiationFailed := resp.StatusCode == http.StatusNotFound || resp.StatusCode == http.StatusNotAcceptable
+	if negotiationFailed && !strings.Contains(respContentType, "text/markdown") {
+		// Close current response and retry with standard HTML accept header
+		_ = resp.Body.Close()
+		req = newGETRequest(targetURL, userAgent, opts.RequestID, opts.SendRequestID)
+		req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8")
+		resp, err = client.Do(req)
+		if err != nil {
+			result.Error = err.Error()
+			return result
+		}
+		defer func() { _ = resp.Body.Close() }()
+
+		// Re-read body
+		bodyBytes, err = io.ReadAll(resp.Body)
+		if err != nil {
+			result.Error = err.Error()
+			return result
+		}
+		contentEncoding = strings.ToLower(resp.Header.Get("Content-Encoding"))
+		if contentEncoding != "" {
+			decompressed, decompErr := decompressBody(bodyBytes, contentEncoding)
+			if decompErr == nil {
+				bodyBytes = decompressed
+			}
+		}
+		html = string(bodyBytes)
+		contentLength = int64(len(bodyBytes))
+		fetchTimeMs = time.Since(start).Milliseconds()
+		respContentType = resp.Header.Get("Content-Type")
+	}
+
+	// If server returned markdown directly, use it as-is.
+	// Only treat as a successful extraction on 200 OK — non-2xx markdown bodies
+	// are still error pages and must not get Confidence=100 / OutcomeExtract.
+	if strings.Contains(respContentType, "text/markdown") {
+		content := CleanupMarkdown(html)
+
+		// Apply dedupe before computing derived metrics so fingerprint, counts,
+		// quality, and validation all reflect the final content.
+		if opts.Dedupe && content != "" {
+			dedupeResult := Dedupe(content)
+			content = dedupeResult.Content
+			result.DedupeApplied = true
+			result.DuplicatesRemoved = dedupeResult.DuplicatesFound
+			result.DuplicateSignals = dedupeResult.DuplicateSignals
+			result.OriginalBlockCount = dedupeResult.OriginalBlocks
+			result.UniqueBlockCount = dedupeResult.UniqueBlocks
+		}
+
+		result.Content = content
+		result.Length = len(content)
+		result.TimeMs = time.Since(start).Milliseconds()
+		result.FetchTimeMs = fetchTimeMs
+		result.StatusCode = resp.StatusCode
+		result.ContentLength = contentLength
+		result.ResponseContentType = respContentType
+		result.Title = extractMarkdownTitle(content)
+		result.HeadingCount = CountMarkdownHeadings(content)
+		result.LinkCount = CountMarkdownLinks(content)
+		result.ParagraphCount = countMarkdownParagraphs(content)
+		result.QualityInfo = ComputeQuality(content)
+		result.Quality = result.QualityInfo.Score
+		result.Fingerprint = SemanticFingerprint(content)
+		result.HasLLMContent = detectLLMContent(content)
+
+		if resp.StatusCode == http.StatusOK {
+			result.Confidence = 100
+			result.Profile = PageProfile{
+				Class:       PageSSR,
+				Outcome:     OutcomeExtract,
+				Reasons:     []string{"content-negotiation-markdown"},
+				Confidence:  100,
+				Trustworthy: true,
+			}
+		} else {
+			result.Confidence = ComputeConfidence(result.Length, result.HeadingCount, result.ParagraphCount, 0, false)
+		}
+
+		result.Validation = ValidateExtraction(&result)
+
+		// Capture LLMs.txt link if present
+		linkHeader := resp.Header.Get("Link")
+		if linkHeader != "" {
+			result.ResponseLink = linkHeader
+			result.LLMsTxtURL = extractLLMsTxtURL(linkHeader)
+		}
+		xLLMsTxt := resp.Header.Get("X-LLMs-Txt")
+		if xLLMsTxt != "" && result.LLMsTxtURL == "" {
+			result.LLMsTxtURL = xLLMsTxt
+		}
+
+		populateResponseHeaders(&result, resp)
+		result.TraceFormats, result.TraceCorrelation = computeTraceInfo(result)
+		result.CDNProvider, result.CDNSignals = fingerprintCDN(result)
+		result.ViaHops = parseViaHeader(result.ResponseVia)
+		result.ProxyLayers = len(result.ViaHops)
+		result.RequestAcceptEncoding = DefaultAcceptEncoding
+		result.RequestID = opts.RequestID
+		result.TTFBMs = ttfbMs
+		result.DownloadMs = downloadMs
+		result.RetryCount = retryCount
+		result.TotalRetryWait = totalRetryWait
+		result.HeadPreflightStatus = headPreflightStatus
+		result.RedirectCount = len(tracker.chain)
+		result.RedirectChain = tracker.chain
+		if resp.Request != nil && resp.Request.URL != nil {
+			result.FinalURL = resp.Request.URL.String()
+		}
+
+		applyStatusBlockedProfile(&result, resp.StatusCode)
+
+		return result
+	}
+
 	if opts.FastMode {
 		needsBrowser, reason := QuickNeedsBrowser(html)
 		if needsBrowser {
@@ -368,34 +494,37 @@ func FromURLWithOptions(targetURL string, opts Options) Result {
 		result.Soft404Hints = soft404Hints
 	}
 
-	// HTTP status code awareness: 401/403/429/502/503/504 are strong blocked signals
-	// (502/504 only after retries exhausted - they reach here if still failing)
-	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden ||
-		resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode == http.StatusBadGateway ||
-		resp.StatusCode == http.StatusServiceUnavailable || resp.StatusCode == http.StatusGatewayTimeout {
-		result.IsBlocked = true
-		result.Profile.Class = PageBlocked
-		result.Profile.Outcome = OutcomeNeedsBrowser
-		result.Profile.Trustworthy = false
-		var statusReason string
-		switch resp.StatusCode {
-		case http.StatusUnauthorized:
-			statusReason = "http-401-unauthorized"
-		case http.StatusForbidden:
-			statusReason = "http-403-forbidden"
-		case http.StatusTooManyRequests:
-			statusReason = "http-429-rate-limited"
-		case http.StatusBadGateway:
-			statusReason = "http-502-bad-gateway"
-		case http.StatusServiceUnavailable:
-			statusReason = "http-503-service-unavailable"
-		case http.StatusGatewayTimeout:
-			statusReason = "http-504-gateway-timeout"
-		}
-		result.Profile.Reasons = append(result.Profile.Reasons, statusReason)
-	}
+	applyStatusBlockedProfile(&result, resp.StatusCode)
 
 	return result
+}
+
+// applyStatusBlockedProfile marks the result as blocked when the HTTP status
+// is a strong blocked signal (401/403/429/502/503/504). No-op for other
+// statuses, so callers can apply it unconditionally on any extraction path.
+func applyStatusBlockedProfile(result *Result, statusCode int) {
+	var reason string
+	switch statusCode {
+	case http.StatusUnauthorized:
+		reason = "http-401-unauthorized"
+	case http.StatusForbidden:
+		reason = "http-403-forbidden"
+	case http.StatusTooManyRequests:
+		reason = "http-429-rate-limited"
+	case http.StatusBadGateway:
+		reason = "http-502-bad-gateway"
+	case http.StatusServiceUnavailable:
+		reason = "http-503-service-unavailable"
+	case http.StatusGatewayTimeout:
+		reason = "http-504-gateway-timeout"
+	default:
+		return
+	}
+	result.IsBlocked = true
+	result.Profile.Class = PageBlocked
+	result.Profile.Outcome = OutcomeNeedsBrowser
+	result.Profile.Trustworthy = false
+	result.Profile.Reasons = append(result.Profile.Reasons, reason)
 }
 
 func FromHTML(html string, targetURL string) Result {
@@ -424,6 +553,13 @@ func fromHTMLInternal(html string, targetURL string, start time.Time, opts Optio
 
 	// Preprocess HTML to preserve content that would otherwise be stripped
 	html = PreprocessHTML(html)
+
+	// Extract LD+JSON structured data before sanitization (it's in script tags)
+	ldBlocks := ExtractLDJSON(html)
+
+	// Sanitize HTML: strip hidden elements, junk tags, invisible content.
+	// This significantly improves readability extraction on complex pages.
+	html = SanitizeHTML(html)
 
 	parsedURL, _ := url.Parse(targetURL)
 	parseStart := time.Now()
@@ -472,6 +608,28 @@ func fromHTMLInternal(html string, targetURL string, start time.Time, opts Optio
 		}
 	}
 
+	// LD+JSON supplementation: if readability gave poor results but LD+JSON has content,
+	// append it. Common on news homepages (NYT) and academic pages (arXiv).
+	if len(ldBlocks) > 0 {
+		ldContent := LDJSONToMarkdown(ldBlocks)
+		if ldContent != "" && result.Length < 5000 {
+			// Append LD+JSON content to supplement weak readability output.
+			if result.Content != "" {
+				result.Content = result.Content + "\n\n---\n\n" + ldContent
+			} else {
+				result.Content = ldContent
+			}
+			result.Length = len(result.Content)
+			result.SPASignals = append(result.SPASignals, "ldjson-supplemented")
+			result.QualityInfo = ComputeQuality(result.Content)
+			result.Quality = result.QualityInfo.Score
+			result.Fingerprint = SemanticFingerprint(result.Content)
+			result.Confidence = ComputeConfidence(result.Length, result.HeadingCount, result.ParagraphCount, len(result.SPASignals), result.IsBlocked)
+		}
+		// Store LD+JSON metadata on result regardless.
+		result.LDJSONBlocks = ldBlocks
+	}
+
 	if result.Confidence < 30 {
 		result.IsSPA = true
 	}
@@ -491,6 +649,9 @@ func fromHTMLInternal(html string, targetURL string, start time.Time, opts Optio
 		result.Quality = result.QualityInfo.Score
 		result.Fingerprint = SemanticFingerprint(result.Content)
 	}
+
+	// Detect LLM-specific content.
+	result.HasLLMContent = detectLLMContent(result.Content)
 
 	result.Profile = ClassifyPage(result)
 

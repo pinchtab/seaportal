@@ -162,6 +162,124 @@ func CountPattern(html string, pattern string) int {
 	return len(re.FindAllString(html, -1))
 }
 
+// CountMarkdownHeadings counts lines starting with # in markdown content.
+func CountMarkdownHeadings(content string) int {
+	headingRe := regexp.MustCompile(`(?m)^#{1,6}\s`)
+	return len(headingRe.FindAllString(content, -1))
+}
+
+// extractMarkdownTitle returns the first heading or the YAML title from
+// markdown frontmatter.
+func extractMarkdownTitle(content string) string {
+	if fm, ok := readYAMLFrontmatter(content); ok {
+		for _, line := range strings.Split(fm, "\n") {
+			line = strings.TrimSpace(line)
+			if !strings.HasPrefix(line, "title:") {
+				continue
+			}
+			title := strings.TrimSpace(strings.TrimPrefix(line, "title:"))
+			title = strings.Trim(title, `"'`)
+			if title != "" {
+				return title
+			}
+		}
+	}
+	headingRe := regexp.MustCompile(`(?m)^#{1,6}\s+(.+)$`)
+	if m := headingRe.FindStringSubmatch(content); len(m) > 1 {
+		return strings.TrimSpace(m[1])
+	}
+	return ""
+}
+
+// readYAMLFrontmatter returns the body between a leading "---" delimiter
+// line and a subsequent closing "---" delimiter line, and reports whether
+// the block was properly closed. Walks line-by-line so a "---" substring
+// inside a quoted value (e.g. title: "Hello --- world") does not terminate
+// the block — a substring search would.
+func readYAMLFrontmatter(content string) (string, bool) {
+	switch {
+	case strings.HasPrefix(content, "---\n"):
+		content = content[4:]
+	case strings.HasPrefix(content, "---\r\n"):
+		content = content[5:]
+	default:
+		return "", false
+	}
+	var fm strings.Builder
+	for content != "" {
+		nl := strings.IndexByte(content, '\n')
+		var line string
+		if nl < 0 {
+			line = content
+			content = ""
+		} else {
+			line = content[:nl]
+			content = content[nl+1:]
+		}
+		if strings.TrimRight(line, "\r") == "---" {
+			return fm.String(), true
+		}
+		if fm.Len() > 0 {
+			fm.WriteByte('\n')
+		}
+		fm.WriteString(line)
+	}
+	return "", false
+}
+
+// countMarkdownParagraphs counts non-empty, non-heading, non-list text blocks.
+func countMarkdownParagraphs(content string) int {
+	count := 0
+	for _, line := range strings.Split(content, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") || strings.HasPrefix(line, "-") ||
+			strings.HasPrefix(line, "*") || strings.HasPrefix(line, ">") ||
+			strings.HasPrefix(line, "```") || strings.HasPrefix(line, "---") {
+			continue
+		}
+		if len(line) > 40 { // Likely a paragraph, not a short label
+			count++
+		}
+	}
+	return count
+}
+
+var (
+	reLinkURL = regexp.MustCompile(`<([^>]+)>`)
+	reLinkRel = regexp.MustCompile(`(?i)\brel\s*=\s*["']?([a-zA-Z0-9_-]+)["']?`)
+)
+
+// extractLLMsTxtURL parses a Link header and returns the URL whose rel is
+// "llms-full-txt" if present, falling back to "llms-txt". The earlier
+// implementation OR'd both and returned whichever appeared first, so a
+// header listing llms-txt before llms-full-txt would yield the smaller doc
+// despite the comment claiming preference.
+//
+// Example: `</llms.txt>; rel="llms-txt", </llms-full.txt>; rel="llms-full-txt"`
+// returns `/llms-full.txt` regardless of order.
+func extractLLMsTxtURL(linkHeader string) string {
+	parts := strings.Split(linkHeader, ",")
+
+	findRel := func(want string) string {
+		for _, part := range parts {
+			part = strings.TrimSpace(part)
+			rel := reLinkRel.FindStringSubmatch(part)
+			if len(rel) < 2 || !strings.EqualFold(rel[1], want) {
+				continue
+			}
+			if m := reLinkURL.FindStringSubmatch(part); len(m) > 1 {
+				return m[1]
+			}
+		}
+		return ""
+	}
+
+	if u := findRel("llms-full-txt"); u != "" {
+		return u
+	}
+	return findRel("llms-txt")
+}
+
 // CountMarkdownLinks counts Markdown-style links [text](url) in content.
 // Useful for React/SPA pages where links appear in converted markdown but not raw HTML.
 func CountMarkdownLinks(content string) int {

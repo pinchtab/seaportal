@@ -1,0 +1,25 @@
+HTTP/2 200 
+x-ua-compatible: IE=edge
+content-type: text/html; charset=UTF-8
+content-encoding: gzip
+x-ratelimit-used: 1
+x-ratelimit-remaining: 99.0
+x-ratelimit-reset: 570
+accept-ranges: bytes
+date: Thu, 26 Mar 2026 10:20:29 GMT
+via: 1.1 varnish
+vary: accept-encoding
+set-cookie: loid=000000002azt9nh0t1.2.1774520429115.Z0FBQUFBQnB4UWh0SDVtd1R1ZDZ5c3RhQ2tzdHBCd3Y3ejg5NHNYUkxRckhzeHBpcHVMeTJ6MlkzdE40Y2ZRQTNwN2NOSXo2R1EwUnJkMzhrUE5DYXIydDdfOE9GeVVHa1FKOFRWN1V4LVJTanhIa1I5bzd6SnpWWnhTNWpYcVEwMXJTSUNtY01jOW0; Domain=reddit.com; Max-Age=63071999; Path=/; expires=Sat, 25-Mar-2028 10:20:29 GMT; secure; SameSite=None; Secure
+set-cookie: session_tracker=eaicrekkmddjjjlige.0.1774520429125.Z0FBQUFBQnB4UWh0Qm1GcHJqeEc2QTMzTHd5U0xfZ2luWkRQYUlMZzVvVnpjNTF4WFQ2b2Z4UXBYUDdPMTF5RjNJSW51S01vNWpBb2FNWXhQQUtHcDBYdWNGUWxqZHpXV0Nid0NPel9JcmNobG8yaTJkSmxTNHZsWk5aa0JFNzBGcXh3NEwzeGZvd1k; Domain=reddit.com; Max-Age=7199; Path=/; expires=Thu, 26-Mar-2026 12:20:29 GMT; secure; SameSite=None; Secure
+set-cookie: csv=2; Max-Age=63072000; Domain=.reddit.com; Path=/; Secure; SameSite=None
+set-cookie: edgebucket=KrF7pVezuyRaBHIAfn; Domain=reddit.com; Max-Age=63071999; Path=/;  secure
+cache-control: private, max-age=3600
+server: snooserv
+strict-transport-security: max-age=31536000; includeSubdomains
+x-content-type-options: nosniff
+x-frame-options: SAMEORIGIN
+x-xss-protection: 1; mode=block
+report-to: {"group": "w3-reporting-nel", "max_age": 14400, "include_subdomains": true,  "endpoints": [{ "url": "https://w3-reporting-nel.reddit.com/reports" }]}, {"group": "w3-reporting", "max_age": 14400, "include_subdomains": true, "endpoints": [{ "url": "https://w3-reporting.reddit.com/reports" }]}, {"group": "w3-reporting-csp", "max_age": 14400, "include_subdomains": true, "endpoints": [{ "url": "https://w3-reporting-csp.reddit.com/reports" }]}
+nel: {"report_to": "w3-reporting-nel", "max_age": 14400, "include_subdomains": false, "success_fraction": 1.0, "failure_fraction": 1.0}
+content-length: 21902
+

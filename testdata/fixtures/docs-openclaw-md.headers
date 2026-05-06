@@ -1,0 +1,26 @@
+HTTP/2 200 
+age: 1894
+cache-control: no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0
+cf-cache-status: HIT
+cf-ray: 9e255fdb3a9bf65b-LHR
+content-disposition: inline
+content-encoding: gzip
+content-security-policy: default-src 'none'
+content-type: text/markdown; charset=utf-8
+date: Thu, 26 Mar 2026 10:11:59 GMT
+expires: 0
+last-modified: Thu, 26 Mar 2026 09:40:25 GMT
+link: </llms.txt>; rel="llms-txt", </llms-full.txt>; rel="llms-full-txt"
+pragma: no-cache
+server: Vercel
+strict-transport-security: max-age=63072000
+vary: rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch, Accept-Encoding
+x-cache-key: clawdhub/2399/dpl_2BXHkZdX5PhuU4TgQXPCUNwtt7oq/#html=raw
+x-frame-options: DENY
+x-llms-txt: /llms.txt
+x-matched-path: /_mintlify/_markdown/_sites/[subdomain]/[[...slug]]
+x-mint-proxy-version: 1.0.0-prod
+x-robots-tag: noindex, nofollow
+x-vercel-cache: REVALIDATED
+x-vercel-id: lhr1:bom1:iad1::iad1::ttnzf-1774519919859-aaf08d53a441
+
