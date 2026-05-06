@@ -29,6 +29,8 @@ COMMANDS=(
   "benchmark:⚡:Run benchmarks"
   "doctor:🏥:Check dev environment"
   "e2e:🐳:E2E tests (Docker)"
+  "smoke:💨:Smoke tests (slow fixture suite)"
+  "all:🎯:Run check + test + e2e"
 )
 
 # ── Helpers ──────────────────────────────────────────────────────────
@@ -145,6 +147,22 @@ run_command() {
       echo "  ${ACCENT}${BOLD}🏥 Doctor${NC}"
       echo ""
       exec bash scripts/doctor.sh
+      ;;
+    "smoke")
+      echo "  ${ACCENT}${BOLD}💨 Smoke tests${NC}"
+      echo ""
+      go test -tags=smoke -v -count=1 ./internal/engine/ -run 'TestFixture|TestExtended'
+      echo ""
+      echo "  ${SUCCESS}✓${NC} Smoke complete"
+      ;;
+    "all")
+      echo "  ${ACCENT}${BOLD}🎯 All — check → test → e2e${NC}"
+      echo ""
+      ( run_command "check" )
+      ( run_command "test" )
+      ( run_command "e2e" )
+      echo ""
+      echo "  ${SUCCESS}✓${NC} All passed"
       ;;
     "e2e")
       echo "  ${ACCENT}${BOLD}🐳 E2E tests (Docker)${NC}"

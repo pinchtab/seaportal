@@ -27,7 +27,7 @@ echo ""
 echo -e "  ${BOLD}Go${NC}"
 
 if command -v go &>/dev/null; then
-  GO_VERSION=$(go version | grep -oP 'go\K[0-9]+\.[0-9]+')
+  GO_VERSION=$(go version | awk '{print $3}' | sed 's/^go//')
   REQUIRED=$(grep '^go ' go.mod | awk '{print $2}')
   ok "go $GO_VERSION (required: $REQUIRED)"
 else
@@ -95,6 +95,46 @@ else
     ok "go test (short)"
   else
     fail "go test failed"
+  fi
+fi
+
+# ── gotestsum (optional, for prettier test output) ───────────────────
+
+echo ""
+echo -e "  ${BOLD}Test runner (optional)${NC}"
+
+GOTESTSUM=""
+if command -v gotestsum &>/dev/null; then
+  GOTESTSUM="gotestsum"
+elif [ -x "$(go env GOPATH 2>/dev/null)/bin/gotestsum" ]; then
+  GOTESTSUM="$(go env GOPATH)/bin/gotestsum"
+fi
+
+if [ -n "$GOTESTSUM" ]; then
+  GOTESTSUM_VERSION=$($GOTESTSUM --version 2>/dev/null | head -1)
+  if [ -n "$GOTESTSUM_VERSION" ]; then
+    ok "$GOTESTSUM_VERSION"
+  else
+    ok "gotestsum"
+  fi
+else
+  warn "gotestsum not found (recommended — used by ./dev test for cleaner package-oriented output)"
+  if command -v go &>/dev/null && [ -t 0 ]; then
+    printf "    ${MUTED}Install gotestsum via go install? (Y/n) ${NC}"
+    read -r answer
+    if [ "$answer" != "n" ] && [ "$answer" != "N" ]; then
+      if go install gotest.tools/gotestsum@latest; then
+        ok "gotestsum installed"
+        WARNINGS=$((WARNINGS - 1))
+      else
+        fail "gotestsum install failed"
+        hint "go install gotest.tools/gotestsum@latest"
+      fi
+    else
+      hint "go install gotest.tools/gotestsum@latest"
+    fi
+  else
+    hint "go install gotest.tools/gotestsum@latest"
   fi
 fi
 

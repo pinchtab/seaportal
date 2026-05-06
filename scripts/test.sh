@@ -31,9 +31,38 @@ echo -e "  ${MUTED}Target: $TARGET${NC}"
 
 section "Running Tests"
 
-if ! go test -v -count=1 -race -coverprofile=coverage.out "$TARGET"; then
-  fail "Tests failed"
-  exit 1
+resolve_gotestsum() {
+  if command -v gotestsum >/dev/null 2>&1; then
+    command -v gotestsum
+    return 0
+  fi
+  local gobin gopath
+  gobin="$(go env GOBIN 2>/dev/null)"
+  if [ -n "$gobin" ] && [ -x "$gobin/gotestsum" ]; then
+    echo "$gobin/gotestsum"
+    return 0
+  fi
+  gopath="$(go env GOPATH 2>/dev/null)"
+  if [ -n "$gopath" ] && [ -x "$gopath/bin/gotestsum" ]; then
+    echo "$gopath/bin/gotestsum"
+    return 0
+  fi
+  return 1
+}
+
+if GOTESTSUM_BIN="$(resolve_gotestsum)"; then
+  if ! "$GOTESTSUM_BIN" --format=pkgname --hide-summary=output -- -count=1 -race -coverprofile=coverage.out "$TARGET"; then
+    fail "Tests failed"
+    exit 1
+  fi
+else
+  echo -e "    ${MUTED}gotestsum not found — falling back to go test${NC}"
+  echo -e "    ${MUTED}Install: go install gotest.tools/gotestsum@latest${NC}"
+  echo ""
+  if ! go test -v -count=1 -race -coverprofile=coverage.out "$TARGET"; then
+    fail "Tests failed"
+    exit 1
+  fi
 fi
 ok "All tests passed"
 
