@@ -162,6 +162,77 @@ func CountPattern(html string, pattern string) int {
 	return len(re.FindAllString(html, -1))
 }
 
+// CountMarkdownHeadings counts lines starting with # in markdown content.
+func CountMarkdownHeadings(content string) int {
+	headingRe := regexp.MustCompile(`(?m)^#{1,6}\s`)
+	return len(headingRe.FindAllString(content, -1))
+}
+
+// extractMarkdownTitle returns the first heading or the YAML title from markdown frontmatter.
+func extractMarkdownTitle(content string) string {
+	// Try YAML frontmatter title: field
+	if strings.HasPrefix(content, "---") {
+		endIdx := strings.Index(content[3:], "---")
+		if endIdx > 0 {
+			fm := content[3 : 3+endIdx]
+			for _, line := range strings.Split(fm, "\n") {
+				line = strings.TrimSpace(line)
+				if strings.HasPrefix(line, "title:") {
+					title := strings.TrimSpace(strings.TrimPrefix(line, "title:"))
+					title = strings.Trim(title, `"'`)
+					if title != "" {
+						return title
+					}
+				}
+			}
+		}
+	}
+	// Fall back to first heading
+	headingRe := regexp.MustCompile(`(?m)^#{1,6}\s+(.+)$`)
+	m := headingRe.FindStringSubmatch(content)
+	if len(m) > 1 {
+		return strings.TrimSpace(m[1])
+	}
+	return ""
+}
+
+// countMarkdownParagraphs counts non-empty, non-heading, non-list text blocks.
+func countMarkdownParagraphs(content string) int {
+	count := 0
+	for _, line := range strings.Split(content, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") || strings.HasPrefix(line, "-") ||
+			strings.HasPrefix(line, "*") || strings.HasPrefix(line, ">") ||
+			strings.HasPrefix(line, "```") || strings.HasPrefix(line, "---") {
+			continue
+		}
+		if len(line) > 40 { // Likely a paragraph, not a short label
+			count++
+		}
+	}
+	return count
+}
+
+// extractLLMsTxtURL parses a Link header for rel="llms-txt" or rel="llms-full-txt".
+func extractLLMsTxtURL(linkHeader string) string {
+	// Parse Link: </llms.txt>; rel="llms-txt", </llms-full.txt>; rel="llms-full-txt"
+	for _, part := range strings.Split(linkHeader, ",") {
+		part = strings.TrimSpace(part)
+		if !strings.Contains(part, "llms") {
+			continue
+		}
+		// Prefer llms-full-txt over llms-txt
+		if strings.Contains(part, "llms-full-txt") || strings.Contains(part, "llms-txt") {
+			urlRe := regexp.MustCompile(`<([^>]+)>`)
+			m := urlRe.FindStringSubmatch(part)
+			if len(m) > 1 {
+				return m[1]
+			}
+		}
+	}
+	return ""
+}
+
 // CountMarkdownLinks counts Markdown-style links [text](url) in content.
 // Useful for React/SPA pages where links appear in converted markdown but not raw HTML.
 func CountMarkdownLinks(content string) int {

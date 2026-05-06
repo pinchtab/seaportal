@@ -1,0 +1,12 @@
+HTTP/2 200 
+date: Thu, 26 Mar 2026 10:11:36 GMT
+content-type: text/html
+content-encoding: gzip
+last-modified: Tue, 24 Mar 2026 22:07:32 GMT
+allow: GET, HEAD
+age: 11880
+cf-cache-status: HIT
+vary: Accept-Encoding
+server: cloudflare
+cf-ray: 9e255f48e939bdb2-LHR
+

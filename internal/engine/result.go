@@ -199,6 +199,15 @@ type Result struct {
 	// Link header for resource hints and preloading
 	ResponseLink string `json:"responseLink,omitempty"` // Link header for preload, prefetch, preconnect hints
 
+	// LLMs.txt URL discovered via Link or X-LLMs-Txt headers
+	LLMsTxtURL string `json:"llmsTxtUrl,omitempty"` // URL to LLMs.txt file for AI-friendly content
+
+	// LD+JSON structured data extracted from the page
+	LDJSONBlocks []LDJSONBlock `json:"ldJsonBlocks,omitempty"` // Structured data from <script type="application/ld+json">
+
+	// LLM-specific content detected (e.g., Stripe "Instructions for LLMs")
+	HasLLMContent bool `json:"hasLlmContent,omitempty"` // True if page contains LLM-targeted instructions
+
 	// Robots and indexing control
 	ResponseXRobotsTag string `json:"responseXRobotsTag,omitempty"` // X-Robots-Tag header for page indexing directives (noindex, nofollow, etc.)
 
