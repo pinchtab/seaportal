@@ -26,7 +26,7 @@ start_test "detect blocked/challenge page"
 if sp_ok --json "$FIXTURES_URL/blocked.html"; then
   is_blocked=$(echo "$SP_OUT" | jq -r '.isBlocked // false')
   needs_browser=$(echo "$SP_OUT" | jq -r '.validation.needsBrowser // false')
-  page_class=$(echo "$SP_OUT" | jq -r '.profile.class // ""')
+  page_class=$(echo "$SP_OUT" | jq -r '.pageClass // .profile.class // ""')
   
   if [ "$is_blocked" = "true" ] || [ "$needs_browser" = "true" ] || [ "$page_class" = "blocked" ]; then
     echo -e "    ${GREEN}✓${NC} detected (IsBlocked=$is_blocked, class=$page_class)"
@@ -42,7 +42,7 @@ fi
 start_test "article page classified correctly"
 
 if sp_ok --json "$FIXTURES_URL/article.html"; then
-  page_class=$(echo "$SP_OUT" | jq -r '.profile.class // ""')
+  page_class=$(echo "$SP_OUT" | jq -r '.pageClass // .profile.class // ""')
   is_spa=$(echo "$SP_OUT" | jq -r '.isSpa // false')
   
   if [ "$is_spa" = "false" ] && [ "$page_class" != "spa" ]; then

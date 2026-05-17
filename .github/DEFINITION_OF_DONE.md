@@ -1,43 +1,74 @@
 # Definition of Done (PR Checklist)
 
-## Automated ✅ (CI enforces these)
-These run automatically via `ci.yml`. If your PR fails them, fix and re-push.
-- [ ] Go formatting & linting passes (gofmt, golangci-lint)
-- [ ] Tests pass (`go test ./...`)
+## Automated ✅ (CI / pre-push gate enforces these)
+
+Run automatically via `./dev all` (and CI). Fix and re-push on failure.
+- [ ] Go formatting passes (gofmt)
+- [ ] Static analysis passes (go vet, golangci-lint)
 - [ ] Build succeeds (`go build ./...`)
+- [ ] Unit tests pass (`go test ./...`)
+- [ ] E2E tests pass (`./dev e2e`)
+- [ ] Branch naming follows convention
 
 ## Manual — Code Quality (Required)
-- [ ] **Error handling explicit** — All errors wrapped with `%w`, no silent failures
-- [ ] **No regressions** — Extraction quality, confidence scoring, bot detection still work
-- [ ] **SOLID principles** — Functions do one thing, testable, no unnecessary deps
-- [ ] **No redundant comments** — Comments explain *why* or *context*, not *what*
+
+- [ ] **Error handling explicit** — All errors wrapped with `%w`, no silent
+      failures. Cache / SWR background goroutines may swallow errors only
+      with an inline comment explaining why.
+- [ ] **No regressions** — If you touched extraction, run `./dev bench eval`
+      and confirm seaportal's F1 didn't drop materially.
+- [ ] **SOLID** — Functions do one thing, testable, no unnecessary deps.
+- [ ] **No site-specific code** — Cross-cutting infrastructure (Cloudflare,
+      Wikidata URL patterns) is acceptable; per-host code is not.
+- [ ] **No redundant comments** — Comments explain *why* or *context*, not
+      *what* the code does.
   - ❌ Bad: `// Loop through items` above `for _, item := range items`
-  - ✅ Good: `// AWS WAF returns empty challenge-container div`
+  - ❌ Bad: `// Return error` above `return err`
+  - ✅ Good: `// regression: wikidata-edit-property-pencil-leak — Wikipedia infobox edit pencils render as image-only links to Wikidata Q*#P* anchors`
+  - ✅ Good: `// performance: dedupe disabled above 500 blocks; quadratic comparison`
 
 ## Manual — Testing (Required)
-- [ ] **New/changed functionality has tests** — Unit tests in same package
-- [ ] **Extraction changes tested** — Run against real URLs to verify quality
-- [ ] **Detection changes tested** — Verify blocked/SPA detection still accurate
+
+- [ ] **Bug fix lands with a regression test** — named `// regression:
+      <kebab-slug>` per `CONTRIBUTING.md`. The test must fail on the
+      pre-fix code (verify by reverting locally).
+- [ ] **New functionality has tests** — Same-package unit tests preferred.
+      Prefer minimal synthetic fixtures over scraped real-world HTML.
+- [ ] **Docker E2E tests run locally** — if you modified the CLI subcommand
+      dispatch, transport, or output format: `./dev e2e`.
 
 ## Manual — Documentation (Required)
-- [ ] **README.md updated** — If user-facing changes (API, options, output format)
-- [ ] **docs/fixtures.md updated** — If new test fixtures added
+
+- [ ] **`skills/seaportal/SKILL.md` updated** — if user-facing CLI flag,
+      subcommand, or `pageClass` semantic changed.
+- [ ] **`RELEASE.md` updated** — if release process or `.goreleaser.yml`
+      structure changed.
 
 ## Manual — Review (Required)
-- [ ] **PR description explains what + why**
-- [ ] **Commits are atomic** — Logical grouping, good messages
+
+- [ ] **PR description explains what + why** — especially classification
+      or extraction-quality impact.
+- [ ] **Commits are atomic** — logical grouping, good messages.
 
 ## Conditional (Only if applicable)
-- [ ] Breaking API changes documented in PR description
+
+- [ ] **Capability suite re-run** — if classification, extraction, or
+      preprocessing changed, run `./dev opt baseline` and confirm no
+      category regresses.
+- [ ] **Allocation budget** — if hot-path allocations changed, run
+      `go test -tags=allocs ./internal/engine/` and update
+      `tests/bench/profiles/allocs_baseline.json` if intentional.
 
 ---
 
 ## Quick Checklist (Copy/Paste for PRs)
 ```markdown
 ## Definition of Done
-- [ ] Tests added & passing
+- [ ] `./dev all` passes (check + test + e2e)
+- [ ] Bug fix has a `// regression: <slug>` test that fails pre-fix
 - [ ] Error handling explicit (wrapped with %w)
-- [ ] No regressions in extraction quality
+- [ ] No site-specific code beyond cross-cutting CDN/parser patterns
 - [ ] No redundant comments (explain why, not what)
-- [ ] README updated (if user-facing)
+- [ ] `skills/seaportal/SKILL.md` updated if user-facing
+- [ ] `./dev bench eval` re-run if extraction touched
 ```

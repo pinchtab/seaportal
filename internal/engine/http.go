@@ -3,9 +3,11 @@ package engine
 
 import (
 	"errors"
+	"fmt"
 	"math/rand"
 	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"syscall"
 	"time"
@@ -13,13 +15,21 @@ import (
 
 type redirectTracker struct {
 	chain []string
+	// count is the number of redirect hops attempted (i.e. checkRedirect
+	// calls observed). Increments BEFORE the 10-hop cap check, so a loop
+	// killed by the cap reports count = 10 — matching what an operator
+	// would expect: "ten redirects were attempted against the cap of ten."
+	// `chain` only records the URL-from-the-previous-request and is gated
+	// on the cap, so it has fewer entries than `count` when the cap fires.
+	// Use `count` for `Result.RedirectCount`; `chain` is the trail of URLs.
+	count int
 }
 
 func (rt *redirectTracker) checkRedirect(req *http.Request, via []*http.Request) error {
+	rt.count++
 	if len(via) >= 10 {
 		return http.ErrUseLastResponse
 	}
-	// Track the URL we're being redirected FROM (the previous request's URL)
 	if len(via) > 0 {
 		rt.chain = append(rt.chain, via[len(via)-1].URL.String())
 	}
@@ -30,6 +40,23 @@ func (rt *redirectTracker) checkRedirect(req *http.Request, via []*http.Request)
 // Uses utls to bypass Cloudflare and other bot detection that fingerprint Go's TLS stack.
 func getClient() *http.Client {
 	return getUTLSClient()
+}
+
+// getClientForOptions returns the shared no-proxy client when opts.Proxy is
+// empty, or a fresh proxy-aware client otherwise. An invalid proxy URL is
+// reported back so callers can fail fast with a helpful Result.Error.
+func getClientForOptions(opts Options) (*http.Client, error) {
+	if opts.Proxy == "" {
+		return getClient(), nil
+	}
+	parsed, err := url.Parse(opts.Proxy)
+	if err != nil {
+		return nil, err
+	}
+	if parsed.Scheme == "" || parsed.Host == "" {
+		return nil, fmt.Errorf("proxy URL must include scheme and host (got %q)", opts.Proxy)
+	}
+	return getUTLSClientWithProxy(parsed), nil
 }
 
 // parseRetryAfter parses the Retry-After header value.

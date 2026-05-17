@@ -1,4 +1,3 @@
-// Package portal provides content extraction with SPA detection
 package engine
 
 import (
@@ -25,8 +24,6 @@ type CardItem struct {
 	Section string
 }
 
-// DetectIndexPage checks if HTML looks like a homepage/index page
-// (multiple article cards rather than single article content)
 func DetectIndexPage(htmlStr string) IndexPageResult {
 	result := IndexPageResult{}
 
@@ -36,7 +33,6 @@ func DetectIndexPage(htmlStr string) IndexPageResult {
 	}
 
 	articleCount := countElements(doc, "article")
-	// Extended card class patterns - includes modern React/styled-component patterns
 	cardCount := countElementsWithClass(doc, "div", []string{
 		"card", "post", "story", "item", "entry", "teaser",
 		"cardwrapper", "summaryitem", "headline", "hed",
@@ -48,17 +44,13 @@ func DetectIndexPage(htmlStr string) IndexPageResult {
 	result.Items = items
 	result.HeadlineCount = len(items)
 
-	// Determine if this is an index page
-	// Heuristic: 5+ article/card elements with headlines suggests index page
 	if result.ArticleCount >= 5 && result.HeadlineCount >= 5 { //nolint:gocritic
 		result.IsIndexPage = true
 		result.Confidence = min(100, 50+result.HeadlineCount*2)
 	} else if result.HeadlineCount >= 8 {
-		// Lots of headlines even without article elements - lowered threshold
 		result.IsIndexPage = true
 		result.Confidence = min(100, 40+result.HeadlineCount*2)
 	} else if result.HeadlineCount >= 6 && result.ArticleCount >= 3 {
-		// Mixed case: some cards + decent headlines
 		result.IsIndexPage = true
 		result.Confidence = min(100, 35+result.HeadlineCount*2)
 	}
@@ -75,20 +67,22 @@ func ShouldUseIndexFallback(readabilityResult Result, indexResult IndexPageResul
 		return false
 	}
 
-	// Use fallback if readability gave poor results on an index page
-	// Poor results = low content length or few headings despite many articles
-	// Raised thresholds: homepages should have substantial content
+	if readabilityResult.Length >= 10000 {
+		return false
+	}
+
 	readabilityPoor := readabilityResult.Length < 4000 ||
 		readabilityResult.HeadingCount < 5
 
 	indexRich := indexResult.HeadlineCount >= 5
 
-	// Also use fallback if readability found almost no headings but index has many
-	// (suggests readability completely missed the article list)
 	readabilityMissedContent := readabilityResult.HeadingCount < 4 &&
 		indexResult.HeadlineCount >= 10
 
-	return (readabilityPoor && indexRich) || readabilityMissedContent
+	readabilityTiny := readabilityResult.Length < 200 &&
+		indexResult.HeadlineCount >= 5
+
+	return (readabilityPoor && indexRich) || readabilityMissedContent || readabilityTiny
 }
 
 func countElements(n *html.Node, tag string) int {
@@ -132,7 +126,6 @@ func extractCardItems(doc *html.Node) []CardItem {
 	var items []CardItem
 	seen := make(map[string]bool)
 
-	// Strategy 1: Find headlines inside <article> elements
 	articles := findElements(doc, "article")
 	for _, article := range articles {
 		item := extractCardFromArticle(article)
@@ -142,7 +135,6 @@ func extractCardItems(doc *html.Node) []CardItem {
 		}
 	}
 
-	// Strategy 2: Find h2/h3 elements with links (common pattern)
 	for _, tag := range []string{"h2", "h3", "h4"} {
 		headings := findElements(doc, tag)
 		for _, h := range headings {
@@ -154,7 +146,16 @@ func extractCardItems(doc *html.Node) []CardItem {
 		}
 	}
 
-	// Sort by title length (longer titles usually more informative)
+	if len(items) < 5 {
+		liItems := extractCardItemsFromListAnchors(doc)
+		for _, item := range liItems {
+			if item.Title != "" && item.URL != "" && !seen[item.URL] {
+				items = append(items, item)
+				seen[item.URL] = true
+			}
+		}
+	}
+
 	sort.Slice(items, func(i, j int) bool {
 		return len(items[i].Title) > len(items[j].Title)
 	})
@@ -163,6 +164,30 @@ func extractCardItems(doc *html.Node) []CardItem {
 		items = items[:50]
 	}
 
+	return items
+}
+
+func extractCardItemsFromListAnchors(doc *html.Node) []CardItem {
+	var items []CardItem
+	lis := findElements(doc, "li")
+	for _, li := range lis {
+		a := findFirstElement(li, "a")
+		if a == nil {
+			continue
+		}
+		href := getAttr(a, "href")
+		title := cleanText(getTextContent(a))
+		if href == "" || title == "" {
+			continue
+		}
+		if strings.HasPrefix(href, "#") || strings.HasPrefix(strings.ToLower(href), "javascript:") {
+			continue
+		}
+		if len(title) < 15 && len(strings.Fields(title)) < 3 {
+			continue
+		}
+		items = append(items, CardItem{Title: title, URL: href})
+	}
 	return items
 }
 
@@ -196,7 +221,6 @@ func extractCardFromArticle(article *html.Node) CardItem {
 		}
 	}
 
-	// Fallback: first <p> that's not too long
 	if item.Teaser == "" {
 		if p := findFirstElement(article, "p"); p != nil {
 			text := cleanText(getTextContent(p))
@@ -232,7 +256,6 @@ func extractCardFromHeading(h *html.Node) CardItem {
 func findTeaserAfterHeading(h *html.Node) string {
 	for sib := h.NextSibling; sib != nil; sib = sib.NextSibling {
 		if sib.Type == html.ElementNode {
-			// Stop at next heading - we've gone too far
 			if sib.Data == "h1" || sib.Data == "h2" || sib.Data == "h3" || sib.Data == "h4" {
 				break
 			}
@@ -257,7 +280,7 @@ func findTeaserAfterHeading(h *html.Node) string {
 	if parent := h.Parent; parent != nil {
 		for c := parent.FirstChild; c != nil; c = c.NextSibling {
 			if c == h {
-				continue // Skip the heading itself
+				continue
 			}
 			if c.Type == html.ElementNode {
 				class := strings.ToLower(getAttr(c, "class"))
@@ -376,7 +399,6 @@ func formatIndexMarkdown(items []CardItem) string {
 			continue
 		}
 
-		// Format: ## [Title](URL)
 		if item.URL != "" {
 			sb.WriteString("## [")
 			sb.WriteString(item.Title)

@@ -1,0 +1,2068 @@
+document
+  e1 link "Skip to content" <a> [interactive] href=#start-of-content
+  e2 banner "Navigation Menu Toggle navigation Sign in Appearance settings {\"props\":{}} {\"..." <header>
+    e3 heading "Navigation Menu" <h2> level=2
+    e4 button "Toggle navigation" <button> [interactive]
+    e5 button "Toggle navigation" <button> [interactive]
+    e6 link "Homepage" <a> [interactive] href=/
+    e7 link "Sign in" <a> [interactive] href=/login?return_to=https%3A%2F%2Fgithub.com%2Fsindresorhus%2Fawesome
+    e8 button <button> [interactive]
+    e9 navigation "Global" <nav>
+      e10 list "PlatformAI CODE CREATIONGitHub CopilotWrite better code with AIGitHub SparkBu..." <ul>
+        e11 listitem "PlatformAI CODE CREATIONGitHub CopilotWrite better code with AIGitHub SparkBu..." <li>
+          e12 button "Platform" <button> [interactive]
+          e13 list "AI CODE CREATIONGitHub CopilotWrite better code with AIGitHub SparkBuild and ..." <ul>
+            e14 listitem "AI CODE CREATIONGitHub CopilotWrite better code with AIGitHub SparkBuild and ..." <li>
+              e15 list "GitHub CopilotWrite better code with AIGitHub SparkBuild and deploy intellige..." <ul>
+                e16 listitem "GitHub CopilotWrite better code with AI" <li>
+                  e17 link "GitHub CopilotWrite better code with AI" <a> [interactive] href=https://github.com/features/copilot
+                e18 listitem "GitHub SparkBuild and deploy intelligent apps" <li>
+                  e19 link "GitHub SparkBuild and deploy intelligent apps" <a> [interactive] href=https://github.com/features/spark
+                e20 listitem "GitHub ModelsManage and compare prompts" <li>
+                  e21 link "GitHub ModelsManage and compare prompts" <a> [interactive] href=https://github.com/features/models
+                e22 listitem "MCP RegistryNewIntegrate external tools" <li>
+                  e23 link "MCP RegistryNewIntegrate external tools" <a> [interactive] href=https://github.com/mcp
+            e24 listitem "DEVELOPER WORKFLOWSActionsAutomate any workflowCodespacesInstant dev environm..." <li>
+              e25 list "ActionsAutomate any workflowCodespacesInstant dev environmentsIssuesPlan and ..." <ul>
+                e26 listitem "ActionsAutomate any workflow" <li>
+                  e27 link "ActionsAutomate any workflow" <a> [interactive] href=https://github.com/features/actions
+                e28 listitem "CodespacesInstant dev environments" <li>
+                  e29 link "CodespacesInstant dev environments" <a> [interactive] href=https://github.com/features/codespaces
+                e30 listitem "IssuesPlan and track work" <li>
+                  e31 link "IssuesPlan and track work" <a> [interactive] href=https://github.com/features/issues
+                e32 listitem "Code ReviewManage code changes" <li>
+                  e33 link "Code ReviewManage code changes" <a> [interactive] href=https://github.com/features/code-review
+            e34 listitem "APPLICATION SECURITYGitHub Advanced SecurityFind and fix vulnerabilitiesCode ..." <li>
+              e35 list "GitHub Advanced SecurityFind and fix vulnerabilitiesCode securitySecure your ..." <ul>
+                e36 listitem "GitHub Advanced SecurityFind and fix vulnerabilities" <li>
+                  e37 link "GitHub Advanced SecurityFind and fix vulnerabilities" <a> [interactive] href=https://github.com/security/advanced-security
+                e38 listitem "Code securitySecure your code as you build" <li>
+                  e39 link "Code securitySecure your code as you build" <a> [interactive] href=https://github.com/security/advanced-security/code-security
+                e40 listitem "Secret protectionStop leaks before they start" <li>
+                  e41 link "Secret protectionStop leaks before they start" <a> [interactive] href=https://github.com/security/advanced-security/secret-protection
+            e42 listitem "EXPLOREWhy GitHubDocumentationBlogChangelogMarketplace" <li>
+              e43 list "Why GitHubDocumentationBlogChangelogMarketplace" <ul>
+                e44 listitem "Why GitHub" <li>
+                  e45 link "Why GitHub" <a> [interactive] href=https://github.com/why-github
+                e46 listitem "Documentation" <li>
+                  e47 link "Documentation" <a> [interactive] href=https://docs.github.com
+                e48 listitem "Blog" <li>
+                  e49 link "Blog" <a> [interactive] href=https://github.blog
+                e50 listitem "Changelog" <li>
+                  e51 link "Changelog" <a> [interactive] href=https://github.blog/changelog
+                e52 listitem "Marketplace" <li>
+                  e53 link "Marketplace" <a> [interactive] href=https://github.com/marketplace
+          e54 link "View all features" <a> [interactive] href=https://github.com/features
+        e55 listitem "SolutionsBY COMPANY SIZEEnterprisesSmall and medium teamsStartupsNonprofitsBY..." <li>
+          e56 button "Solutions" <button> [interactive]
+          e57 list "BY COMPANY SIZEEnterprisesSmall and medium teamsStartupsNonprofitsBY USE CASE..." <ul>
+            e58 listitem "BY COMPANY SIZEEnterprisesSmall and medium teamsStartupsNonprofits" <li>
+              e59 list "EnterprisesSmall and medium teamsStartupsNonprofits" <ul>
+                e60 listitem "Enterprises" <li>
+                  e61 link "Enterprises" <a> [interactive] href=https://github.com/enterprise
+                e62 listitem "Small and medium teams" <li>
+                  e63 link "Small and medium teams" <a> [interactive] href=https://github.com/team
+                e64 listitem "Startups" <li>
+                  e65 link "Startups" <a> [interactive] href=https://github.com/enterprise/startups
+                e66 listitem "Nonprofits" <li>
+                  e67 link "Nonprofits" <a> [interactive] href=https://github.com/solutions/industry/nonprofits
+            e68 listitem "BY USE CASEApp ModernizationDevSecOpsDevOpsCI/CDView all use cases" <li>
+              e69 list "App ModernizationDevSecOpsDevOpsCI/CDView all use cases" <ul>
+                e70 listitem "App Modernization" <li>
+                  e71 link "App Modernization" <a> [interactive] href=https://github.com/solutions/use-case/app-modernization
+                e72 listitem "DevSecOps" <li>
+                  e73 link "DevSecOps" <a> [interactive] href=https://github.com/solutions/use-case/devsecops
+                e74 listitem "DevOps" <li>
+                  e75 link "DevOps" <a> [interactive] href=https://github.com/solutions/use-case/devops
+                e76 listitem "CI/CD" <li>
+                  e77 link "CI/CD" <a> [interactive] href=https://github.com/solutions/use-case/ci-cd
+                e78 listitem "View all use cases" <li>
+                  e79 link "View all use cases" <a> [interactive] href=https://github.com/solutions/use-case
+            e80 listitem "BY INDUSTRYHealthcareFinancial servicesManufacturingGovernmentView all indust..." <li>
+              e81 list "HealthcareFinancial servicesManufacturingGovernmentView all industries" <ul>
+                e82 listitem "Healthcare" <li>
+                  e83 link "Healthcare" <a> [interactive] href=https://github.com/solutions/industry/healthcare
+                e84 listitem "Financial services" <li>
+                  e85 link "Financial services" <a> [interactive] href=https://github.com/solutions/industry/financial-services
+                e86 listitem "Manufacturing" <li>
+                  e87 link "Manufacturing" <a> [interactive] href=https://github.com/solutions/industry/manufacturing
+                e88 listitem "Government" <li>
+                  e89 link "Government" <a> [interactive] href=https://github.com/solutions/industry/government
+                e90 listitem "View all industries" <li>
+                  e91 link "View all industries" <a> [interactive] href=https://github.com/solutions/industry
+          e92 link "View all solutions" <a> [interactive] href=https://github.com/solutions
+        e93 listitem "ResourcesEXPLORE BY TOPICAISoftware DevelopmentDevOpsSecurityView all topicsE..." <li>
+          e94 button "Resources" <button> [interactive]
+          e95 list "EXPLORE BY TOPICAISoftware DevelopmentDevOpsSecurityView all topicsEXPLORE BY..." <ul>
+            e96 listitem "EXPLORE BY TOPICAISoftware DevelopmentDevOpsSecurityView all topics" <li>
+              e97 list "AISoftware DevelopmentDevOpsSecurityView all topics" <ul>
+                e98 listitem "AI" <li>
+                  e99 link "AI" <a> [interactive] href=https://github.com/resources/articles?topic=ai
+                e100 listitem "Software Development" <li>
+                  e101 link "Software Development" <a> [interactive] href=https://github.com/resources/articles?topic=software-development
+                e102 listitem "DevOps" <li>
+                  e103 link "DevOps" <a> [interactive] href=https://github.com/resources/articles?topic=devops
+                e104 listitem "Security" <li>
+                  e105 link "Security" <a> [interactive] href=https://github.com/resources/articles?topic=security
+                e106 listitem "View all topics" <li>
+                  e107 link "View all topics" <a> [interactive] href=https://github.com/resources/articles
+            e108 listitem "EXPLORE BY TYPECustomer storiesEvents & webinarsEbooks & reportsBusiness insi..." <li>
+              e109 list "Customer storiesEvents & webinarsEbooks & reportsBusiness insightsGitHub Skills" <ul>
+                e110 listitem "Customer stories" <li>
+                  e111 link "Customer stories" <a> [interactive] href=https://github.com/customer-stories
+                e112 listitem "Events & webinars" <li>
+                  e113 link "Events & webinars" <a> [interactive] href=https://github.com/resources/events
+                e114 listitem "Ebooks & reports" <li>
+                  e115 link "Ebooks & reports" <a> [interactive] href=https://github.com/resources/whitepapers
+                e116 listitem "Business insights" <li>
+                  e117 link "Business insights" <a> [interactive] href=https://github.com/solutions/executive-insights
+                e118 listitem "GitHub Skills" <li>
+                  e119 link "GitHub Skills" <a> [interactive] href=https://skills.github.com
+            e120 listitem "SUPPORT & SERVICESDocumentationCustomer supportCommunity forumTrust centerPar..." <li>
+              e121 list "DocumentationCustomer supportCommunity forumTrust centerPartners" <ul>
+                e122 listitem "Documentation" <li>
+                  e123 link "Documentation" <a> [interactive] href=https://docs.github.com
+                e124 listitem "Customer support" <li>
+                  e125 link "Customer support" <a> [interactive] href=https://support.github.com
+                e126 listitem "Community forum" <li>
+                  e127 link "Community forum" <a> [interactive] href=https://github.com/orgs/community/discussions
+                e128 listitem "Trust center" <li>
+                  e129 link "Trust center" <a> [interactive] href=https://github.com/trust-center
+                e130 listitem "Partners" <li>
+                  e131 link "Partners" <a> [interactive] href=https://github.com/partners
+          e132 link "View all resources" <a> [interactive] href=https://github.com/resources
+        e133 listitem "Open SourceCOMMUNITYGitHub SponsorsFund open source developersPROGRAMSSecurit..." <li>
+          e134 button "Open Source" <button> [interactive]
+          e135 list "COMMUNITYGitHub SponsorsFund open source developersPROGRAMSSecurity LabMainta..." <ul>
+            e136 listitem "COMMUNITYGitHub SponsorsFund open source developers" <li>
+              e137 list "GitHub SponsorsFund open source developers" <ul>
+                e138 listitem "GitHub SponsorsFund open source developers" <li>
+                  e139 link "GitHub SponsorsFund open source developers" <a> [interactive] href=https://github.com/sponsors
+            e140 listitem "PROGRAMSSecurity LabMaintainer CommunityAcceleratorGitHub StarsArchive Program" <li>
+              e141 list "Security LabMaintainer CommunityAcceleratorGitHub StarsArchive Program" <ul>
+                e142 listitem "Security Lab" <li>
+                  e143 link "Security Lab" <a> [interactive] href=https://securitylab.github.com
+                e144 listitem "Maintainer Community" <li>
+                  e145 link "Maintainer Community" <a> [interactive] href=https://maintainers.github.com
+                e146 listitem "Accelerator" <li>
+                  e147 link "Accelerator" <a> [interactive] href=https://github.com/accelerator
+                e148 listitem "GitHub Stars" <li>
+                  e149 link "GitHub Stars" <a> [interactive] href=https://stars.github.com
+                e150 listitem "Archive Program" <li>
+                  e151 link "Archive Program" <a> [interactive] href=https://archiveprogram.github.com
+            e152 listitem "REPOSITORIESTopicsTrendingCollections" <li>
+              e153 list "TopicsTrendingCollections" <ul>
+                e154 listitem "Topics" <li>
+                  e155 link "Topics" <a> [interactive] href=https://github.com/topics
+                e156 listitem "Trending" <li>
+                  e157 link "Trending" <a> [interactive] href=https://github.com/trending
+                e158 listitem "Collections" <li>
+                  e159 link "Collections" <a> [interactive] href=https://github.com/collections
+        e160 listitem "EnterpriseENTERPRISE SOLUTIONSEnterprise platformAI-powered developer platfor..." <li>
+          e161 button "Enterprise" <button> [interactive]
+          e162 list "ENTERPRISE SOLUTIONSEnterprise platformAI-powered developer platformAVAILABLE..." <ul>
+            e163 listitem "ENTERPRISE SOLUTIONSEnterprise platformAI-powered developer platform" <li>
+              e164 list "Enterprise platformAI-powered developer platform" <ul>
+                e165 listitem "Enterprise platformAI-powered developer platform" <li>
+                  e166 link "Enterprise platformAI-powered developer platform" <a> [interactive] href=https://github.com/enterprise
+            e167 listitem "AVAILABLE ADD-ONSGitHub Advanced SecurityEnterprise-grade security featuresCo..." <li>
+              e168 list "GitHub Advanced SecurityEnterprise-grade security featuresCopilot for Busines..." <ul>
+                e169 listitem "GitHub Advanced SecurityEnterprise-grade security features" <li>
+                  e170 link "GitHub Advanced SecurityEnterprise-grade security features" <a> [interactive] href=https://github.com/security/advanced-security
+                e171 listitem "Copilot for BusinessEnterprise-grade AI features" <li>
+                  e172 link "Copilot for BusinessEnterprise-grade AI features" <a> [interactive] href=https://github.com/features/copilot/copilot-business
+                e173 listitem "Premium SupportEnterprise-grade 24/7 support" <li>
+                  e174 link "Premium SupportEnterprise-grade 24/7 support" <a> [interactive] href=https://github.com/premium-support
+        e175 listitem "Pricing" <li>
+          e176 link "Pricing" <a> [interactive] href=https://github.com/pricing
+    e177 button "Search or jump to…" <button> [interactive]
+    e178 textbox <input>
+    e179 dialog "Search code, repositories, users, issues, pull requests... Search Clear Searc..." <modal-dialog>
+      e180 heading "Search code, repositories, users, issues, pull requests..." <h1> level=1
+      e181 form "Search Clear" <form>
+        e182 combobox <input> [interactive]
+        e183 button <button> [interactive]
+        e184 listbox "Suggestions" <ul>
+      e185 link "Search syntax tips" <a> [interactive] href=https://docs.github.com/search-github/github-code-search/understanding-github-code-search-syntax
+    e186 dialog "Provide feedback We read every piece of feedback, and take your input very se..." <dialog>
+      e187 heading "Provide feedback" <h1> level=1
+      e188 button "Close" <button> [interactive]
+      e189 form "We read every piece of feedback, and take your input very seriously. Include ..." <form>
+        e190 textbox <input>
+        e191 paragraph "We read every piece of feedback, and take your input very seriously." <p>
+        e192 textbox <textarea> [interactive]
+        e193 checkbox "Include my email address so I can be contacted" <input> [interactive]
+      e194 button "Cancel" <button> [interactive]
+      e195 button "Submit feedback" <button> [interactive]
+    e196 dialog "Saved searches Use saved searches to filter your results more quickly Name Qu..." <dialog>
+      e197 heading "Saved searches" <h1> level=1
+      e198 heading "Use saved searches to filter your results more quickly" <h2> level=2
+      e199 button "Close" <button> [interactive]
+      e200 form "Name Query To see all available qualifiers, see our documentation." <form>
+        e201 textbox <input>
+        e202 textbox <input>
+        e203 textbox "github-ruby" <input> [interactive]
+        e204 textbox <input>
+        e205 textbox "(repo:mona/a OR repo:mona/b) AND lang:python" <input> [interactive]
+        e206 paragraph "To see all available qualifiers, see our documentation." <p>
+          e207 link "documentation" <a> [interactive] href=https://docs.github.com/search-github/github-code-search/understanding-github-code-search-syntax
+      e208 button "Cancel" <button> [interactive]
+      e209 button "Create saved search" <button> [interactive]
+    e210 link "Sign in" <a> [interactive] href=/login?return_to=https%3A%2F%2Fgithub.com%2Fsindresorhus%2Fawesome
+    e211 link "Sign up" <a> [interactive] href=/signup?ref_cta=Sign+up&ref_loc=header+logged+out&ref_page=%2F%3Cuser-name%3E%2F%3Crepo-name%3E&source=header-repo&source_repo=sindresorhus%2Fawesome
+    e212 button <button> [interactive]
+    e213 button "Resetting focus" <button> [interactive]
+  e214 button <button> [interactive]
+  e215 button "Dismiss this message" <button> [interactive]
+  e216 alert "{{ message }}" <div>
+  e217 main "sindresorhus / awesome Public Uh oh! There was an error while loading. Please..." <main>
+    e218 link "sindresorhus" <a> [interactive] href=/sindresorhus
+    e219 link "awesome" <a> [interactive] href=/sindresorhus/awesome
+    e220 list "Uh oh! There was an error while loading. Please reload this page. Notificatio..." <ul>
+      e221 listitem "Uh oh! There was an error while loading. Please reload this page." <li>
+        e222 heading "Uh oh!" <h3> level=3
+        e223 paragraph <p>
+        e224 paragraph "There was an error while loading. Please reload this page." <p>
+        e225 paragraph <p>
+      e226 listitem "Notifications You must be signed in to change notification settings" <li>
+        e227 link "You must be signed in to change notification settings" <a> [interactive] href=/login?return_to=%2Fsindresorhus%2Fawesome
+      e228 listitem "Fork 35k" <li>
+        e229 link "Fork 35k" <a> [interactive] href=/login?return_to=%2Fsindresorhus%2Fawesome
+      e230 listitem "Star 466k" <li>
+        e231 link "You must be signed in to star a repository" <a> [interactive] href=/login?return_to=%2Fsindresorhus%2Fawesome
+    e232 navigation "Repository" <nav>
+      e233 list "Code Issues 17 Pull requests 58 Actions Security and quality 0 Insights" <ul>
+        e234 listitem "Code" <li>
+          e235 link "Code" <a> [interactive] href=/sindresorhus/awesome
+        e236 listitem "Issues 17" <li>
+          e237 link "Issues 17" <a> [interactive] href=/sindresorhus/awesome/issues
+        e238 listitem "Pull requests 58" <li>
+          e239 link "Pull requests 58" <a> [interactive] href=/sindresorhus/awesome/pulls
+        e240 listitem "Actions" <li>
+          e241 link "Actions" <a> [interactive] href=/sindresorhus/awesome/actions
+        e242 listitem "Security and quality 0" <li>
+          e243 link "Security and quality 0" <a> [interactive] href=/sindresorhus/awesome/security
+        e244 listitem "Insights" <li>
+          e245 link "Insights" <a> [interactive] href=/sindresorhus/awesome/pulse
+      e246 button <button> [interactive]
+      e247 menu "Code Issues Pull requests Actions Security and quality Insights" <ul>
+        e248 none "Code" <li>
+          e249 menuitem "Code" <a> [interactive]
+        e250 none "Issues" <li>
+          e251 menuitem "Issues" <a> [interactive]
+        e252 none "Pull requests" <li>
+          e253 menuitem "Pull requests" <a> [interactive]
+        e254 none "Actions" <li>
+          e255 menuitem "Actions" <a> [interactive]
+        e256 none "Security and quality" <li>
+          e257 menuitem "Security and quality" <a> [interactive]
+        e258 none "Insights" <li>
+          e259 menuitem "Insights" <a> [interactive]
+    e260 link <a> [interactive] href=/sindresorhus/awesome
+    e261 banner "sindresorhus/awesome" <header>
+      e262 heading "sindresorhus/awesome" <h1> level=1
+      e263 textbox <input>
+    e264 button "main branch" <button> [interactive]
+    e265 link "Branches" <a> [interactive] href=/sindresorhus/awesome/branches
+    e266 link "Tags" <a> [interactive] href=/sindresorhus/awesome/tags
+    e267 link "Go to Branches page" <a> [interactive] href=/sindresorhus/awesome/branches
+    e268 link "Go to Tags page" <a> [interactive] href=/sindresorhus/awesome/tags
+    e269 button "Go to file" <button> [interactive]
+    e270 button "Code" <button> [interactive]
+    e271 button <button> [interactive]
+    e272 heading "Folders and files" <h2> level=2
+    e273 table "NameNameLast commit messageLast commit dateLatest commit History1,201 Commits..." <table>
+      e274 rowgroup "NameNameLast commit messageLast commit date" <thead>
+        e275 row "NameNameLast commit messageLast commit date" <tr>
+          e276 columnheader "Name" <th>
+          e277 columnheader "Name" <th>
+          e278 columnheader "Last commit message" <th>
+          e279 columnheader "Last commit date" <th>
+      e280 rowgroup "Latest commit History1,201 Commits1,201 Commits.github/workflows.github/workf..." <tbody>
+        e281 row "Latest commit History1,201 Commits1,201 Commits" <tr>
+          e282 cell "Latest commit History1,201 Commits1,201 Commits" <td>
+            e283 heading "Latest commit" <h2> level=2
+            e284 heading "History" <h2> level=2
+            e285 link "1,201 Commits" <a> [interactive] href=/sindresorhus/awesome/commits/main/
+            e286 link "View commit history for this file." <a> [interactive] href=/sindresorhus/awesome/commits/main/
+            e287 tooltip "1,201 Commits" <span>
+        e288 row ".github/workflows.github/workflows" <tr>
+          e289 cell ".github/workflows" <td>
+            e290 link ".github/workflows, (Directory)" <a> [interactive] href=/sindresorhus/awesome/tree/main/.github/workflows
+          e291 cell ".github/workflows" <td>
+            e292 link ".github/workflows, (Directory)" <a> [interactive] href=/sindresorhus/awesome/tree/main/.github/workflows
+          e293 cell <td>
+          e294 cell <td>
+        e295 row "mediamedia" <tr>
+          e296 cell "media" <td>
+            e297 link "media, (Directory)" <a> [interactive] href=/sindresorhus/awesome/tree/main/media
+          e298 cell "media" <td>
+            e299 link "media, (Directory)" <a> [interactive] href=/sindresorhus/awesome/tree/main/media
+          e300 cell <td>
+          e301 cell <td>
+        e302 row ".editorconfig.editorconfig" <tr>
+          e303 cell ".editorconfig" <td>
+            e304 link ".editorconfig, (File)" <a> [interactive] href=/sindresorhus/awesome/blob/main/.editorconfig
+          e305 cell ".editorconfig" <td>
+            e306 link ".editorconfig, (File)" <a> [interactive] href=/sindresorhus/awesome/blob/main/.editorconfig
+          e307 cell <td>
+          e308 cell <td>
+        e309 row ".gitattributes.gitattributes" <tr>
+          e310 cell ".gitattributes" <td>
+            e311 link ".gitattributes, (File)" <a> [interactive] href=/sindresorhus/awesome/blob/main/.gitattributes
+          e312 cell ".gitattributes" <td>
+            e313 link ".gitattributes, (File)" <a> [interactive] href=/sindresorhus/awesome/blob/main/.gitattributes
+          e314 cell <td>
+          e315 cell <td>
+        e316 row "awesome.mdawesome.md" <tr>
+          e317 cell "awesome.md" <td>
+            e318 link "awesome.md, (File)" <a> [interactive] href=/sindresorhus/awesome/blob/main/awesome.md
+          e319 cell "awesome.md" <td>
+            e320 link "awesome.md, (File)" <a> [interactive] href=/sindresorhus/awesome/blob/main/awesome.md
+          e321 cell <td>
+          e322 cell <td>
+        e323 row "code-of-conduct.mdcode-of-conduct.md" <tr>
+          e324 cell "code-of-conduct.md" <td>
+            e325 link "code-of-conduct.md, (File)" <a> [interactive] href=/sindresorhus/awesome/blob/main/code-of-conduct.md
+          e326 cell "code-of-conduct.md" <td>
+            e327 link "code-of-conduct.md, (File)" <a> [interactive] href=/sindresorhus/awesome/blob/main/code-of-conduct.md
+          e328 cell <td>
+          e329 cell <td>
+        e330 row "contributing.mdcontributing.md" <tr>
+          e331 cell "contributing.md" <td>
+            e332 link "contributing.md, (File)" <a> [interactive] href=/sindresorhus/awesome/blob/main/contributing.md
+          e333 cell "contributing.md" <td>
+            e334 link "contributing.md, (File)" <a> [interactive] href=/sindresorhus/awesome/blob/main/contributing.md
+          e335 cell <td>
+          e336 cell <td>
+        e337 row "create-list.mdcreate-list.md" <tr>
+          e338 cell "create-list.md" <td>
+            e339 link "create-list.md, (File)" <a> [interactive] href=/sindresorhus/awesome/blob/main/create-list.md
+          e340 cell "create-list.md" <td>
+            e341 link "create-list.md, (File)" <a> [interactive] href=/sindresorhus/awesome/blob/main/create-list.md
+          e342 cell <td>
+          e343 cell <td>
+        e344 row "licenselicense" <tr>
+          e345 cell "license" <td>
+            e346 link "license, (File)" <a> [interactive] href=/sindresorhus/awesome/blob/main/license
+          e347 cell "license" <td>
+            e348 link "license, (File)" <a> [interactive] href=/sindresorhus/awesome/blob/main/license
+          e349 cell <td>
+          e350 cell <td>
+        e351 row "pull_request_template.mdpull_request_template.md" <tr>
+          e352 cell "pull_request_template.md" <td>
+            e353 link "pull_request_template.md, (File)" <a> [interactive] href=/sindresorhus/awesome/blob/main/pull_request_template.md
+          e354 cell "pull_request_template.md" <td>
+            e355 link "pull_request_template.md, (File)" <a> [interactive] href=/sindresorhus/awesome/blob/main/pull_request_template.md
+          e356 cell <td>
+          e357 cell <td>
+        e358 row "readme.mdreadme.md" <tr>
+          e359 cell "readme.md" <td>
+            e360 link "readme.md, (File)" <a> [interactive] href=/sindresorhus/awesome/blob/main/readme.md
+          e361 cell "readme.md" <td>
+            e362 link "readme.md, (File)" <a> [interactive] href=/sindresorhus/awesome/blob/main/readme.md
+          e363 cell <td>
+          e364 cell <td>
+        e365 row "View all files" <tr>
+          e366 cell "View all files" <td>
+            e367 button "View all files" <button> [interactive]
+    e368 heading "Repository files navigation" <h2> level=2
+    e369 navigation "Repository files" <nav>
+      e370 list "READMECode of conductContributingCC0-1.0 license" <ul>
+        e371 listitem "README" <li>
+          e372 link "README" <a> [interactive] href=#
+        e373 listitem "Code of conduct" <li>
+          e374 link "Code of conduct" <a> [interactive] href=#
+        e375 listitem "Contributing" <li>
+          e376 link "Contributing" <a> [interactive] href=#
+        e377 listitem "CC0-1.0 license" <li>
+          e378 link "CC0-1.0 license" <a> [interactive] href=#
+    e379 button "Outline" <button> [interactive]
+    e380 article "Check out my macOS app Supercharge Elevate your Mac experience My open source..." <article>
+      e381 link <a> [interactive] href=/sindresorhus/awesome/blob/main/media/logo.svg
+        e382 image "Awesome" <img>
+      e383 heading "Supercharge Elevate your Mac experience" <h2> level=2
+        e384 link "Supercharge" <a> [interactive] href=https://sindresorhus.com/supercharge
+      e385 link "Permalink: Supercharge" <a> [interactive] href=#superchargeelevate-your-mac-experience
+      e386 paragraph "My open source work is supported by the community" <p>
+        e387 link "My open source work is supported by the community" <a> [interactive] href=https://github.com/sponsors/sindresorhus
+      e388 paragraph "Special thanks to:" <p>
+        e389 link <a> [interactive] href=https://depot.dev?utm_source=github&utm_medium=sindresorhus
+      e390 image "Depot logo" <img>
+      e391 link "Get the most out of every conversation. AI-powered meeting notes, automations..." <a> [interactive] href=https://circleback.ai?utm_source=sindresorhus&utm_medium=sponsorship&utm_campaign=awesome-list&utm_id=awesome
+        e392 image "Circleback logo" <img>
+      e393 paragraph <p>
+      e394 paragraph "What is an awesome list? Contribution guide Creating a list Twitter" <p>
+        e395 link "What is an awesome list?" <a> [interactive] href=/sindresorhus/awesome/blob/main/awesome.md
+        e396 link "Contribution guide" <a> [interactive] href=/sindresorhus/awesome/blob/main/contributing.md
+        e397 link "Creating a list" <a> [interactive] href=/sindresorhus/awesome/blob/main/create-list.md
+        e398 link "Twitter" <a> [interactive] href=https://twitter.com/awesome__re
+      e399 paragraph "Just type awesome.re to go here. Check out my apps and follow me on Twitter." <p>
+        e400 link "awesome.re" <a> [interactive] href=https://awesome.re
+          e401 code "awesome.re" <code>
+        e402 link "apps" <a> [interactive] href=https://sindresorhus.com/apps
+        e403 link "Twitter" <a> [interactive] href=https://twitter.com/sindresorhus
+      e404 heading "Contents" <h2> level=2
+      e405 link "Permalink: Contents" <a> [interactive] href=#contents
+      e406 list "Platforms Programming Languages Front-End Development Back-End Development Co..." <ul>
+        e407 listitem "Platforms" <li>
+          e408 link "Platforms" <a> [interactive] href=#platforms
+        e409 listitem "Programming Languages" <li>
+          e410 link "Programming Languages" <a> [interactive] href=#programming-languages
+        e411 listitem "Front-End Development" <li>
+          e412 link "Front-End Development" <a> [interactive] href=#front-end-development
+        e413 listitem "Back-End Development" <li>
+          e414 link "Back-End Development" <a> [interactive] href=#back-end-development
+        e415 listitem "Computer Science" <li>
+          e416 link "Computer Science" <a> [interactive] href=#computer-science
+        e417 listitem "Big Data" <li>
+          e418 link "Big Data" <a> [interactive] href=#big-data
+        e419 listitem "Theory" <li>
+          e420 link "Theory" <a> [interactive] href=#theory
+        e421 listitem "Books" <li>
+          e422 link "Books" <a> [interactive] href=#books
+        e423 listitem "Editors" <li>
+          e424 link "Editors" <a> [interactive] href=#editors
+        e425 listitem "Gaming" <li>
+          e426 link "Gaming" <a> [interactive] href=#gaming
+        e427 listitem "Development Environment" <li>
+          e428 link "Development Environment" <a> [interactive] href=#development-environment
+        e429 listitem "Entertainment" <li>
+          e430 link "Entertainment" <a> [interactive] href=#entertainment
+        e431 listitem "Databases" <li>
+          e432 link "Databases" <a> [interactive] href=#databases
+        e433 listitem "Media" <li>
+          e434 link "Media" <a> [interactive] href=#media
+        e435 listitem "Learn" <li>
+          e436 link "Learn" <a> [interactive] href=#learn
+        e437 listitem "Security" <li>
+          e438 link "Security" <a> [interactive] href=#security
+        e439 listitem "Content Management Systems" <li>
+          e440 link "Content Management Systems" <a> [interactive] href=#content-management-systems
+        e441 listitem "Hardware" <li>
+          e442 link "Hardware" <a> [interactive] href=#hardware
+        e443 listitem "Business" <li>
+          e444 link "Business" <a> [interactive] href=#business
+        e445 listitem "Work" <li>
+          e446 link "Work" <a> [interactive] href=#work
+        e447 listitem "Networking" <li>
+          e448 link "Networking" <a> [interactive] href=#networking
+        e449 listitem "Decentralized Systems" <li>
+          e450 link "Decentralized Systems" <a> [interactive] href=#decentralized-systems
+        e451 listitem "Health and Social Science" <li>
+          e452 link "Health and Social Science" <a> [interactive] href=#health-and-social-science
+        e453 listitem "Events" <li>
+          e454 link "Events" <a> [interactive] href=#events
+        e455 listitem "Testing" <li>
+          e456 link "Testing" <a> [interactive] href=#testing
+        e457 listitem "Miscellaneous" <li>
+          e458 link "Miscellaneous" <a> [interactive] href=#miscellaneous
+        e459 listitem "Related" <li>
+          e460 link "Related" <a> [interactive] href=#related
+      e461 heading "Platforms" <h2> level=2
+      e462 link "Permalink: Platforms" <a> [interactive] href=#platforms
+      e463 list "Node.js - Async non-blocking event-driven JavaScript runtime built on Chrome'..." <ul>
+        e464 listitem "Node.js - Async non-blocking event-driven JavaScript runtime built on Chrome'..." <li>
+          e465 link "Node.js" <a> [interactive] href=https://github.com/sindresorhus/awesome-nodejs#readme
+          e466 list "Cross-Platform - Writing cross-platform code on Node.js." <ul>
+            e467 listitem "Cross-Platform - Writing cross-platform code on Node.js." <li>
+              e468 link "Cross-Platform" <a> [interactive] href=https://github.com/bcoe/awesome-cross-platform-nodejs#readme
+        e469 listitem "Frontend Development" <li>
+          e470 link "Frontend Development" <a> [interactive] href=https://github.com/dypsilon/frontend-dev-bookmarks#readme
+        e471 listitem "iOS - Mobile operating system for Apple phones and tablets." <li>
+          e472 link "iOS" <a> [interactive] href=https://github.com/vsouza/awesome-ios#readme
+        e473 listitem "Android - Mobile operating system developed by Google." <li>
+          e474 link "Android" <a> [interactive] href=https://github.com/JStumpp/awesome-android#readme
+        e475 listitem "IoT & Hybrid Apps" <li>
+          e476 link "IoT & Hybrid Apps" <a> [interactive] href=https://github.com/weblancaster/awesome-IoT-hybrid#readme
+        e477 listitem "Electron - Cross-platform native desktop apps using JavaScript/HTML/CSS." <li>
+          e478 link "Electron" <a> [interactive] href=https://github.com/sindresorhus/awesome-electron#readme
+        e479 listitem "Cordova - JavaScript API for hybrid apps." <li>
+          e480 link "Cordova" <a> [interactive] href=https://github.com/busterc/awesome-cordova#readme
+        e481 listitem "React Native - JavaScript framework for writing natively rendering mobile app..." <li>
+          e482 link "React Native" <a> [interactive] href=https://github.com/jondot/awesome-react-native#readme
+        e483 listitem "Xamarin - Mobile app development IDE, testing, and distribution." <li>
+          e484 link "Xamarin" <a> [interactive] href=https://github.com/XamSome/awesome-xamarin#readme
+        e485 listitem "Linux Containers eBPF - Virtual machine that allows you to write more efficie..." <li>
+          e486 link "Linux" <a> [interactive] href=https://github.com/inputsh/awesome-linux#readme
+          e487 list "Containers eBPF - Virtual machine that allows you to write more efficient and..." <ul>
+            e488 listitem "Containers" <li>
+              e489 link "Containers" <a> [interactive] href=https://github.com/Friz-zy/awesome-linux-containers#readme
+            e490 listitem "eBPF - Virtual machine that allows you to write more efficient and powerful t..." <li>
+              e491 link "eBPF" <a> [interactive] href=https://github.com/zoidbergwill/awesome-ebpf#readme
+            e492 listitem "Arch-based Projects - Linux distributions and projects based on Arch Linux." <li>
+              e493 link "Arch-based Projects" <a> [interactive] href=https://github.com/PandaFoss/Awesome-Arch#readme
+            e494 listitem "AppImage - Package apps in a single file that works on various mainstream Lin..." <li>
+              e495 link "AppImage" <a> [interactive] href=https://github.com/AppImage/awesome-appimage#readme
+            e496 listitem "Omarchy - Opinionated Arch Linux and Hyprland desktop environment from the cr..." <li>
+              e497 link "Omarchy" <a> [interactive] href=https://github.com/aorumbayev/awesome-omarchy#readme
+        e498 listitem "macOS - Operating system for Apple's Mac computers. Screensavers Apps Open So..." <li>
+          e499 list "Screensavers Apps Open Source Apps" <ul>
+            e500 listitem "Screensavers" <li>
+              e501 link "Screensavers" <a> [interactive] href=https://github.com/agarrharr/awesome-macos-screensavers#readme
+            e502 listitem "Apps" <li>
+              e503 link "Apps" <a> [interactive] href=https://github.com/jaywcjlove/awesome-mac#readme
+            e504 listitem "Open Source Apps" <li>
+              e505 link "Open Source Apps" <a> [interactive] href=https://github.com/serhii-londar/open-source-mac-os-apps#readme
+        e506 listitem "watchOS - Operating system for the Apple Watch." <li>
+          e507 link "watchOS" <a> [interactive] href=https://github.com/yenchenlin/awesome-watchos#readme
+        e508 listitem "JVM" <li>
+          e509 link "JVM" <a> [interactive] href=https://github.com/deephacks/awesome-jvm#readme
+        e510 listitem "Salesforce" <li>
+          e511 link "Salesforce" <a> [interactive] href=https://github.com/mailtoharshit/awesome-salesforce#readme
+        e512 listitem "Amazon Web Services" <li>
+          e513 link "Amazon Web Services" <a> [interactive] href=https://github.com/donnemartin/awesome-aws#readme
+        e514 listitem "Windows - Consumer desktop operating system. PowerToys Run Plugins - Communit..." <li>
+          e515 link "Windows" <a> [interactive] href=https://github.com/0pandadev/awesome-windows#readme
+          e516 list "PowerToys Run Plugins - Community plugins for the Windows quick launcher." <ul>
+            e517 listitem "PowerToys Run Plugins - Community plugins for the Windows quick launcher." <li>
+              e518 link "PowerToys Run Plugins" <a> [interactive] href=https://github.com/hlaueriksson/awesome-powertoys-run-plugins#readme
+        e519 listitem "IPFS - P2P hypermedia protocol." <li>
+          e520 link "IPFS" <a> [interactive] href=https://github.com/ipfs/awesome-ipfs#readme
+        e521 listitem "Fuse - Mobile development tools." <li>
+          e522 link "Fuse" <a> [interactive] href=https://github.com/fuse-compound/awesome-fuse#readme
+        e523 listitem "Heroku - Cloud platform as a service." <li>
+          e524 link "Heroku" <a> [interactive] href=https://github.com/ianstormtaylor/awesome-heroku#readme
+        e525 listitem "Raspberry Pi - Credit card-sized computer aimed at teaching kids programming,..." <li>
+          e526 link "Raspberry Pi" <a> [interactive] href=https://github.com/thibmaek/awesome-raspberry-pi#readme
+        e527 listitem "Qt - Cross-platform GUI app framework." <li>
+          e528 link "Qt" <a> [interactive] href=https://github.com/JesseTG/awesome-qt#readme
+        e529 listitem "WebExtensions - Cross-browser extension system." <li>
+          e530 link "WebExtensions" <a> [interactive] href=https://github.com/fregante/Awesome-WebExtensions#readme
+        e531 listitem "Smart TV - Create apps for different TV platforms." <li>
+          e532 link "Smart TV" <a> [interactive] href=https://github.com/vitalets/awesome-smart-tv#readme
+        e533 listitem "GNOME - Simple and distraction-free desktop environment for Linux." <li>
+          e534 link "GNOME" <a> [interactive] href=https://github.com/Kazhnuz/awesome-gnome#readme
+        e535 listitem "KDE - A free software community dedicated to creating an open and user-friend..." <li>
+          e536 link "KDE" <a> [interactive] href=https://github.com/francoism90/awesome-kde#readme
+        e537 listitem ".NET Core Roslyn - Open-source compilers and code analysis APIs for C# and VB..." <li>
+          e538 link ".NET" <a> [interactive] href=https://github.com/quozd/awesome-dotnet#readme
+          e539 list "Core Roslyn - Open-source compilers and code analysis APIs for C# and VB.NET ..." <ul>
+            e540 listitem "Core" <li>
+              e541 link "Core" <a> [interactive] href=https://github.com/thangchung/awesome-dotnet-core#readme
+            e542 listitem "Roslyn - Open-source compilers and code analysis APIs for C# and VB.NET langu..." <li>
+              e543 link "Roslyn" <a> [interactive] href=https://github.com/ironcev/awesome-roslyn#readme
+        e544 listitem "Amazon Alexa - Virtual home assistant." <li>
+          e545 link "Amazon Alexa" <a> [interactive] href=https://github.com/miguelmota/awesome-amazon-alexa#readme
+        e546 listitem "DigitalOcean - Cloud computing platform designed for developers." <li>
+          e547 link "DigitalOcean" <a> [interactive] href=https://github.com/jonleibowitz/awesome-digitalocean#readme
+        e548 listitem "Flutter - Google's mobile SDK for building native iOS and Android apps from a..." <li>
+          e549 link "Flutter" <a> [interactive] href=https://github.com/Solido/awesome-flutter#readme
+        e550 listitem "Home Assistant - Open source home automation that puts local control and priv..." <li>
+          e551 link "Home Assistant" <a> [interactive] href=https://github.com/frenck/awesome-home-assistant#readme
+        e552 listitem "IBM Cloud - Cloud platform for developers and companies." <li>
+          e553 link "IBM Cloud" <a> [interactive] href=https://github.com/victorshinya/awesome-ibmcloud#readme
+        e554 listitem "Firebase - App development platform built on Google Cloud." <li>
+          e555 link "Firebase" <a> [interactive] href=https://github.com/jthegedus/awesome-firebase#readme
+        e556 listitem "Robot Operating System 2.0 - Set of software libraries and tools that help yo..." <li>
+          e557 link "Robot Operating System 2.0" <a> [interactive] href=https://github.com/fkromer/awesome-ros2#readme
+        e558 listitem "Adafruit IO - Visualize and store data from any device." <li>
+          e559 link "Adafruit IO" <a> [interactive] href=https://github.com/adafruit/awesome-adafruitio#readme
+        e560 listitem "Cloudflare - CDN, DNS, DDoS protection, and security for your site." <li>
+          e561 link "Cloudflare" <a> [interactive] href=https://github.com/irazasyed/awesome-cloudflare#readme
+        e562 listitem "Actions on Google - Developer platform for Google Assistant." <li>
+          e563 link "Actions on Google" <a> [interactive] href=https://github.com/ravirupareliya/awesome-actions-on-google#readme
+        e564 listitem "ESP - Low-cost microcontrollers with WiFi and broad IoT applications." <li>
+          e565 link "ESP" <a> [interactive] href=https://github.com/agucova/awesome-esp#readme
+        e566 listitem "Deno - A secure runtime for JavaScript and TypeScript that uses V8 and is bui..." <li>
+          e567 link "Deno" <a> [interactive] href=https://github.com/denolib/awesome-deno#readme
+        e568 listitem "DOS - Operating system for x86-based personal computers that was popular duri..." <li>
+          e569 link "DOS" <a> [interactive] href=https://github.com/balintkissdev/awesome-dos#readme
+        e570 listitem "Nix - Package manager for Linux and other Unix systems that makes package man..." <li>
+          e571 link "Nix" <a> [interactive] href=https://github.com/nix-community/awesome-nix#readme
+        e572 listitem "Integration - Linking together different IT systems (components) to functiona..." <li>
+          e573 link "Integration" <a> [interactive] href=https://github.com/stn1slv/awesome-integration#readme
+        e574 listitem "Node-RED - A programming tool for wiring together hardware devices, APIs, and..." <li>
+          e575 link "Node-RED" <a> [interactive] href=https://github.com/naimo84/awesome-nodered#readme
+        e576 listitem "Low Code - Allowing business professionals to address their needs on their ow..." <li>
+          e577 link "Low Code" <a> [interactive] href=https://github.com/zenitysec/awesome-low-code#readme
+        e578 listitem "Capacitor - Cross-platform open source runtime for building Web Native apps." <li>
+          e579 link "Capacitor" <a> [interactive] href=https://github.com/riderx/awesome-capacitor#readme
+        e580 listitem "ArcGIS Developer - Mapping and location analysis platform for developers." <li>
+          e581 link "ArcGIS Developer" <a> [interactive] href=https://github.com/Esri/awesome-arcgis-developer#readme
+        e582 listitem "Bluetooth Low Energy - Low-power wireless communication protocol ideal for Io..." <li>
+          e583 link "Bluetooth Low Energy" <a> [interactive] href=https://github.com/dotintent/awesome-ble#readme
+        e584 listitem "Uno Platform - Open-source .NET UI platform for building cross-platform apps." <li>
+          e585 link "Uno Platform" <a> [interactive] href=https://github.com/MartinZikmund/awesome-uno-platform#readme
+        e586 listitem "Google Cloud - Cloud computing services by Google." <li>
+          e587 link "Google Cloud" <a> [interactive] href=https://github.com/GoogleCloudPlatform/awesome-google-cloud#readme
+        e588 listitem "Firebase Genkit - An open-source framework for building AI-powered apps and f..." <li>
+          e589 link "Firebase Genkit" <a> [interactive] href=https://github.com/xavidop/awesome-firebase-genkit#readme
+        e590 listitem "Backstage - Open-source platform for building Internal Developer Portals that..." <li>
+          e591 link "Backstage" <a> [interactive] href=https://github.com/shano/awesome-backstage#readme
+      e592 heading "Programming Languages" <h2> level=2
+      e593 link "Permalink: Programming Languages" <a> [interactive] href=#programming-languages
+      e594 list "JavaScript Promises Standard Style - Style guide and linter. Must Watch Talks..." <ul>
+        e595 listitem "JavaScript Promises Standard Style - Style guide and linter. Must Watch Talks..." <li>
+          e596 link "JavaScript" <a> [interactive] href=https://github.com/sorrycc/awesome-javascript#readme
+          e597 list "Promises Standard Style - Style guide and linter. Must Watch Talks Tips Netwo..." <ul>
+            e598 listitem "Promises" <li>
+              e599 link "Promises" <a> [interactive] href=https://github.com/wbinnssmith/awesome-promises#readme
+            e600 listitem "Standard Style - Style guide and linter." <li>
+              e601 link "Standard Style" <a> [interactive] href=https://github.com/standard/awesome-standard#readme
+            e602 listitem "Must Watch Talks" <li>
+              e603 link "Must Watch Talks" <a> [interactive] href=https://github.com/bolshchikov/js-must-watch#readme
+            e604 listitem "Tips" <li>
+              e605 link "Tips" <a> [interactive] href=https://github.com/loverajoel/jstips#readme
+            e606 listitem "Network Layer" <li>
+              e607 link "Network Layer" <a> [interactive] href=https://github.com/Kikobeats/awesome-network-js#readme
+            e608 listitem "Micro npm Packages" <li>
+              e609 link "Micro npm Packages" <a> [interactive] href=https://github.com/parro-it/awesome-micro-npm-packages#readme
+            e610 listitem "Mad Science npm Packages - Impossible sounding projects that exist." <li>
+              e611 link "Mad Science npm Packages" <a> [interactive] href=https://github.com/feross/awesome-mad-science#readme
+            e612 listitem "Maintenance Modules - For npm packages." <li>
+              e613 link "Maintenance Modules" <a> [interactive] href=https://github.com/maxogden/maintenance-modules#readme
+            e614 listitem "npm - Package manager." <li>
+              e615 link "npm" <a> [interactive] href=https://github.com/sindresorhus/awesome-npm#readme
+            e616 listitem "AVA - Test runner." <li>
+              e617 link "AVA" <a> [interactive] href=https://github.com/avajs/awesome-ava#readme
+            e618 listitem "ESLint - Linter." <li>
+              e619 link "ESLint" <a> [interactive] href=https://github.com/dustinspecker/awesome-eslint#readme
+            e620 listitem "Functional Programming" <li>
+              e621 link "Functional Programming" <a> [interactive] href=https://github.com/stoeffel/awesome-fp-js#readme
+            e622 listitem "Observables" <li>
+              e623 link "Observables" <a> [interactive] href=https://github.com/sindresorhus/awesome-observables#readme
+            e624 listitem "npm scripts - Task runner." <li>
+              e625 link "npm scripts" <a> [interactive] href=https://github.com/RyanZim/awesome-npm-scripts#readme
+            e626 listitem "30 Seconds of Code - Code snippets you can understand in 30 seconds." <li>
+              e627 link "30 Seconds of Code" <a> [interactive] href=https://github.com/30-seconds/30-seconds-of-code#readme
+            e628 listitem "Ponyfills - Like polyfills but without overriding native APIs." <li>
+              e629 link "Ponyfills" <a> [interactive] href=https://github.com/Richienb/awesome-ponyfills#readme
+        e630 listitem "Swift - Apple's compiled programming language that is secure, modern, program..." <li>
+          e631 link "Swift" <a> [interactive] href=https://github.com/matteocrippa/awesome-swift#readme
+          e632 list "Education Playgrounds" <ul>
+            e633 listitem "Education" <li>
+              e634 link "Education" <a> [interactive] href=https://github.com/hsavit1/Awesome-Swift-Education#readme
+            e635 listitem "Playgrounds" <li>
+              e636 link "Playgrounds" <a> [interactive] href=https://github.com/uraimo/Awesome-Swift-Playgrounds#readme
+        e637 listitem "Python - General-purpose programming language designed for readability. Async..." <li>
+          e638 link "Python" <a> [interactive] href=https://github.com/vinta/awesome-python#readme
+          e639 list "Asyncio - Asynchronous I/O in Python 3. Scientific Audio - Scientific researc..." <ul>
+            e640 listitem "Asyncio - Asynchronous I/O in Python 3." <li>
+              e641 link "Asyncio" <a> [interactive] href=https://github.com/timofurrer/awesome-asyncio#readme
+            e642 listitem "Scientific Audio - Scientific research in audio/music." <li>
+              e643 link "Scientific Audio" <a> [interactive] href=https://github.com/faroit/awesome-python-scientific-audio#readme
+            e644 listitem "CircuitPython - A version of Python for microcontrollers." <li>
+              e645 link "CircuitPython" <a> [interactive] href=https://github.com/adafruit/awesome-circuitpython#readme
+            e646 listitem "Data Science - Data analysis and machine learning." <li>
+              e647 link "Data Science" <a> [interactive] href=https://github.com/krzjoa/awesome-python-data-science#readme
+            e648 listitem "Typing - Optional static typing for Python." <li>
+              e649 link "Typing" <a> [interactive] href=https://github.com/typeddjango/awesome-python-typing#readme
+            e650 listitem "MicroPython - A lean and efficient implementation of Python 3 for microcontro..." <li>
+              e651 link "MicroPython" <a> [interactive] href=https://github.com/mcauser/awesome-micropython#readme
+        e652 listitem "Rust Pest - Parser generator." <li>
+          e653 link "Rust" <a> [interactive] href=https://github.com/rust-unofficial/awesome-rust#readme
+          e654 list "Pest - Parser generator." <ul>
+            e655 listitem "Pest - Parser generator." <li>
+              e656 link "Pest" <a> [interactive] href=https://github.com/pest-parser/awesome-pest#readme
+        e657 listitem "Haskell" <li>
+          e658 link "Haskell" <a> [interactive] href=https://github.com/krispo/awesome-haskell#readme
+        e659 listitem "PureScript" <li>
+          e660 link "PureScript" <a> [interactive] href=https://github.com/passy/awesome-purescript#readme
+        e661 listitem "Go" <li>
+          e662 link "Go" <a> [interactive] href=https://github.com/avelino/awesome-go#readme
+        e663 listitem "Scala Scala Native - Optimizing ahead-of-time compiler for Scala based on LLVM." <li>
+          e664 link "Scala" <a> [interactive] href=https://github.com/lauris/awesome-scala#readme
+          e665 list "Scala Native - Optimizing ahead-of-time compiler for Scala based on LLVM." <ul>
+            e666 listitem "Scala Native - Optimizing ahead-of-time compiler for Scala based on LLVM." <li>
+              e667 link "Scala Native" <a> [interactive] href=https://github.com/tindzk/awesome-scala-native#readme
+        e668 listitem "Ruby" <li>
+          e669 link "Ruby" <a> [interactive] href=https://github.com/markets/awesome-ruby#readme
+        e670 listitem "Clojure" <li>
+          e671 link "Clojure" <a> [interactive] href=https://github.com/razum2um/awesome-clojure#readme
+        e672 listitem "ClojureScript" <li>
+          e673 link "ClojureScript" <a> [interactive] href=https://github.com/hantuzun/awesome-clojurescript#readme
+        e674 listitem "Elixir" <li>
+          e675 link "Elixir" <a> [interactive] href=https://github.com/h4cc/awesome-elixir#readme
+        e676 listitem "Elm" <li>
+          e677 link "Elm" <a> [interactive] href=https://github.com/sporto/awesome-elm#readme
+        e678 listitem "Erlang" <li>
+          e679 link "Erlang" <a> [interactive] href=https://github.com/drobakowski/awesome-erlang#readme
+        e680 listitem "Julia - High-level dynamic programming language designed to address the needs..." <li>
+          e681 link "Julia" <a> [interactive] href=https://github.com/svaksha/Julia.jl#readme
+        e682 listitem "Lua" <li>
+          e683 link "Lua" <a> [interactive] href=https://github.com/LewisJEllis/awesome-lua#readme
+        e684 listitem "C" <li>
+          e685 link "C" <a> [interactive] href=https://github.com/inputsh/awesome-c#readme
+        e686 listitem "C/C++ - General-purpose language with a bias toward system programming and em..." <li>
+          e687 link "C/C++" <a> [interactive] href=https://github.com/fffaraz/awesome-cpp#readme
+        e688 listitem "R - Functional programming language and environment for statistical computing..." <li>
+          e689 link "R" <a> [interactive] href=https://github.com/qinwf/awesome-R#readme
+          e690 list "Learning" <ul>
+            e691 listitem "Learning" <li>
+              e692 link "Learning" <a> [interactive] href=https://github.com/iamericfletcher/awesome-r-learning-resources#readme
+        e693 listitem "D" <li>
+          e694 link "D" <a> [interactive] href=https://github.com/dlang-community/awesome-d#readme
+        e695 listitem "Common Lisp - Powerful dynamic multiparadigm language that facilitates iterat..." <li>
+          e696 link "Common Lisp" <a> [interactive] href=https://github.com/CodyReichert/awesome-cl#readme
+          e697 list "Learning" <ul>
+            e698 listitem "Learning" <li>
+              e699 link "Learning" <a> [interactive] href=https://github.com/GustavBertram/awesome-common-lisp-learning#readme
+        e700 listitem "Perl" <li>
+          e701 link "Perl" <a> [interactive] href=https://github.com/hachiojipm/awesome-perl#readme
+        e702 listitem "Groovy" <li>
+          e703 link "Groovy" <a> [interactive] href=https://github.com/kdabir/awesome-groovy#readme
+        e704 listitem "Dart" <li>
+          e705 link "Dart" <a> [interactive] href=https://github.com/yissachar/awesome-dart#readme
+        e706 listitem "Java - Popular secure object-oriented language designed for flexibility to \"w..." <li>
+          e707 link "Java" <a> [interactive] href=https://github.com/akullpp/awesome-java#readme
+          e708 list "RxJava J2ME - Java specification designed for old keypad phones and PDAs." <ul>
+            e709 listitem "RxJava" <li>
+              e710 link "RxJava" <a> [interactive] href=https://github.com/eleventigers/awesome-rxjava#readme
+            e711 listitem "J2ME - Java specification designed for old keypad phones and PDAs." <li>
+              e712 link "J2ME" <a> [interactive] href=https://github.com/hstsethi/awesome-j2me#readme
+        e713 listitem "Kotlin" <li>
+          e714 link "Kotlin" <a> [interactive] href=https://github.com/KotlinBy/awesome-kotlin#readme
+        e715 listitem "OCaml" <li>
+          e716 link "OCaml" <a> [interactive] href=https://github.com/ocaml-community/awesome-ocaml#readme
+        e717 listitem "ColdFusion" <li>
+          e718 link "ColdFusion" <a> [interactive] href=https://github.com/seancoyne/awesome-coldfusion#readme
+        e719 listitem "Fortran" <li>
+          e720 link "Fortran" <a> [interactive] href=https://github.com/rabbiabram/awesome-fortran#readme
+        e721 listitem "PHP - Server-side scripting language. Composer - Package manager." <li>
+          e722 link "PHP" <a> [interactive] href=https://github.com/ziadoz/awesome-php#readme
+          e723 list "Composer - Package manager." <ul>
+            e724 listitem "Composer - Package manager." <li>
+              e725 link "Composer" <a> [interactive] href=https://github.com/jakoch/awesome-composer#readme
+        e726 listitem "Pascal" <li>
+          e727 link "Pascal" <a> [interactive] href=https://github.com/Fr0sT-Brutal/awesome-pascal#readme
+        e728 listitem "AutoHotkey" <li>
+          e729 link "AutoHotkey" <a> [interactive] href=https://github.com/ahkscript/awesome-AutoHotkey#readme
+        e730 listitem "AutoIt" <li>
+          e731 link "AutoIt" <a> [interactive] href=https://github.com/J2TeaM/awesome-AutoIt#readme
+        e732 listitem "Crystal" <li>
+          e733 link "Crystal" <a> [interactive] href=https://github.com/veelenga/awesome-crystal#readme
+        e734 listitem "Frege - Haskell for the JVM." <li>
+          e735 link "Frege" <a> [interactive] href=https://github.com/sfischer13/awesome-frege#readme
+        e736 listitem "CMake - Build, test, and package software." <li>
+          e737 link "CMake" <a> [interactive] href=https://github.com/onqtam/awesome-cmake#readme
+        e738 listitem "ActionScript 3 - Object-oriented language targeting Adobe AIR." <li>
+          e739 link "ActionScript 3" <a> [interactive] href=https://github.com/robinrodricks/awesome-actionscript3#readme
+        e740 listitem "Eta - Functional programming language for the JVM." <li>
+          e741 link "Eta" <a> [interactive] href=https://github.com/sfischer13/awesome-eta#readme
+        e742 listitem "Idris - General purpose pure functional programming language with dependent t..." <li>
+          e743 link "Idris" <a> [interactive] href=https://github.com/joaomilho/awesome-idris#readme
+        e744 listitem "Ada/SPARK - Modern programming language designed for large, long-lived apps w..." <li>
+          e745 link "Ada/SPARK" <a> [interactive] href=https://github.com/ohenley/awesome-ada#readme
+        e746 listitem "Q# - Domain-specific programming language used for expressing quantum algorit..." <li>
+          e747 link "Q#" <a> [interactive] href=https://github.com/ebraminio/awesome-qsharp#readme
+        e748 listitem "Imba - Programming language inspired by Ruby and Python and compiles to perfo..." <li>
+          e749 link "Imba" <a> [interactive] href=https://github.com/koolamusic/awesome-imba#readme
+        e750 listitem "Vala - Programming language designed to take full advantage of the GLib and G..." <li>
+          e751 link "Vala" <a> [interactive] href=https://github.com/desiderantes/awesome-vala#readme
+        e752 listitem "Coq - Formal language and environment for programming and specification which..." <li>
+          e753 link "Coq" <a> [interactive] href=https://github.com/coq-community/awesome-coq#readme
+        e754 listitem "V - Simple, fast, safe, compiled language for developing maintainable software." <li>
+          e755 link "V" <a> [interactive] href=https://github.com/vlang/awesome-v#readme
+        e756 listitem "Move - Domain-specific programming language for writing safe smart contracts." <li>
+          e757 link "Move" <a> [interactive] href=https://github.com/MystenLabs/awesome-move#readme
+        e758 listitem "Esolangs - Programming languages designed for experimentation or as jokes rat..." <li>
+          e759 link "Esolangs" <a> [interactive] href=https://github.com/angrykoala/awesome-esolangs#readme
+        e760 listitem "VBA - An event-driven version of Visual Basic 6.0 built into most Microsoft O..." <li>
+          e761 link "VBA" <a> [interactive] href=https://github.com/sancarn/awesome-vba#readme
+        e762 listitem "F# - A .NET-based language with focus on functional programming." <li>
+          e763 link "F#" <a> [interactive] href=https://github.com/fsprojects/awesome-fsharp#readme
+      e764 link <a> [interactive] href=https://vshymanskyy.github.io/StandWithUkraine
+      e765 heading "Front-End Development" <h2> level=2
+      e766 link "Permalink: Front-End Development" <a> [interactive] href=#front-end-development
+      e767 list "ES6 Tools Web Performance Optimization Web Tools CSS - Style sheet language t..." <ul>
+        e768 listitem "ES6 Tools" <li>
+          e769 link "ES6 Tools" <a> [interactive] href=https://github.com/addyosmani/es6-tools#readme
+        e770 listitem "Web Performance Optimization" <li>
+          e771 link "Web Performance Optimization" <a> [interactive] href=https://github.com/davidsonfellipe/awesome-wpo#readme
+        e772 listitem "Web Tools" <li>
+          e773 link "Web Tools" <a> [interactive] href=https://github.com/lvwzhen/tools#readme
+        e774 listitem "CSS - Style sheet language that specifies how HTML elements are displayed on ..." <li>
+          e775 link "CSS" <a> [interactive] href=https://github.com/awesome-css-group/awesome-css#readme
+          e776 list "Critical-Path Tools Scalability Must-Watch Talks Protips Frameworks" <ul>
+            e777 listitem "Critical-Path Tools" <li>
+              e778 link "Critical-Path Tools" <a> [interactive] href=https://github.com/addyosmani/critical-path-css-tools#readme
+            e779 listitem "Scalability" <li>
+              e780 link "Scalability" <a> [interactive] href=https://github.com/davidtheclark/scalable-css-reading-list#readme
+            e781 listitem "Must-Watch Talks" <li>
+              e782 link "Must-Watch Talks" <a> [interactive] href=https://github.com/AllThingsSmitty/must-watch-css#readme
+            e783 listitem "Protips" <li>
+              e784 link "Protips" <a> [interactive] href=https://github.com/AllThingsSmitty/css-protips#readme
+            e785 listitem "Frameworks" <li>
+              e786 link "Frameworks" <a> [interactive] href=https://github.com/troxler/awesome-css-frameworks#readme
+        e787 listitem "React - JavaScript library for building user interfaces. Relay - Framework fo..." <li>
+          e788 link "React" <a> [interactive] href=https://github.com/enaqx/awesome-react#readme
+          e789 list "Relay - Framework for building data-driven React apps. React Hooks - Lets you..." <ul>
+            e790 listitem "Relay - Framework for building data-driven React apps." <li>
+              e791 link "Relay" <a> [interactive] href=https://github.com/expede/awesome-relay#readme
+            e792 listitem "React Hooks - Lets you use state and other React features without writing a c..." <li>
+              e793 link "React Hooks" <a> [interactive] href=https://github.com/glauberfc/awesome-react-hooks#readme
+        e794 listitem "Web Components" <li>
+          e795 link "Web Components" <a> [interactive] href=https://github.com/web-padawan/awesome-web-components#readme
+        e796 listitem "Polymer - JavaScript library to develop Web Components." <li>
+          e797 link "Polymer" <a> [interactive] href=https://github.com/Granze/awesome-polymer#readme
+        e798 listitem "Angular - App framework." <li>
+          e799 link "Angular" <a> [interactive] href=https://github.com/PatrickJS/awesome-angular#readme
+        e800 listitem "Backbone - App framework." <li>
+          e801 link "Backbone" <a> [interactive] href=https://github.com/sadcitizen/awesome-backbone#readme
+        e802 listitem "HTML5 - Markup language used for websites & web apps." <li>
+          e803 link "HTML5" <a> [interactive] href=https://github.com/diegocard/awesome-html5#readme
+        e804 listitem "SVG - XML-based vector image format." <li>
+          e805 link "SVG" <a> [interactive] href=https://github.com/willianjusten/awesome-svg#readme
+        e806 listitem "Canvas" <li>
+          e807 link "Canvas" <a> [interactive] href=https://github.com/raphamorim/awesome-canvas#readme
+        e808 listitem "KnockoutJS - JavaScript library." <li>
+          e809 link "KnockoutJS" <a> [interactive] href=https://github.com/dnbard/awesome-knockout#readme
+        e810 listitem "Dojo Toolkit - JavaScript toolkit." <li>
+          e811 link "Dojo Toolkit" <a> [interactive] href=https://github.com/petk/awesome-dojo#readme
+        e812 listitem "Inspiration" <li>
+          e813 link "Inspiration" <a> [interactive] href=https://github.com/NoahBuscher/Inspire#readme
+        e814 listitem "Ember - App framework." <li>
+          e815 link "Ember" <a> [interactive] href=https://github.com/ember-community-russia/awesome-ember#readme
+        e816 listitem "Android UI" <li>
+          e817 link "Android UI" <a> [interactive] href=https://github.com/wasabeef/awesome-android-ui#readme
+        e818 listitem "iOS UI" <li>
+          e819 link "iOS UI" <a> [interactive] href=https://github.com/cjwirth/awesome-ios-ui#readme
+        e820 listitem "Meteor" <li>
+          e821 link "Meteor" <a> [interactive] href=https://github.com/Urigo/awesome-meteor#readme
+        e822 listitem "BEM" <li>
+          e823 link "BEM" <a> [interactive] href=https://github.com/sturobson/BEM-resources#readme
+        e824 listitem "Flexbox" <li>
+          e825 link "Flexbox" <a> [interactive] href=https://github.com/afonsopacifer/awesome-flexbox#readme
+        e826 listitem "Web Typography" <li>
+          e827 link "Web Typography" <a> [interactive] href=https://github.com/deanhume/typography#readme
+        e828 listitem "Web Accessibility" <li>
+          e829 link "Web Accessibility" <a> [interactive] href=https://github.com/brunopulis/awesome-a11y#readme
+        e830 listitem "Material Design" <li>
+          e831 link "Material Design" <a> [interactive] href=https://github.com/sachin1092/awesome-material#readme
+        e832 listitem "D3 - Library for producing dynamic, interactive data visualizations." <li>
+          e833 link "D3" <a> [interactive] href=https://github.com/wbkd/awesome-d3#readme
+        e834 listitem "Emails" <li>
+          e835 link "Emails" <a> [interactive] href=https://github.com/jonathandion/awesome-emails#readme
+        e836 listitem "jQuery - Easy to use JavaScript library for DOM manipulation. Tips" <li>
+          e837 link "jQuery" <a> [interactive] href=https://github.com/petk/awesome-jquery#readme
+          e838 list "Tips" <ul>
+            e839 listitem "Tips" <li>
+              e840 link "Tips" <a> [interactive] href=https://github.com/AllThingsSmitty/jquery-tips-everyone-should-know#readme
+        e841 listitem "Web Audio" <li>
+          e842 link "Web Audio" <a> [interactive] href=https://github.com/notthetup/awesome-webaudio#readme
+        e843 listitem "Offline-First" <li>
+          e844 link "Offline-First" <a> [interactive] href=https://github.com/pazguille/offline-first#readme
+        e845 listitem "Static Website Services" <li>
+          e846 link "Static Website Services" <a> [interactive] href=https://github.com/agarrharr/awesome-static-website-services#readme
+        e847 listitem "Cycle.js - Functional and reactive JavaScript framework." <li>
+          e848 link "Cycle.js" <a> [interactive] href=https://github.com/cyclejs-community/awesome-cyclejs#readme
+        e849 listitem "Text Editing" <li>
+          e850 link "Text Editing" <a> [interactive] href=https://github.com/dok/awesome-text-editing#readme
+        e851 listitem "Motion UI Design" <li>
+          e852 link "Motion UI Design" <a> [interactive] href=https://github.com/fliptheweb/motion-ui-design#readme
+        e853 listitem "Vue.js - App framework." <li>
+          e854 link "Vue.js" <a> [interactive] href=https://github.com/vuejs/awesome-vue#readme
+        e855 listitem "Marionette.js - App framework." <li>
+          e856 link "Marionette.js" <a> [interactive] href=https://github.com/sadcitizen/awesome-marionette#readme
+        e857 listitem "Aurelia - App framework." <li>
+          e858 link "Aurelia" <a> [interactive] href=https://github.com/aurelia-contrib/awesome-aurelia#readme
+        e859 listitem "Charting" <li>
+          e860 link "Charting" <a> [interactive] href=https://github.com/zingchart/awesome-charting#readme
+        e861 listitem "Ionic Framework" <li>
+          e862 link "Ionic Framework" <a> [interactive] href=https://github.com/candelibas/awesome-ionic#readme
+        e863 listitem "Chrome DevTools" <li>
+          e864 link "Chrome DevTools" <a> [interactive] href=https://github.com/ChromeDevTools/awesome-chrome-devtools#readme
+        e865 listitem "PostCSS - CSS tool." <li>
+          e866 link "PostCSS" <a> [interactive] href=https://github.com/jdrgomes/awesome-postcss#readme
+        e867 listitem "Draft.js - Rich text editor framework for React." <li>
+          e868 link "Draft.js" <a> [interactive] href=https://github.com/nikgraf/awesome-draft-js#readme
+        e869 listitem "Service Workers" <li>
+          e870 link "Service Workers" <a> [interactive] href=https://github.com/TalAter/awesome-service-workers#readme
+        e871 listitem "Progressive Web Apps" <li>
+          e872 link "Progressive Web Apps" <a> [interactive] href=https://github.com/TalAter/awesome-progressive-web-apps#readme
+        e873 listitem "choo - App framework." <li>
+          e874 link "choo" <a> [interactive] href=https://github.com/choojs/awesome-choo#readme
+        e875 listitem "Redux - State container for JavaScript apps." <li>
+          e876 link "Redux" <a> [interactive] href=https://github.com/brillout/awesome-redux#readme
+        e877 listitem "Browserify - Module bundler." <li>
+          e878 link "Browserify" <a> [interactive] href=https://github.com/browserify/awesome-browserify#readme
+        e879 listitem "Sass - CSS preprocessor." <li>
+          e880 link "Sass" <a> [interactive] href=https://github.com/Famolus/awesome-sass#readme
+        e881 listitem "Ant Design - Enterprise-class UI design language." <li>
+          e882 link "Ant Design" <a> [interactive] href=https://github.com/websemantics/awesome-ant-design#readme
+        e883 listitem "Less - CSS preprocessor." <li>
+          e884 link "Less" <a> [interactive] href=https://github.com/LucasBassetti/awesome-less#readme
+        e885 listitem "WebGL - JavaScript API for rendering 3D graphics." <li>
+          e886 link "WebGL" <a> [interactive] href=https://github.com/sjfricke/awesome-webgl#readme
+        e887 listitem "Preact - App framework." <li>
+          e888 link "Preact" <a> [interactive] href=https://github.com/preactjs/awesome-preact#readme
+        e889 listitem "Progressive Enhancement" <li>
+          e890 link "Progressive Enhancement" <a> [interactive] href=https://github.com/jbmoelker/progressive-enhancement-resources#readme
+        e891 listitem "Next.js - Framework for server-rendered React apps." <li>
+          e892 link "Next.js" <a> [interactive] href=https://github.com/unicodeveloper/awesome-nextjs#readme
+        e893 listitem "lit - Library for building web components with a declarative template system." <li>
+          e894 link "lit" <a> [interactive] href=https://github.com/web-padawan/awesome-lit#readme
+        e895 listitem "JAMstack - Modern web development architecture based on client-side JavaScrip..." <li>
+          e896 link "JAMstack" <a> [interactive] href=https://github.com/automata/awesome-jamstack#readme
+        e897 listitem "WordPress-Gatsby - Web development technology stack with WordPress as a back ..." <li>
+          e898 link "WordPress-Gatsby" <a> [interactive] href=https://github.com/henrikwirth/awesome-wordpress-gatsby#readme
+        e899 listitem "Mobile Web Development - Creating a great mobile web experience." <li>
+          e900 link "Mobile Web Development" <a> [interactive] href=https://github.com/myshov/awesome-mobile-web-development#readme
+        e901 listitem "Storybook - Development environment for UI components." <li>
+          e902 link "Storybook" <a> [interactive] href=https://github.com/lauthieb/awesome-storybook#readme
+        e903 listitem "Blazor - .NET web framework using C#/Razor and HTML that runs in the browser ..." <li>
+          e904 link "Blazor" <a> [interactive] href=https://github.com/AdrienTorris/awesome-blazor#readme
+        e905 listitem "PageSpeed Metrics - Metrics to help understand page speed and user experience." <li>
+          e906 link "PageSpeed Metrics" <a> [interactive] href=https://github.com/csabapalfi/awesome-pagespeed-metrics#readme
+        e907 listitem "Tailwind CSS - Utility-first CSS framework for rapid UI development." <li>
+          e908 link "Tailwind CSS" <a> [interactive] href=https://github.com/aniftyco/awesome-tailwindcss#readme
+        e909 listitem "Seed - Rust framework for creating web apps running in WebAssembly." <li>
+          e910 link "Seed" <a> [interactive] href=https://github.com/seed-rs/awesome-seed-rs#readme
+        e911 listitem "Web Performance Budget - Techniques to ensure certain performance metrics for..." <li>
+          e912 link "Web Performance Budget" <a> [interactive] href=https://github.com/pajaydev/awesome-web-performance-budget#readme
+        e913 listitem "Web Animation - Animations in the browser with JavaScript, CSS, SVG, etc." <li>
+          e914 link "Web Animation" <a> [interactive] href=https://github.com/sergey-pimenov/awesome-web-animation#readme
+        e915 listitem "Yew - Rust framework inspired by Elm and React for creating multi-threaded fr..." <li>
+          e916 link "Yew" <a> [interactive] href=https://github.com/jetli/awesome-yew#readme
+        e917 listitem "Material-UI - Material Design React components for faster and easier web deve..." <li>
+          e918 link "Material-UI" <a> [interactive] href=https://github.com/nadunindunil/awesome-material-ui#readme
+        e919 listitem "Building Blocks for Web Apps - Standalone features to be integrated into web ..." <li>
+          e920 link "Building Blocks for Web Apps" <a> [interactive] href=https://github.com/componently-com/awesome-building-blocks-for-web-apps#readme
+        e921 listitem "Svelte - App framework." <li>
+          e922 link "Svelte" <a> [interactive] href=https://github.com/TheComputerM/awesome-svelte#readme
+        e923 listitem "Design systems - Collection of reusable components, guided by rules that ensu..." <li>
+          e924 link "Design systems" <a> [interactive] href=https://github.com/klaufel/awesome-design-systems#readme
+        e925 listitem "Inertia.js - Make single-page apps without building an API." <li>
+          e926 link "Inertia.js" <a> [interactive] href=https://github.com/innocenzi/awesome-inertiajs#readme
+        e927 listitem "MDBootstrap - Templates, layouts, components, and widgets to rapidly build we..." <li>
+          e928 link "MDBootstrap" <a> [interactive] href=https://github.com/mdbootstrap/awesome-mdbootstrap#readme
+        e929 listitem "Master CSS - A virtual CSS language with enhanced syntax." <li>
+          e930 link "Master CSS" <a> [interactive] href=https://github.com/master-co/awesome-master-css#readme
+        e931 listitem "Hydrogen - Edge-first framework for building Shopify storefronts with React." <li>
+          e932 link "Hydrogen" <a> [interactive] href=https://github.com/shopify/awesome-hydrogen#readme
+        e933 listitem "Tiny JS - Frontend libraries that fit into 2 kB with dependencies." <li>
+          e934 link "Tiny JS" <a> [interactive] href=https://github.com/thoughtspile/awesome-tiny-js#readme
+        e935 listitem "Frontend GIS - Geographic Information Systems (GIS) for web browsers." <li>
+          e936 link "Frontend GIS" <a> [interactive] href=https://github.com/joewdavies/awesome-frontend-gis#readme
+        e937 listitem "WebGPU - JavaScript API for rendering and compute on GPUs." <li>
+          e938 link "WebGPU" <a> [interactive] href=https://github.com/mikbry/awesome-webgpu#readme
+        e939 listitem "WebAssembly - A portable binary format for running code efficiently across pl..." <li>
+          e940 link "WebAssembly" <a> [interactive] href=https://github.com/idematos/awesome-webassembly#readme
+      e941 heading "Back-End Development" <h2> level=2
+      e942 link "Permalink: Back-End Development" <a> [interactive] href=#back-end-development
+      e943 list "Flask - Python framework. Docker Vagrant - Automation virtual machine environ..." <ul>
+        e944 listitem "Flask - Python framework." <li>
+          e945 link "Flask" <a> [interactive] href=https://github.com/mjhea0/awesome-flask#readme
+        e946 listitem "Docker" <li>
+          e947 link "Docker" <a> [interactive] href=https://github.com/veggiemonk/awesome-docker#readme
+        e948 listitem "Vagrant - Automation virtual machine environment." <li>
+          e949 link "Vagrant" <a> [interactive] href=https://github.com/iJackUA/awesome-vagrant#readme
+        e950 listitem "Pyramid - Python framework." <li>
+          e951 link "Pyramid" <a> [interactive] href=https://github.com/uralbash/awesome-pyramid#readme
+        e952 listitem "Play1 Framework" <li>
+          e953 link "Play1 Framework" <a> [interactive] href=https://github.com/PerfectCarl/awesome-play1#readme
+        e954 listitem "CakePHP - PHP framework." <li>
+          e955 link "CakePHP" <a> [interactive] href=https://github.com/friendsofcake/awesome-cakephp#readme
+        e956 listitem "Symfony - PHP framework. Education" <li>
+          e957 link "Symfony" <a> [interactive] href=https://github.com/sitepoint-editors/awesome-symfony#readme
+          e958 list "Education" <ul>
+            e959 listitem "Education" <li>
+              e960 link "Education" <a> [interactive] href=https://github.com/pehapkari/awesome-symfony-education#readme
+        e961 listitem "Laravel - PHP framework. Education TALL Stack - Full-stack development soluti..." <li>
+          e962 link "Laravel" <a> [interactive] href=https://github.com/chiraggude/awesome-laravel#readme
+          e963 list "Education TALL Stack - Full-stack development solution featuring libraries bu..." <ul>
+            e964 listitem "Education" <li>
+              e965 link "Education" <a> [interactive] href=https://github.com/fukuball/Awesome-Laravel-Education#readme
+            e966 listitem "TALL Stack - Full-stack development solution featuring libraries built by the..." <li>
+              e967 link "TALL Stack" <a> [interactive] href=https://github.com/livewire/awesome-tall-stack#readme
+        e968 listitem "Rails - Web app framework for Ruby. Gems - Packages." <li>
+          e969 link "Rails" <a> [interactive] href=https://github.com/gramantin/awesome-rails#readme
+          e970 list "Gems - Packages." <ul>
+            e971 listitem "Gems - Packages." <li>
+              e972 link "Gems" <a> [interactive] href=https://github.com/hothero/awesome-rails-gem#readme
+        e973 listitem "Phalcon - PHP framework." <li>
+          e974 link "Phalcon" <a> [interactive] href=https://github.com/phalcon/awesome-phalcon#readme
+        e975 listitem "Useful .htaccess Snippets" <li>
+          e976 link "Useful .htaccess Snippets" <a> [interactive] href=https://github.com/phanan/htaccess#readme
+            e977 code ".htaccess" <code>
+        e978 listitem "nginx - Web server." <li>
+          e979 link "nginx" <a> [interactive] href=https://github.com/fcambus/nginx-resources#readme
+        e980 listitem "Dropwizard - Java framework." <li>
+          e981 link "Dropwizard" <a> [interactive] href=https://github.com/stve/awesome-dropwizard#readme
+        e982 listitem "Kubernetes - Open-source platform that automates Linux container operations." <li>
+          e983 link "Kubernetes" <a> [interactive] href=https://github.com/ramitsurana/awesome-kubernetes#readme
+        e984 listitem "Lumen - PHP micro-framework." <li>
+          e985 link "Lumen" <a> [interactive] href=https://github.com/unicodeveloper/awesome-lumen#readme
+        e986 listitem "Serverless Framework - Serverless computing and serverless architectures." <li>
+          e987 link "Serverless Framework" <a> [interactive] href=https://github.com/pmuens/awesome-serverless#readme
+        e988 listitem "Apache Wicket - Java web app framework." <li>
+          e989 link "Apache Wicket" <a> [interactive] href=https://github.com/PhantomYdn/awesome-wicket#readme
+        e990 listitem "Vert.x - Toolkit for building reactive apps on the JVM." <li>
+          e991 link "Vert.x" <a> [interactive] href=https://github.com/vert-x3/vertx-awesome#readme
+        e992 listitem "Terraform - Tool for building, changing, and versioning infrastructure." <li>
+          e993 link "Terraform" <a> [interactive] href=https://github.com/shuaibiyy/awesome-terraform#readme
+        e994 listitem "Vapor - Server-side development in Swift." <li>
+          e995 link "Vapor" <a> [interactive] href=https://github.com/vapor-community/awesome-vapor#readme
+        e996 listitem "Dash - Python web app framework." <li>
+          e997 link "Dash" <a> [interactive] href=https://github.com/ucg8j/awesome-dash#readme
+        e998 listitem "FastAPI - Python web app framework." <li>
+          e999 link "FastAPI" <a> [interactive] href=https://github.com/mjhea0/awesome-fastapi#readme
+        e1000 listitem "CDK - Open-source software development framework for defining cloud infrastru..." <li>
+          e1001 link "CDK" <a> [interactive] href=https://github.com/kolomied/awesome-cdk#readme
+        e1002 listitem "IAM - User accounts, authentication and authorization." <li>
+          e1003 link "IAM" <a> [interactive] href=https://github.com/kdeldycke/awesome-iam#readme
+        e1004 listitem "Slim - PHP framework." <li>
+          e1005 link "Slim" <a> [interactive] href=https://github.com/nekofar/awesome-slim#readme
+        e1006 listitem "Fiber - Web framework built on top of Fasthttp, the fastest HTTP engine for Go." <li>
+          e1007 link "Fiber" <a> [interactive] href=https://github.com/gofiber/awesome-fiber#readme
+        e1008 listitem "Kustomize - Kubernetes native declarative configuration management tool." <li>
+          e1009 link "Kustomize" <a> [interactive] href=https://github.com/DevOpsHiveHQ/awesome-kustomize#readme
+        e1010 listitem "OpenTofu - Open-source infrastructure as code tool." <li>
+          e1011 link "OpenTofu" <a> [interactive] href=https://github.com/virtualroot/awesome-opentofu#readme
+        e1012 listitem "Reflex - Python web framework for building both your frontend and backend wit..." <li>
+          e1013 link "Reflex" <a> [interactive] href=https://github.com/reflex-dev/awesome-reflex#readme
+      e1014 heading "Computer Science" <h2> level=2
+      e1015 link "Permalink: Computer Science" <a> [interactive] href=#computer-science
+      e1016 list "University Courses Data Science Tutorials Machine Learning Tutorials ML with ..." <ul>
+        e1017 listitem "University Courses" <li>
+          e1018 link "University Courses" <a> [interactive] href=https://github.com/prakhar1989/awesome-courses#readme
+        e1019 listitem "Data Science Tutorials" <li>
+          e1020 link "Data Science" <a> [interactive] href=https://github.com/academic/awesome-datascience#readme
+          e1021 list "Tutorials" <ul>
+            e1022 listitem "Tutorials" <li>
+              e1023 link "Tutorials" <a> [interactive] href=https://github.com/siboehm/awesome-learn-datascience#readme
+        e1024 listitem "Machine Learning Tutorials ML with Ruby - Learning, implementing, and applyin..." <li>
+          e1025 link "Machine Learning" <a> [interactive] href=https://github.com/josephmisiti/awesome-machine-learning#readme
+          e1026 list "Tutorials ML with Ruby - Learning, implementing, and applying Machine Learnin..." <ul>
+            e1027 listitem "Tutorials" <li>
+              e1028 link "Tutorials" <a> [interactive] href=https://github.com/ujjwalkarn/Machine-Learning-Tutorials#readme
+            e1029 listitem "ML with Ruby - Learning, implementing, and applying Machine Learning using Ruby." <li>
+              e1030 link "ML with Ruby" <a> [interactive] href=https://github.com/arbox/machine-learning-with-ruby#readme
+            e1031 listitem "Core ML Models - Models for Apple's machine learning framework." <li>
+              e1032 link "Core ML Models" <a> [interactive] href=https://github.com/likedan/Awesome-CoreML-Models#readme
+            e1033 listitem "H2O - Open source distributed machine learning platform written in Java with ..." <li>
+              e1034 link "H2O" <a> [interactive] href=https://github.com/h2oai/awesome-h2o#readme
+            e1035 listitem "Software Engineering for Machine Learning - From experiment to production-lev..." <li>
+              e1036 link "Software Engineering for Machine Learning" <a> [interactive] href=https://github.com/SE-ML/awesome-seml#readme
+            e1037 listitem "AI in Finance - Solving problems in finance with machine learning." <li>
+              e1038 link "AI in Finance" <a> [interactive] href=https://github.com/georgezouq/awesome-ai-in-finance#readme
+            e1039 listitem "JAX - Automatic differentiation and XLA compilation brought together for high..." <li>
+              e1040 link "JAX" <a> [interactive] href=https://github.com/n2cholas/awesome-jax#readme
+            e1041 listitem "XAI - Providing insight, explanations, and interpretability to machine learni..." <li>
+              e1042 link "XAI" <a> [interactive] href=https://github.com/altamiracorp/awesome-xai#readme
+        e1043 listitem "Speech and Natural Language Processing Spanish NLP with Ruby Question Answeri..." <li>
+          e1044 link "Speech and Natural Language Processing" <a> [interactive] href=https://github.com/edobashira/speech-language-processing#readme
+          e1045 list "Spanish NLP with Ruby Question Answering - The science of asking and answerin..." <ul>
+            e1046 listitem "Spanish" <li>
+              e1047 link "Spanish" <a> [interactive] href=https://github.com/dav009/awesome-spanish-nlp#readme
+            e1048 listitem "NLP with Ruby" <li>
+              e1049 link "NLP with Ruby" <a> [interactive] href=https://github.com/arbox/nlp-with-ruby#readme
+            e1050 listitem "Question Answering - The science of asking and answering in natural language ..." <li>
+              e1051 link "Question Answering" <a> [interactive] href=https://github.com/seriousran/awesome-qa#readme
+            e1052 listitem "Natural Language Generation - Generation of text used in data-to-text, conver..." <li>
+              e1053 link "Natural Language Generation" <a> [interactive] href=https://github.com/accelerated-text/awesome-nlg#readme
+        e1054 listitem "Linguistics" <li>
+          e1055 link "Linguistics" <a> [interactive] href=https://github.com/theimpossibleastronaut/awesome-linguistics#readme
+        e1056 listitem "Cryptography Papers - Theory basics for using cryptography by non-cryptograph..." <li>
+          e1057 link "Cryptography" <a> [interactive] href=https://github.com/sobolevn/awesome-cryptography#readme
+          e1058 list "Papers - Theory basics for using cryptography by non-cryptographers." <ul>
+            e1059 listitem "Papers - Theory basics for using cryptography by non-cryptographers." <li>
+              e1060 link "Papers" <a> [interactive] href=https://github.com/pFarb/awesome-crypto-papers#readme
+        e1061 listitem "Computer Vision" <li>
+          e1062 link "Computer Vision" <a> [interactive] href=https://github.com/jbhuang0604/awesome-computer-vision#readme
+        e1063 listitem "Deep Learning - Neural networks. TensorFlow - Library for machine intelligenc..." <li>
+          e1064 link "Deep Learning" <a> [interactive] href=https://github.com/ChristosChristofidis/awesome-deep-learning#readme
+          e1065 list "TensorFlow - Library for machine intelligence. TensorFlow.js - WebGL-accelera..." <ul>
+            e1066 listitem "TensorFlow - Library for machine intelligence." <li>
+              e1067 link "TensorFlow" <a> [interactive] href=https://github.com/jtoy/awesome-tensorflow#readme
+            e1068 listitem "TensorFlow.js - WebGL-accelerated machine learning JavaScript library for tra..." <li>
+              e1069 link "TensorFlow.js" <a> [interactive] href=https://github.com/aaronhma/awesome-tensorflow-js#readme
+            e1070 listitem "TensorFlow Lite - Framework that optimizes TensorFlow models for on-device ma..." <li>
+              e1071 link "TensorFlow Lite" <a> [interactive] href=https://github.com/margaretmz/awesome-tensorflow-lite#readme
+            e1072 listitem "Papers - The most cited deep learning papers." <li>
+              e1073 link "Papers" <a> [interactive] href=https://github.com/terryum/awesome-deep-learning-papers#readme
+            e1074 listitem "Education" <li>
+              e1075 link "Education" <a> [interactive] href=https://github.com/guillaume-chevalier/awesome-deep-learning-resources#readme
+        e1076 listitem "Deep Vision" <li>
+          e1077 link "Deep Vision" <a> [interactive] href=https://github.com/kjw0612/awesome-deep-vision#readme
+        e1078 listitem "Open Source Society University" <li>
+          e1079 link "Open Source Society University" <a> [interactive] href=https://github.com/ossu/computer-science#readme
+        e1080 listitem "Functional Programming" <li>
+          e1081 link "Functional Programming" <a> [interactive] href=https://github.com/lucasviola/awesome-functional-programming#readme
+        e1082 listitem "Empirical Software Engineering - Evidence-based research on software systems." <li>
+          e1083 link "Empirical Software Engineering" <a> [interactive] href=https://github.com/dspinellis/awesome-msr#readme
+        e1084 listitem "Static Analysis & Code Quality" <li>
+          e1085 link "Static Analysis & Code Quality" <a> [interactive] href=https://github.com/analysis-tools-dev/static-analysis#readme
+        e1086 listitem "Information Retrieval - Learn to develop your own search engine." <li>
+          e1087 link "Information Retrieval" <a> [interactive] href=https://github.com/harpribot/awesome-information-retrieval#readme
+        e1088 listitem "Quantum Computing - Computing that utilizes quantum mechanics and qubits on q..." <li>
+          e1089 link "Quantum Computing" <a> [interactive] href=https://github.com/desireevl/awesome-quantum-computing#readme
+        e1090 listitem "Theoretical Computer Science - The interplay of computer science and pure mat..." <li>
+          e1091 link "Theoretical Computer Science" <a> [interactive] href=https://github.com/mostafatouny/awesome-theoretical-computer-science#readme
+        e1092 listitem "Conversational AI - Build awesome chatbots and digital assistants." <li>
+          e1093 link "Conversational AI" <a> [interactive] href=https://github.com/jyguyomarch/awesome-conversational-ai#readme
+        e1094 listitem "Generative AI - Automatically generates a wide range of unique content in tex..." <li>
+          e1095 link "Generative AI" <a> [interactive] href=https://github.com/steven2358/awesome-generative-ai#readme
+        e1096 listitem "Position-Based Quantum Cryptography - Theory on quantum cryptography that uti..." <li>
+          e1097 link "Position-Based Quantum Cryptography" <a> [interactive] href=https://github.com/Renaller/awesome-position-based-quantum-cryptography#readme
+      e1098 heading "Big Data" <h2> level=2
+      e1099 link "Permalink: Big Data" <a> [interactive] href=#big-data
+      e1100 list "Big Data Public Datasets Hadoop - Framework for distributed storage and proce..." <ul>
+        e1101 listitem "Big Data" <li>
+          e1102 link "Big Data" <a> [interactive] href=https://github.com/0xnr/awesome-bigdata#readme
+        e1103 listitem "Public Datasets" <li>
+          e1104 link "Public Datasets" <a> [interactive] href=https://github.com/awesomedata/awesome-public-datasets#readme
+        e1105 listitem "Hadoop - Framework for distributed storage and processing of very large data ..." <li>
+          e1106 link "Hadoop" <a> [interactive] href=https://github.com/youngwookim/awesome-hadoop#readme
+        e1107 listitem "Data Engineering" <li>
+          e1108 link "Data Engineering" <a> [interactive] href=https://github.com/igorbarinov/awesome-data-engineering#readme
+        e1109 listitem "Streaming" <li>
+          e1110 link "Streaming" <a> [interactive] href=https://github.com/manuzhang/awesome-streaming#readme
+        e1111 listitem "Apache Spark - Unified engine for large-scale data processing." <li>
+          e1112 link "Apache Spark" <a> [interactive] href=https://github.com/awesome-spark/awesome-spark#readme
+        e1113 listitem "Qlik - Business intelligence platform for data visualization, analytics, and ..." <li>
+          e1114 link "Qlik" <a> [interactive] href=https://github.com/ambster-public/awesome-qlik#readme
+        e1115 listitem "Splunk - Platform for searching, monitoring, and analyzing structured and uns..." <li>
+          e1116 link "Splunk" <a> [interactive] href=https://github.com/sduff/awesome-splunk#readme
+        e1117 listitem "Network Analysis" <li>
+          e1118 link "Network Analysis" <a> [interactive] href=https://github.com/briatte/awesome-network-analysis#readme
+      e1119 heading "Theory" <h2> level=2
+      e1120 link "Permalink: Theory" <a> [interactive] href=#theory
+      e1121 list "Papers We Love Talks Algorithms Education - Learning and practicing. Algorith..." <ul>
+        e1122 listitem "Papers We Love" <li>
+          e1123 link "Papers We Love" <a> [interactive] href=https://github.com/papers-we-love/papers-we-love#readme
+        e1124 listitem "Talks" <li>
+          e1125 link "Talks" <a> [interactive] href=https://github.com/JanVanRyswyck/awesome-talks#readme
+        e1126 listitem "Algorithms Education - Learning and practicing." <li>
+          e1127 link "Algorithms" <a> [interactive] href=https://github.com/tayllan/awesome-algorithms#readme
+          e1128 list "Education - Learning and practicing." <ul>
+            e1129 listitem "Education - Learning and practicing." <li>
+              e1130 link "Education" <a> [interactive] href=https://github.com/gaerae/awesome-algorithms-education#readme
+        e1131 listitem "Algorithm Visualizations" <li>
+          e1132 link "Algorithm Visualizations" <a> [interactive] href=https://github.com/enjalot/algovis#readme
+        e1133 listitem "Artificial Intelligence" <li>
+          e1134 link "Artificial Intelligence" <a> [interactive] href=https://github.com/owainlewis/awesome-artificial-intelligence#readme
+        e1135 listitem "Search Engine Optimization" <li>
+          e1136 link "Search Engine Optimization" <a> [interactive] href=https://github.com/marcobiedermann/search-engine-optimization#readme
+        e1137 listitem "Competitive Programming" <li>
+          e1138 link "Competitive Programming" <a> [interactive] href=https://github.com/lnishan/awesome-competitive-programming#readme
+        e1139 listitem "Math" <li>
+          e1140 link "Math" <a> [interactive] href=https://github.com/rossant/awesome-math#readme
+        e1141 listitem "Recursion Schemes - Traversing nested data structures." <li>
+          e1142 link "Recursion Schemes" <a> [interactive] href=https://github.com/passy/awesome-recursion-schemes#readme
+        e1143 listitem "Audit Algorithms - Algorithmic audits of algorithms." <li>
+          e1144 link "Audit Algorithms" <a> [interactive] href=https://github.com/erwanlemerrer/awesome-audit-algorithms#readme
+        e1145 listitem "AGI & CoCoSci - The reciprocation of Artificial General Intelligence (AGI) an..." <li>
+          e1146 link "AGI & CoCoSci" <a> [interactive] href=https://github.com/YuzheSHI/awesome-agi-cocosci#readme
+        e1147 listitem "Complex Systems - The scientific field studying systems with multiple interac..." <li>
+          e1148 link "Complex Systems" <a> [interactive] href=https://github.com/sellisd/awesome-complexity#readme
+        e1149 listitem "VLM Architectures - Vision Language Model architectures." <li>
+          e1150 link "VLM Architectures" <a> [interactive] href=https://github.com/gokayfem/awesome-vlm-architectures#readme
+      e1151 heading "Books" <h2> level=2
+      e1152 link "Permalink: Books" <a> [interactive] href=#books
+      e1153 list "Free Programming Books Go Books R Books Mind Expanding Books Book Authoring E..." <ul>
+        e1154 listitem "Free Programming Books" <li>
+          e1155 link "Free Programming Books" <a> [interactive] href=https://github.com/EbookFoundation/free-programming-books#readme
+        e1156 listitem "Go Books" <li>
+          e1157 link "Go Books" <a> [interactive] href=https://github.com/dariubs/GoBooks#readme
+        e1158 listitem "R Books" <li>
+          e1159 link "R Books" <a> [interactive] href=https://github.com/RomanTsegelskyi/rbooks#readme
+        e1160 listitem "Mind Expanding Books" <li>
+          e1161 link "Mind Expanding Books" <a> [interactive] href=https://github.com/hackerkid/Mind-Expanding-Books#readme
+        e1162 listitem "Book Authoring" <li>
+          e1163 link "Book Authoring" <a> [interactive] href=https://github.com/TalAter/awesome-book-authoring#readme
+        e1164 listitem "Elixir Books" <li>
+          e1165 link "Elixir Books" <a> [interactive] href=https://github.com/sger/ElixirBooks#readme
+      e1166 heading "Editors" <h2> level=2
+      e1167 link "Permalink: Editors" <a> [interactive] href=#editors
+      e1168 list "Sublime Text Vim Neovim - Vim-fork focused on extensibility and usability. Em..." <ul>
+        e1169 listitem "Sublime Text" <li>
+          e1170 link "Sublime Text" <a> [interactive] href=https://github.com/dreikanter/sublime-bookmarks#readme
+        e1171 listitem "Vim" <li>
+          e1172 link "Vim" <a> [interactive] href=https://github.com/mhinz/vim-galore#readme
+        e1173 listitem "Neovim - Vim-fork focused on extensibility and usability." <li>
+          e1174 link "Neovim" <a> [interactive] href=https://github.com/rockerBOO/awesome-neovim#readme
+        e1175 listitem "Emacs" <li>
+          e1176 link "Emacs" <a> [interactive] href=https://github.com/emacs-tw/awesome-emacs#readme
+        e1177 listitem "Atom - Open-source and hackable text editor." <li>
+          e1178 link "Atom" <a> [interactive] href=https://github.com/mehcode/awesome-atom#readme
+        e1179 listitem "Visual Studio Code - Cross-platform open-source text editor." <li>
+          e1180 link "Visual Studio Code" <a> [interactive] href=https://github.com/viatsko/awesome-vscode#readme
+      e1181 heading "Gaming" <h2> level=2
+      e1182 link "Permalink: Gaming" <a> [interactive] href=#gaming
+      e1183 list "Game Development Game Talks Godot - Game engine. Open Source Games Unity - Ga..." <ul>
+        e1184 listitem "Game Development" <li>
+          e1185 link "Game Development" <a> [interactive] href=https://github.com/ellisonleao/magictools#readme
+        e1186 listitem "Game Talks" <li>
+          e1187 link "Game Talks" <a> [interactive] href=https://github.com/hzoo/awesome-gametalks#readme
+        e1188 listitem "Godot - Game engine." <li>
+          e1189 link "Godot" <a> [interactive] href=https://github.com/godotengine/awesome-godot#readme
+        e1190 listitem "Open Source Games" <li>
+          e1191 link "Open Source Games" <a> [interactive] href=https://github.com/michelpereira/awesome-open-source-games#readme
+        e1192 listitem "Unity - Game engine." <li>
+          e1193 link "Unity" <a> [interactive] href=https://github.com/RyanNielson/awesome-unity#readme
+        e1194 listitem "Chess" <li>
+          e1195 link "Chess" <a> [interactive] href=https://github.com/hkirat/awesome-chess#readme
+        e1196 listitem "LÖVE - Game engine." <li>
+          e1197 link "LÖVE" <a> [interactive] href=https://github.com/love2d-community/awesome-love2d#readme
+        e1198 listitem "PICO-8 - Fantasy console." <li>
+          e1199 link "PICO-8" <a> [interactive] href=https://github.com/pico-8/awesome-PICO-8#readme
+        e1200 listitem "Game Boy Development" <li>
+          e1201 link "Game Boy Development" <a> [interactive] href=https://github.com/gbdev/awesome-gbdev#readme
+        e1202 listitem "Construct 2 - Game engine." <li>
+          e1203 link "Construct 2" <a> [interactive] href=https://github.com/ConstructCommunity/awesome-construct#readme
+        e1204 listitem "Gideros - Game engine." <li>
+          e1205 link "Gideros" <a> [interactive] href=https://github.com/stetso/awesome-gideros#readme
+        e1206 listitem "Minecraft - Sandbox video game." <li>
+          e1207 link "Minecraft" <a> [interactive] href=https://github.com/bs-community/awesome-minecraft#readme
+        e1208 listitem "ComputerCraft - Minecraft mod that adds programmable computers." <li>
+          e1209 link "ComputerCraft" <a> [interactive] href=https://github.com/tomodachi94/awesome-computercraft#readme
+        e1210 listitem "Game Datasets - Materials and datasets for Artificial Intelligence in games." <li>
+          e1211 link "Game Datasets" <a> [interactive] href=https://github.com/leomaurodesenv/game-datasets#readme
+        e1212 listitem "Haxe Game Development - A high-level strongly typed programming language used..." <li>
+          e1213 link "Haxe Game Development" <a> [interactive] href=https://github.com/Dvergar/awesome-haxe-gamedev#readme
+        e1214 listitem "libGDX - Java game framework." <li>
+          e1215 link "libGDX" <a> [interactive] href=https://github.com/rafaskb/awesome-libgdx#readme
+        e1216 listitem "PlayCanvas - Game engine." <li>
+          e1217 link "PlayCanvas" <a> [interactive] href=https://github.com/playcanvas/awesome-playcanvas#readme
+        e1218 listitem "Game Remakes - Actively maintained open-source game remakes." <li>
+          e1219 link "Game Remakes" <a> [interactive] href=https://github.com/radek-sprta/awesome-game-remakes#readme
+        e1220 listitem "Flame - Game engine for Flutter." <li>
+          e1221 link "Flame" <a> [interactive] href=https://github.com/flame-engine/awesome-flame#readme
+        e1222 listitem "Discord Communities - Chat with friends and communities." <li>
+          e1223 link "Discord Communities" <a> [interactive] href=https://github.com/mhxion/awesome-discord-communities#readme
+        e1224 listitem "CHIP-8 - Virtual computer game machine from the 70s." <li>
+          e1225 link "CHIP-8" <a> [interactive] href=https://github.com/tobiasvl/awesome-chip-8#readme
+        e1226 listitem "Games of Coding - Learn a programming language by making games." <li>
+          e1227 link "Games of Coding" <a> [interactive] href=https://github.com/michelpereira/awesome-games-of-coding#readme
+        e1228 listitem "Esports - Video games played as a sport." <li>
+          e1229 link "Esports" <a> [interactive] href=https://github.com/strift/awesome-esports#readme
+        e1230 listitem "Learn Gamedev - The craft of video game creation." <li>
+          e1231 link "Learn Gamedev" <a> [interactive] href=https://github.com/notpresident35/awesome-learn-gamedev#readme
+        e1232 listitem "Game Engine Development - Building software to speed up game creation." <li>
+          e1233 link "Game Engine Development" <a> [interactive] href=https://github.com/stevinz/awesome-game-engine-dev#readme
+        e1234 listitem "GameMaker - Game engine." <li>
+          e1235 link "GameMaker" <a> [interactive] href=https://github.com/bytecauldron/awesome-gamemaker#readme
+        e1236 listitem "Game Production - Leading the process of designing, developing, testing and d..." <li>
+          e1237 link "Game Production" <a> [interactive] href=https://github.com/vhladiienko/awesome-game-production#readme
+        e1238 listitem "Babylon.js - Game engine for cross-platform web and native game development." <li>
+          e1239 link "Babylon.js" <a> [interactive] href=https://github.com/Symbitic/awesome-babylonjs#readme
+        e1240 listitem "Roblox - Immersive platform for hosting millions of diverse experiences." <li>
+          e1241 link "Roblox" <a> [interactive] href=https://github.com/awesome-roblox/awesome-roblox#readme
+      e1242 heading "Development Environment" <h2> level=2
+      e1243 link "Permalink: Development Environment" <a> [interactive] href=#development-environment
+      e1244 list "Quick Look Plugins - For macOS. Dev Env Dotfiles Shell Fish - User-friendly s..." <ul>
+        e1245 listitem "Quick Look Plugins - For macOS." <li>
+          e1246 link "Quick Look Plugins" <a> [interactive] href=https://github.com/sindresorhus/quick-look-plugins#readme
+        e1247 listitem "Dev Env" <li>
+          e1248 link "Dev Env" <a> [interactive] href=https://github.com/jondot/awesome-devenv#readme
+        e1249 listitem "Dotfiles" <li>
+          e1250 link "Dotfiles" <a> [interactive] href=https://github.com/webpro/awesome-dotfiles#readme
+        e1251 listitem "Shell" <li>
+          e1252 link "Shell" <a> [interactive] href=https://github.com/alebcay/awesome-shell#readme
+        e1253 listitem "Fish - User-friendly shell." <li>
+          e1254 link "Fish" <a> [interactive] href=https://github.com/jorgebucaran/awsm.fish#readme
+        e1255 listitem "Command-Line Apps" <li>
+          e1256 link "Command-Line Apps" <a> [interactive] href=https://github.com/agarrharr/awesome-cli-apps#readme
+        e1257 listitem "ZSH Plugins" <li>
+          e1258 link "ZSH Plugins" <a> [interactive] href=https://github.com/unixorn/awesome-zsh-plugins#readme
+        e1259 listitem "GitHub - Hosting service for Git repositories. Browser Extensions Cheat Sheet..." <li>
+          e1260 link "GitHub" <a> [interactive] href=https://github.com/phillipadsmith/awesome-github#readme
+          e1261 list "Browser Extensions Cheat Sheet Pinned Gists - Dynamic pinned gists for your G..." <ul>
+            e1262 listitem "Browser Extensions" <li>
+              e1263 link "Browser Extensions" <a> [interactive] href=https://github.com/stefanbuck/awesome-browser-extensions-for-github#readme
+            e1264 listitem "Cheat Sheet" <li>
+              e1265 link "Cheat Sheet" <a> [interactive] href=https://github.com/tiimgreen/github-cheat-sheet#readme
+            e1266 listitem "Pinned Gists - Dynamic pinned gists for your GitHub profile." <li>
+              e1267 link "Pinned Gists" <a> [interactive] href=https://github.com/matchai/awesome-pinned-gists#readme
+        e1268 listitem "Git Cheat Sheet & Git Flow" <li>
+          e1269 link "Git Cheat Sheet & Git Flow" <a> [interactive] href=https://github.com/arslanbilal/git-cheat-sheet#readme
+        e1270 listitem "Git Tips" <li>
+          e1271 link "Git Tips" <a> [interactive] href=https://github.com/git-tips/tips#readme
+        e1272 listitem "Git Add-ons - Enhance the git CLI." <li>
+          e1273 link "Git Add-ons" <a> [interactive] href=https://github.com/stevemao/awesome-git-addons#readme
+          e1274 code "git" <code>
+        e1275 listitem "Git Hooks - Scripts for automating tasks during git workflows." <li>
+          e1276 link "Git Hooks" <a> [interactive] href=https://github.com/compscilauren/awesome-git-hooks#readme
+          e1277 code "git" <code>
+        e1278 listitem "SSH" <li>
+          e1279 link "SSH" <a> [interactive] href=https://github.com/moul/awesome-ssh#readme
+        e1280 listitem "FOSS for Developers" <li>
+          e1281 link "FOSS for Developers" <a> [interactive] href=https://github.com/tvvocold/FOSS-for-Dev#readme
+        e1282 listitem "Hyper - Cross-platform terminal app built on web technologies." <li>
+          e1283 link "Hyper" <a> [interactive] href=https://github.com/bnb/awesome-hyper#readme
+        e1284 listitem "PowerShell - Cross-platform object-oriented shell." <li>
+          e1285 link "PowerShell" <a> [interactive] href=https://github.com/janikvonrotz/awesome-powershell#readme
+        e1286 listitem "Alfred Workflows - Productivity app for macOS." <li>
+          e1287 link "Alfred Workflows" <a> [interactive] href=https://github.com/alfred-workflows/awesome-alfred-workflows#readme
+        e1288 listitem "Terminals Are Sexy" <li>
+          e1289 link "Terminals Are Sexy" <a> [interactive] href=https://github.com/k4m4/terminals-are-sexy#readme
+        e1290 listitem "GitHub Actions - Create tasks to automate your workflow and share them with o..." <li>
+          e1291 link "GitHub Actions" <a> [interactive] href=https://github.com/sdras/awesome-actions#readme
+        e1292 listitem "WezTerm - Powerful cross-platform terminal emulator." <li>
+          e1293 link "WezTerm" <a> [interactive] href=https://github.com/michaelbrusegard/awesome-wezterm#readme
+      e1294 heading "Entertainment" <h2> level=2
+      e1295 link "Permalink: Entertainment" <a> [interactive] href=#entertainment
+      e1296 list "Science Fiction - Scifi. Fantasy Podcasts Email Newsletters IT Quotes" <ul>
+        e1297 listitem "Science Fiction - Scifi." <li>
+          e1298 link "Science Fiction" <a> [interactive] href=https://github.com/sindresorhus/awesome-scifi#readme
+        e1299 listitem "Fantasy" <li>
+          e1300 link "Fantasy" <a> [interactive] href=https://github.com/RichardLitt/awesome-fantasy#readme
+        e1301 listitem "Podcasts" <li>
+          e1302 link "Podcasts" <a> [interactive] href=https://github.com/ayr-ton/awesome-geek-podcasts#readme
+        e1303 listitem "Email Newsletters" <li>
+          e1304 link "Email Newsletters" <a> [interactive] href=https://github.com/zudochkin/awesome-newsletters#readme
+        e1305 listitem "IT Quotes" <li>
+          e1306 link "IT Quotes" <a> [interactive] href=https://github.com/victorlaerte/awesome-it-quotes#readme
+      e1307 heading "Databases" <h2> level=2
+      e1308 link "Permalink: Databases" <a> [interactive] href=#databases
+      e1309 list "Database MySQL SQLAlchemy InfluxDB Neo4j MongoDB - NoSQL database. RethinkDB ..." <ul>
+        e1310 listitem "Database" <li>
+          e1311 link "Database" <a> [interactive] href=https://github.com/numetriclabz/awesome-db#readme
+        e1312 listitem "MySQL" <li>
+          e1313 link "MySQL" <a> [interactive] href=https://github.com/shlomi-noach/awesome-mysql#readme
+        e1314 listitem "SQLAlchemy" <li>
+          e1315 link "SQLAlchemy" <a> [interactive] href=https://github.com/dahlia/awesome-sqlalchemy#readme
+        e1316 listitem "InfluxDB" <li>
+          e1317 link "InfluxDB" <a> [interactive] href=https://github.com/mark-rushakoff/awesome-influxdb#readme
+        e1318 listitem "Neo4j" <li>
+          e1319 link "Neo4j" <a> [interactive] href=https://github.com/neueda/awesome-neo4j#readme
+        e1320 listitem "MongoDB - NoSQL database." <li>
+          e1321 link "MongoDB" <a> [interactive] href=https://github.com/ramnes/awesome-mongodb#readme
+        e1322 listitem "RethinkDB" <li>
+          e1323 link "RethinkDB" <a> [interactive] href=https://github.com/d3viant0ne/awesome-rethinkdb#readme
+        e1324 listitem "TinkerPop - Graph computing framework." <li>
+          e1325 link "TinkerPop" <a> [interactive] href=https://github.com/mohataher/awesome-tinkerpop#readme
+        e1326 listitem "PostgreSQL - Object-relational database." <li>
+          e1327 link "PostgreSQL" <a> [interactive] href=https://github.com/dhamaniasad/awesome-postgres#readme
+        e1328 listitem "CouchDB - Document-oriented NoSQL database." <li>
+          e1329 link "CouchDB" <a> [interactive] href=https://github.com/quangv/awesome-couchdb#readme
+        e1330 listitem "HBase - Distributed, scalable, big data store." <li>
+          e1331 link "HBase" <a> [interactive] href=https://github.com/rayokota/awesome-hbase#readme
+        e1332 listitem "NoSQL Guides - Help on using non-relational, distributed, open-source, and ho..." <li>
+          e1333 link "NoSQL Guides" <a> [interactive] href=https://github.com/erictleung/awesome-nosql-guides#readme
+        e1334 listitem "Database Tools - Everything that makes working with databases easier." <li>
+          e1335 link "Database Tools" <a> [interactive] href=https://github.com/mgramin/awesome-db-tools#readme
+        e1336 listitem "TypeDB - Logical database to organize large and complex networks of data as o..." <li>
+          e1337 link "TypeDB" <a> [interactive] href=https://github.com/vaticle/typedb-awesome#readme
+        e1338 listitem "Cassandra - Open-source, distributed, wide column store, NoSQL database manag..." <li>
+          e1339 link "Cassandra" <a> [interactive] href=https://github.com/Anant/awesome-cassandra#readme
+        e1340 listitem "TDengine - An open-source time-series database with high-performance, scalabi..." <li>
+          e1341 link "TDengine" <a> [interactive] href=https://github.com/taosdata/awesome-tdengine#readme
+        e1342 listitem "Supabase - An open-source alternative to Firebase." <li>
+          e1343 link "Supabase" <a> [interactive] href=https://github.com/lyqht/awesome-supabase#readme
+        e1344 listitem "PocketBase - An open-source, Go-based backend in one file." <li>
+          e1345 link "PocketBase" <a> [interactive] href=https://github.com/benallfree/awesome-pocketbase#readme
+        e1346 listitem "Neon - An open-source alternative to AWS Aurora." <li>
+          e1347 link "Neon" <a> [interactive] href=https://github.com/tyaga001/awesome-neon#readme
+      e1348 heading "Media" <h2> level=2
+      e1349 link "Permalink: Media" <a> [interactive] href=#media
+      e1350 list "Fonts Codeface - Text editor fonts. Stock Resources GIF - Image format known ..." <ul>
+        e1351 listitem "Fonts" <li>
+          e1352 link "Fonts" <a> [interactive] href=https://github.com/brabadu/awesome-fonts#readme
+        e1353 listitem "Codeface - Text editor fonts." <li>
+          e1354 link "Codeface" <a> [interactive] href=https://github.com/chrissimpkins/codeface#readme
+        e1355 listitem "Stock Resources" <li>
+          e1356 link "Stock Resources" <a> [interactive] href=https://github.com/neutraltone/awesome-stock-resources#readme
+        e1357 listitem "GIF - Image format known for animated images." <li>
+          e1358 link "GIF" <a> [interactive] href=https://github.com/davisonio/awesome-gif#readme
+        e1359 listitem "Music" <li>
+          e1360 link "Music" <a> [interactive] href=https://github.com/ciconia/awesome-music#readme
+        e1361 listitem "Open Source Documents" <li>
+          e1362 link "Open Source Documents" <a> [interactive] href=https://github.com/44bits/awesome-opensource-documents#readme
+        e1363 listitem "Audio Visualization" <li>
+          e1364 link "Audio Visualization" <a> [interactive] href=https://github.com/willianjusten/awesome-audio-visualization#readme
+        e1365 listitem "Broadcasting" <li>
+          e1366 link "Broadcasting" <a> [interactive] href=https://github.com/ebu/awesome-broadcasting#readme
+        e1367 listitem "Pixel Art - Pixel-level digital art." <li>
+          e1368 link "Pixel Art" <a> [interactive] href=https://github.com/Siilwyn/awesome-pixel-art#readme
+        e1369 listitem "FFmpeg - Cross-platform solution to record, convert and stream audio and video." <li>
+          e1370 link "FFmpeg" <a> [interactive] href=https://github.com/transitive-bullshit/awesome-ffmpeg#readme
+        e1371 listitem "Icons - Downloadable SVG/PNG/font icon projects." <li>
+          e1372 link "Icons" <a> [interactive] href=https://github.com/notlmn/awesome-icons#readme
+        e1373 listitem "Audiovisual - Lighting, audio and video in professional environments." <li>
+          e1374 link "Audiovisual" <a> [interactive] href=https://github.com/stingalleman/awesome-audiovisual#readme
+        e1375 listitem "VLC - Cross-platform media player software and streaming server." <li>
+          e1376 link "VLC" <a> [interactive] href=https://github.com/mfkl/awesome-vlc#readme
+        e1377 listitem "Audio Over IP - Reliably transmit uncompressed, low-latency audio over an IP ..." <li>
+          e1378 link "Audio Over IP" <a> [interactive] href=https://github.com/Mo-way/awesome-aoip#readme
+      e1379 heading "Learn" <h2> level=2
+      e1380 link "Permalink: Learn" <a> [interactive] href=#learn
+      e1381 list "CLI Workshoppers - Interactive tutorials. Learn to Program Speaking Tech Vide..." <ul>
+        e1382 listitem "CLI Workshoppers - Interactive tutorials." <li>
+          e1383 link "CLI Workshoppers" <a> [interactive] href=https://github.com/therebelrobot/awesome-workshopper#readme
+        e1384 listitem "Learn to Program" <li>
+          e1385 link "Learn to Program" <a> [interactive] href=https://github.com/karlhorky/learn-to-program#readme
+        e1386 listitem "Speaking" <li>
+          e1387 link "Speaking" <a> [interactive] href=https://github.com/matteofigus/awesome-speaking#readme
+        e1388 listitem "Tech Videos" <li>
+          e1389 link "Tech Videos" <a> [interactive] href=https://github.com/lucasviola/awesome-tech-videos#readme
+        e1390 listitem "Dive into Machine Learning" <li>
+          e1391 link "Dive into Machine Learning" <a> [interactive] href=https://github.com/hangtwenty/dive-into-machine-learning#readme
+        e1392 listitem "Computer History" <li>
+          e1393 link "Computer History" <a> [interactive] href=https://github.com/watson/awesome-computer-history#readme
+        e1394 listitem "Programming for Kids" <li>
+          e1395 link "Programming for Kids" <a> [interactive] href=https://github.com/HollyAdele/awesome-programming-for-kids#readme
+        e1396 listitem "STEAM - Supplements for specific science, technology, engineering, arts, and ..." <li>
+          e1397 link "STEAM" <a> [interactive] href=https://github.com/RahulBirCodes/awesome-steam#readme
+        e1398 listitem "Educational Games - Learn while playing." <li>
+          e1399 link "Educational Games" <a> [interactive] href=https://github.com/yrgo/awesome-educational-games#readme
+        e1400 listitem "JavaScript Learning" <li>
+          e1401 link "JavaScript Learning" <a> [interactive] href=https://github.com/micromata/awesome-javascript-learning#readme
+        e1402 listitem "CSS Learning - Mainly about CSS – the language and the modules." <li>
+          e1403 link "CSS Learning" <a> [interactive] href=https://github.com/micromata/awesome-css-learning#readme
+        e1404 listitem "Product Management - Learn how to be a better product manager." <li>
+          e1405 link "Product Management" <a> [interactive] href=https://github.com/dend/awesome-product-management#readme
+        e1406 listitem "Roadmaps - Gives you a clear route to improve your knowledge and skills." <li>
+          e1407 link "Roadmaps" <a> [interactive] href=https://github.com/liuchong/awesome-roadmaps#readme
+        e1408 listitem "YouTubers - Watch video tutorials from YouTubers that teach you about technol..." <li>
+          e1409 link "YouTubers" <a> [interactive] href=https://github.com/JoseDeFreitas/awesome-youtubers#readme
+        e1410 listitem "Hackathon - Running fun and productive hackathons." <li>
+          e1411 link "Hackathon" <a> [interactive] href=https://github.com/dribdat/awesome-hackathon#readme
+        e1412 listitem "Certificates - Free computer science certifications to showcase your knowledge." <li>
+          e1413 link "Certificates" <a> [interactive] href=https://github.com/PanXProject/awesome-certificates#readme
+      e1414 heading "Security" <h2> level=2
+      e1415 link "Permalink: Security" <a> [interactive] href=#security
+      e1416 list "Application Security Security CTF - Capture The Flag. Cyber Security Universi..." <ul>
+        e1417 listitem "Application Security" <li>
+          e1418 link "Application Security" <a> [interactive] href=https://github.com/paragonie/awesome-appsec#readme
+        e1419 listitem "Security" <li>
+          e1420 link "Security" <a> [interactive] href=https://github.com/sbilly/awesome-security#readme
+        e1421 listitem "CTF - Capture The Flag." <li>
+          e1422 link "CTF" <a> [interactive] href=https://github.com/apsdehal/awesome-ctf#readme
+        e1423 listitem "Cyber Security University - Free educational resources that focus on learning..." <li>
+          e1424 link "Cyber Security University" <a> [interactive] href=https://github.com/brootware/awesome-cyber-security-university#readme
+        e1425 listitem "Malware Analysis" <li>
+          e1426 link "Malware Analysis" <a> [interactive] href=https://github.com/rshipp/awesome-malware-analysis#readme
+        e1427 listitem "Android Security" <li>
+          e1428 link "Android Security" <a> [interactive] href=https://github.com/ashishb/android-security-awesome#readme
+        e1429 listitem "Hacking" <li>
+          e1430 link "Hacking" <a> [interactive] href=https://github.com/carpedm20/awesome-hacking#readme
+        e1431 listitem "Hacking Spots" <li>
+          e1432 link "Hacking Spots" <a> [interactive] href=https://github.com/daviddias/awesome-hacking-locations#readme
+        e1433 listitem "Honeypots - Deception trap, designed to entice an attacker into attempting to..." <li>
+          e1434 link "Honeypots" <a> [interactive] href=https://github.com/paralax/awesome-honeypots#readme
+        e1435 listitem "Incident Response" <li>
+          e1436 link "Incident Response" <a> [interactive] href=https://github.com/meirwah/awesome-incident-response#readme
+        e1437 listitem "Vehicle Security and Car Hacking" <li>
+          e1438 link "Vehicle Security and Car Hacking" <a> [interactive] href=https://github.com/jaredthecoder/awesome-vehicle-security#readme
+        e1439 listitem "Web Security - Security of web apps & services." <li>
+          e1440 link "Web Security" <a> [interactive] href=https://github.com/qazbnm456/awesome-web-security#readme
+        e1441 listitem "Lockpicking - The art of unlocking a lock by manipulating its components with..." <li>
+          e1442 link "Lockpicking" <a> [interactive] href=https://github.com/fabacab/awesome-lockpicking#readme
+        e1443 listitem "Cybersecurity Blue Team - Groups of individuals who identify security flaws i..." <li>
+          e1444 link "Cybersecurity Blue Team" <a> [interactive] href=https://github.com/fabacab/awesome-cybersecurity-blueteam#readme
+        e1445 listitem "Fuzzing - Automated software testing technique that involves feeding pseudo-r..." <li>
+          e1446 link "Fuzzing" <a> [interactive] href=https://github.com/cpuu/awesome-fuzzing#readme
+        e1447 listitem "Embedded and IoT Security" <li>
+          e1448 link "Embedded and IoT Security" <a> [interactive] href=https://github.com/fkie-cad/awesome-embedded-and-iot-security#readme
+        e1449 listitem "GDPR - Regulation on data protection and privacy for all individuals within EU." <li>
+          e1450 link "GDPR" <a> [interactive] href=https://github.com/bakke92/awesome-gdpr#readme
+        e1451 listitem "DevSecOps - Integration of security practices into DevOps." <li>
+          e1452 link "DevSecOps" <a> [interactive] href=https://github.com/TaptuIT/awesome-devsecops#readme
+          e1453 link "DevOps" <a> [interactive] href=https://en.wikipedia.org/wiki/DevOps
+        e1454 listitem "Executable Packing - Packing and unpacking executable formats." <li>
+          e1455 link "Executable Packing" <a> [interactive] href=https://github.com/dhondta/awesome-executable-packing#readme
+        e1456 listitem "Malware Persistence - Techniques that adversaries use to keep access to syste..." <li>
+          e1457 link "Malware Persistence" <a> [interactive] href=https://github.com/Karneades/awesome-malware-persistence#readme
+        e1458 listitem "EVM Security - Understanding the Ethereum Virtual Machine security ecosystem." <li>
+          e1459 link "EVM Security" <a> [interactive] href=https://github.com/kareniel/awesome-evm-security#readme
+        e1460 listitem "Password Cracking - The process of recovering passwords from data that has be..." <li>
+          e1461 link "Password Cracking" <a> [interactive] href=https://github.com/n0kovo/awesome-password-cracking#readme
+        e1462 listitem "Security Card Games - Train your skills and discuss various security topics." <li>
+          e1463 link "Security Card Games" <a> [interactive] href=https://github.com/Karneades/awesome-security-card-games#readme
+        e1464 listitem "Suricata - Intrusion detection/prevention system and network security monitor..." <li>
+          e1465 link "Suricata" <a> [interactive] href=https://github.com/satta/awesome-suricata#readme
+        e1466 listitem "Prompt Injection - A type of vulnerability that specifically targets machine ..." <li>
+          e1467 link "Prompt Injection" <a> [interactive] href=https://github.com/FonduAI/awesome-prompt-injection#readme
+        e1468 listitem "Detection Engineering - Design, build, and operate detective cybersecurity co..." <li>
+          e1469 link "Detection Engineering" <a> [interactive] href=https://github.com/infosecB/awesome-detection-engineering#readme
+        e1470 listitem "Annual Security Reports - Exploring cybersecurity trends, insights, and chall..." <li>
+          e1471 link "Annual Security Reports" <a> [interactive] href=https://github.com/jacobdjwilson/awesome-annual-security-reports#readme
+        e1472 listitem "CI/CD Attacks - Offensive research of systems and processes related to develo..." <li>
+          e1473 link "CI/CD Attacks" <a> [interactive] href=https://github.com/TupleType/awesome-cicd-attacks#readme
+        e1474 listitem "OpenID Connect - Identity standard and authentication protocol built on OAuth..." <li>
+          e1475 link "OpenID Connect" <a> [interactive] href=https://github.com/cerberauth/awesome-openid-connect#readme
+      e1476 heading "Content Management Systems" <h2> level=2
+      e1477 link "Permalink: Content Management Systems" <a> [interactive] href=#content-management-systems
+      e1478 list "Umbraco Refinery CMS - Ruby on Rails CMS. Wagtail - Django CMS focused on fle..." <ul>
+        e1479 listitem "Umbraco" <li>
+          e1480 link "Umbraco" <a> [interactive] href=https://github.com/umbraco-community/awesome-umbraco#readme
+        e1481 listitem "Refinery CMS - Ruby on Rails CMS." <li>
+          e1482 link "Refinery CMS" <a> [interactive] href=https://github.com/refinerycms-contrib/awesome-refinerycms#readme
+        e1483 listitem "Wagtail - Django CMS focused on flexibility and user experience." <li>
+          e1484 link "Wagtail" <a> [interactive] href=https://github.com/springload/awesome-wagtail#readme
+        e1485 listitem "Textpattern - Lightweight PHP-based CMS." <li>
+          e1486 link "Textpattern" <a> [interactive] href=https://github.com/drmonkeyninja/awesome-textpattern#readme
+        e1487 listitem "Drupal - Extensible PHP-based CMS." <li>
+          e1488 link "Drupal" <a> [interactive] href=https://github.com/nirgn975/awesome-drupal#readme
+        e1489 listitem "Craft CMS - Content-first CMS." <li>
+          e1490 link "Craft CMS" <a> [interactive] href=https://github.com/craftcms/awesome#readme
+        e1491 listitem "Sitecore - .NET digital marketing platform that combines CMS with tools for m..." <li>
+          e1492 link "Sitecore" <a> [interactive] href=https://github.com/MartinMiles/Awesome-Sitecore#readme
+        e1493 listitem "Silverstripe CMS - PHP MVC framework that serves as a classic or headless CMS." <li>
+          e1494 link "Silverstripe CMS" <a> [interactive] href=https://github.com/wernerkrauss/awesome-silverstripe-cms#readme
+        e1495 listitem "Directus - A real-time API and app dashboard for managing SQL database content." <li>
+          e1496 link "Directus" <a> [interactive] href=https://github.com/directus-community/awesome-directus#readme
+        e1497 listitem "Plone - Open source Python CMS." <li>
+          e1498 link "Plone" <a> [interactive] href=https://github.com/collective/awesome-plone#readme
+        e1499 listitem "Payload - Next.js native and open source headless CMS." <li>
+          e1500 link "Payload" <a> [interactive] href=https://github.com/DanailMinchev/awesome-payload#readme
+      e1501 heading "Hardware" <h2> level=2
+      e1502 link "Permalink: Hardware" <a> [interactive] href=#hardware
+      e1503 list "Robotics Internet of Things Electronics - For electronic engineers and hobbyi..." <ul>
+        e1504 listitem "Robotics" <li>
+          e1505 link "Robotics" <a> [interactive] href=https://github.com/Kiloreux/awesome-robotics#readme
+        e1506 listitem "Internet of Things" <li>
+          e1507 link "Internet of Things" <a> [interactive] href=https://github.com/HQarroum/awesome-iot#readme
+        e1508 listitem "Electronics - For electronic engineers and hobbyists." <li>
+          e1509 link "Electronics" <a> [interactive] href=https://github.com/kitspace/awesome-electronics#readme
+        e1510 listitem "Bluetooth Beacons" <li>
+          e1511 link "Bluetooth Beacons" <a> [interactive] href=https://github.com/rabschi/awesome-beacon#readme
+        e1512 listitem "Electric Guitar Specifications - Checklist for building your own electric gui..." <li>
+          e1513 link "Electric Guitar Specifications" <a> [interactive] href=https://github.com/gitfrage/guitarspecs#readme
+        e1514 listitem "Plotters - Computer-controlled drawing machines and other visual art robots." <li>
+          e1515 link "Plotters" <a> [interactive] href=https://github.com/beardicus/awesome-plotters#readme
+        e1516 listitem "Robotic Tooling - Free and open tools for professional robotic development." <li>
+          e1517 link "Robotic Tooling" <a> [interactive] href=https://github.com/protontypes/awesome-robotic-tooling#readme
+        e1518 listitem "LIDAR - Sensor for measuring distances by illuminating the target with laser ..." <li>
+          e1519 link "LIDAR" <a> [interactive] href=https://github.com/szenergy/awesome-lidar#readme
+        e1520 listitem "Open Hardware - Open-source hardware projects." <li>
+          e1521 link "Open Hardware" <a> [interactive] href=https://github.com/delftopenhardware/awesome-open-hardware#readme
+        e1522 listitem "ADS-B - Technology broadcasting aircraft's identity, position, and data perio..." <li>
+          e1523 link "ADS-B" <a> [interactive] href=https://github.com/rickstaa/awesome-adsb#readme
+        e1524 listitem "Flying FPV - Open hardware and software related to drones / UAVs." <li>
+          e1525 link "Flying FPV" <a> [interactive] href=https://github.com/Matthias84/awesome-flying-fpv#readme
+      e1526 heading "Business" <h2> level=2
+      e1527 link "Permalink: Business" <a> [interactive] href=#business
+      e1528 list "Open Companies Places to Post Your Startup OKR Methodology - Goal setting & c..." <ul>
+        e1529 listitem "Open Companies" <li>
+          e1530 link "Open Companies" <a> [interactive] href=https://github.com/opencompany/awesome-open-company#readme
+        e1531 listitem "Places to Post Your Startup" <li>
+          e1532 link "Places to Post Your Startup" <a> [interactive] href=https://github.com/mmccaff/PlacesToPostYourStartup#readme
+        e1533 listitem "OKR Methodology - Goal setting & communication best practices." <li>
+          e1534 link "OKR Methodology" <a> [interactive] href=https://github.com/domenicosolazzo/awesome-okr#readme
+        e1535 listitem "Indie - Independent developer businesses." <li>
+          e1536 link "Indie" <a> [interactive] href=https://github.com/mezod/awesome-indie#readme
+        e1537 listitem "Tools of the Trade - Tools used by companies on Hacker News." <li>
+          e1538 link "Tools of the Trade" <a> [interactive] href=https://github.com/cjbarber/ToolsOfTheTrade#readme
+        e1539 listitem "Clean Tech - Fighting climate change with technology." <li>
+          e1540 link "Clean Tech" <a> [interactive] href=https://github.com/nglgzz/awesome-clean-tech#readme
+        e1541 listitem "Wardley Maps - Provides high situational awareness to help improve strategic ..." <li>
+          e1542 link "Wardley Maps" <a> [interactive] href=https://github.com/wardley-maps-community/awesome-wardley-maps#readme
+        e1543 listitem "Social Enterprise - Building an organization primarily focused on social impa..." <li>
+          e1544 link "Social Enterprise" <a> [interactive] href=https://github.com/RayBB/awesome-social-enterprise#readme
+        e1545 listitem "Engineering Team Management - How to transition from software development to ..." <li>
+          e1546 link "Engineering Team Management" <a> [interactive] href=https://github.com/kdeldycke/awesome-engineering-team-management#readme
+        e1547 listitem "Developer-First Products - Products that target developers as the user." <li>
+          e1548 link "Developer-First Products" <a> [interactive] href=https://github.com/agamm/awesome-developer-first#readme
+        e1549 listitem "Billing - Payments, invoicing, pricing, accounting, marketplace, fraud, and b..." <li>
+          e1550 link "Billing" <a> [interactive] href=https://github.com/kdeldycke/awesome-billing#readme
+        e1551 listitem "Engineering Strategy - How to design and execute engineering strategies for t..." <li>
+          e1552 link "Engineering Strategy" <a> [interactive] href=https://github.com/aleixmorgadas/awesome-engineering-strategy#readme
+      e1553 heading "Work" <h2> level=2
+      e1554 link "Permalink: Work" <a> [interactive] href=#work
+      e1555 list "Slack - Team collaboration. Communities Remote Jobs Productivity Niche Job Bo..." <ul>
+        e1556 listitem "Slack - Team collaboration. Communities" <li>
+          e1557 link "Slack" <a> [interactive] href=https://github.com/matiassingers/awesome-slack#readme
+          e1558 list "Communities" <ul>
+            e1559 listitem "Communities" <li>
+              e1560 link "Communities" <a> [interactive] href=https://github.com/filipelinhares/awesome-slack#readme
+        e1561 listitem "Remote Jobs" <li>
+          e1562 link "Remote Jobs" <a> [interactive] href=https://github.com/lukasz-madon/awesome-remote-job#readme
+        e1563 listitem "Productivity" <li>
+          e1564 link "Productivity" <a> [interactive] href=https://github.com/jyguyomarch/awesome-productivity#readme
+        e1565 listitem "Niche Job Boards" <li>
+          e1566 link "Niche Job Boards" <a> [interactive] href=https://github.com/tramcar/awesome-job-boards#readme
+        e1567 listitem "Programming Interviews" <li>
+          e1568 link "Programming Interviews" <a> [interactive] href=https://github.com/DopplerHQ/awesome-interview-questions#readme
+        e1569 listitem "Code Review - Reviewing code." <li>
+          e1570 link "Code Review" <a> [interactive] href=https://github.com/joho/awesome-code-review#readme
+        e1571 listitem "Creative Technology - Businesses & groups that specialize in combining comput..." <li>
+          e1572 link "Creative Technology" <a> [interactive] href=https://github.com/j0hnm4r5/awesome-creative-technology#readme
+        e1573 listitem "Internships - CV writing guides and companies that hire interns." <li>
+          e1574 link "Internships" <a> [interactive] href=https://github.com/lodthe/awesome-internships#readme
+      e1575 heading "Networking" <h2> level=2
+      e1576 link "Permalink: Networking" <a> [interactive] href=#networking
+      e1577 list "Software-Defined Networking PCAPTools Real-Time Communications - Network prot..." <ul>
+        e1578 listitem "Software-Defined Networking" <li>
+          e1579 link "Software-Defined Networking" <a> [interactive] href=https://github.com/sdnds-tw/awesome-sdn#readme
+        e1580 listitem "PCAPTools" <li>
+          e1581 link "PCAPTools" <a> [interactive] href=https://github.com/caesar0301/awesome-pcaptools#readme
+        e1582 listitem "Real-Time Communications - Network protocols for near simultaneous exchange o..." <li>
+          e1583 link "Real-Time Communications" <a> [interactive] href=https://github.com/rtckit/awesome-rtc#readme
+        e1584 listitem "SNMP - A protocol for collecting, modifying, and organizing information about..." <li>
+          e1585 link "SNMP" <a> [interactive] href=https://github.com/eozer/awesome-snmp#readme
+        e1586 listitem "Scapy - Python-based interactive packet manipulation." <li>
+          e1587 link "Scapy" <a> [interactive] href=https://github.com/secdev/awesome-scapy#readme
+        e1588 listitem "Cilium - Provides networking and security capabilities for containerized apps..." <li>
+          e1589 link "Cilium" <a> [interactive] href=https://github.com/seifrajhi/awesome-cilium#readme
+      e1590 heading "Decentralized Systems" <h2> level=2
+      e1591 link "Permalink: Decentralized Systems" <a> [interactive] href=#decentralized-systems
+      e1592 list "Bitcoin - Services and tools for Bitcoin software developers. Ripple - Open s..." <ul>
+        e1593 listitem "Bitcoin - Services and tools for Bitcoin software developers." <li>
+          e1594 link "Bitcoin" <a> [interactive] href=https://github.com/igorbarinov/awesome-bitcoin#readme
+        e1595 listitem "Ripple - Open source distributed settlement network." <li>
+          e1596 link "Ripple" <a> [interactive] href=https://github.com/vhpoet/awesome-ripple#readme
+        e1597 listitem "Non-Financial Blockchain - Applications of Blockchain beyond finance." <li>
+          e1598 link "Non-Financial Blockchain" <a> [interactive] href=https://github.com/machinomy/awesome-non-financial-blockchain#readme
+        e1599 listitem "Mastodon - Open source decentralized microblogging network." <li>
+          e1600 link "Mastodon" <a> [interactive] href=https://github.com/hyperupcall/awesome-mastodon#readme
+        e1601 listitem "Ethereum - Distributed computing platform for smart contract development." <li>
+          e1602 link "Ethereum" <a> [interactive] href=https://github.com/ttumiel/Awesome-Ethereum#readme
+        e1603 listitem "Blockchain AI - AI and machine-learning projects built on Blockchain." <li>
+          e1604 link "Blockchain AI" <a> [interactive] href=https://github.com/steven2358/awesome-blockchain-ai#readme
+        e1605 listitem "EOSIO - A decentralized operating system supporting industrial-scale apps." <li>
+          e1606 link "EOSIO" <a> [interactive] href=https://github.com/DanailMinchev/awesome-eosio#readme
+        e1607 listitem "Corda - Open source Blockchain platform designed for business." <li>
+          e1608 link "Corda" <a> [interactive] href=https://github.com/chainstack/awesome-corda#readme
+        e1609 listitem "Waves - Open source Blockchain platform and development toolset for Web 3.0 a..." <li>
+          e1610 link "Waves" <a> [interactive] href=https://github.com/msmolyakov/awesome-waves#readme
+        e1611 listitem "Substrate - Framework for writing scalable, upgradeable blockchains in Rust." <li>
+          e1612 link "Substrate" <a> [interactive] href=https://github.com/substrate-developer-hub/awesome-substrate#readme
+        e1613 listitem "Golem - Open source peer-to-peer marketplace for computing resources." <li>
+          e1614 link "Golem" <a> [interactive] href=https://github.com/golemfactory/awesome-golem#readme
+        e1615 listitem "Stacks - A smart contract platform secured by Bitcoin." <li>
+          e1616 link "Stacks" <a> [interactive] href=https://github.com/friedger/awesome-stacks-chain#readme
+        e1617 listitem "Algorand - An open-source, proof of stake Blockchain and smart contract compu..." <li>
+          e1618 link "Algorand" <a> [interactive] href=https://github.com/aorumbayev/awesome-algorand#readme
+        e1619 listitem "ZeroNet - A decentralized web-like network of peer-to-peer users." <li>
+          e1620 link "ZeroNet" <a> [interactive] href=https://github.com/zolagonano/awesome-zeronet#readme
+        e1621 listitem "Cosmos SDK - Modular framework for building app-specific blockchains in Go." <li>
+          e1622 link "Cosmos SDK" <a> [interactive] href=https://github.com/cosmos/awesome-cosmos#readme
+        e1623 listitem "Tor - A free overlay network for enabling anonymous communication." <li>
+          e1624 link "Tor" <a> [interactive] href=https://github.com/polycarbohydrate/awesome-tor#readme
+        e1625 listitem "ATProto - Open, decentralized network for building social apps." <li>
+          e1626 link "ATProto" <a> [interactive] href=https://github.com/atblueprints/awesome-atproto#readme
+      e1627 heading "Health and Social Science" <h2> level=2
+      e1628 link "Permalink: Health and Social Science" <a> [interactive] href=#health-and-social-science
+      e1629 list "Biomedical Information Extraction - How to extract information from unstructu..." <ul>
+        e1630 listitem "Biomedical Information Extraction - How to extract information from unstructu..." <li>
+          e1631 link "Biomedical Information Extraction" <a> [interactive] href=https://github.com/caufieldjh/awesome-bioie#readme
+        e1632 listitem "Computational Neuroscience - A multidisciplinary science which uses computati..." <li>
+          e1633 link "Computational Neuroscience" <a> [interactive] href=https://github.com/eselkin/awesome-computational-neuroscience#readme
+        e1634 listitem "Diversity - Creating a more inclusive and diverse tech community." <li>
+          e1635 link "Diversity" <a> [interactive] href=https://github.com/folkswhocode/awesome-diversity#readme
+        e1636 listitem "Digital History - Computer-aided scientific investigation of history." <li>
+          e1637 link "Digital History" <a> [interactive] href=https://github.com/maehr/awesome-digital-history#readme
+        e1638 listitem "Empathy in Engineering - Building and promoting more compassionate engineerin..." <li>
+          e1639 link "Empathy in Engineering" <a> [interactive] href=https://github.com/KimberlyMunoz/empathy-in-engineering#readme
+        e1640 listitem "Healthcare - Open source healthcare software for facilities, providers, devel..." <li>
+          e1641 link "Healthcare" <a> [interactive] href=https://github.com/kakoni/awesome-healthcare#readme
+        e1642 listitem "Humane Technology - Open source projects that help improve society." <li>
+          e1643 link "Humane Technology" <a> [interactive] href=https://github.com/humanetech-community/awesome-humane-tech#readme
+        e1644 listitem "Mental Health - Awareness and self-care in the software industry." <li>
+          e1645 link "Mental Health" <a> [interactive] href=https://github.com/dreamingechoes/awesome-mental-health#readme
+        e1646 listitem "Neuroscience - Study of the nervous system and brain." <li>
+          e1647 link "Neuroscience" <a> [interactive] href=https://github.com/analyticalmonk/awesome-neuroscience#readme
+        e1648 listitem "Digital Humanities - Software for humanities scholars using quantitative or c..." <li>
+          e1649 link "Digital Humanities" <a> [interactive] href=https://github.com/dh-tech/awesome-digital-humanities#readme
+        e1650 listitem "Lucid Dreams - A dream where one becomes aware they are dreaming." <li>
+          e1651 link "Lucid Dreams" <a> [interactive] href=https://github.com/IAmCoder/awesome-lucid-dreams#readme
+        e1652 listitem "Neuroimaging - Software for analyzing brain data from living subjects." <li>
+          e1653 link "Neuroimaging" <a> [interactive] href=https://github.com/NPACore/awesome-neuroimaging#readme
+        e1654 listitem "Transgender - Someone whose gender identity differs from their assigned birth..." <li>
+          e1655 link "Transgender" <a> [interactive] href=https://github.com/cvyl/awesome-transgender#readme
+      e1656 heading "Events" <h2> level=2
+      e1657 link "Permalink: Events" <a> [interactive] href=#events
+      e1658 list "Creative Tech Events - Events around the globe for creative coding, tech, des..." <ul>
+        e1659 listitem "Creative Tech Events - Events around the globe for creative coding, tech, des..." <li>
+          e1660 link "Creative Tech Events" <a> [interactive] href=https://github.com/danvoyce/awesome-creative-tech-events#readme
+        e1661 listitem "Events in Italy - Tech-related events in Italy." <li>
+          e1662 link "Events in Italy" <a> [interactive] href=https://github.com/ildoc/awesome-italy-events#readme
+        e1663 listitem "Events in the Netherlands - Tech-related events in the Netherlands." <li>
+          e1664 link "Events in the Netherlands" <a> [interactive] href=https://github.com/awkward/awesome-netherlands-events#readme
+      e1665 heading "Testing" <h2> level=2
+      e1666 link "Permalink: Testing" <a> [interactive] href=#testing
+      e1667 list "Testing - Software testing. Visual Regression Testing - Ensures changes did n..." <ul>
+        e1668 listitem "Testing - Software testing." <li>
+          e1669 link "Testing" <a> [interactive] href=https://github.com/TheJambo/awesome-testing#readme
+        e1670 listitem "Visual Regression Testing - Ensures changes did not break the functionality o..." <li>
+          e1671 link "Visual Regression Testing" <a> [interactive] href=https://github.com/mojoaxel/awesome-regression-testing#readme
+        e1672 listitem "Selenium - Open-source browser automation framework and ecosystem." <li>
+          e1673 link "Selenium" <a> [interactive] href=https://github.com/christian-bromann/awesome-selenium#readme
+        e1674 listitem "Appium - Test automation tool for apps." <li>
+          e1675 link "Appium" <a> [interactive] href=https://github.com/SrinivasanTarget/awesome-appium#readme
+        e1676 listitem "TAP - Test Anything Protocol." <li>
+          e1677 link "TAP" <a> [interactive] href=https://github.com/sindresorhus/awesome-tap#readme
+        e1678 listitem "JMeter - Load testing and performance measurement tool." <li>
+          e1679 link "JMeter" <a> [interactive] href=https://github.com/aliesbelik/awesome-jmeter#readme
+        e1680 listitem "k6 - Open-source, developer-centric performance monitoring and load testing s..." <li>
+          e1681 link "k6" <a> [interactive] href=https://github.com/grafana/awesome-k6#readme
+        e1682 listitem "Playwright - Node.js library to automate Chromium, Firefox and WebKit with a ..." <li>
+          e1683 link "Playwright" <a> [interactive] href=https://github.com/mxschmitt/awesome-playwright#readme
+        e1684 listitem "Quality Assurance Roadmap - How to start & build a career in software testing." <li>
+          e1685 link "Quality Assurance Roadmap" <a> [interactive] href=https://github.com/fityanos/awesome-quality-assurance-roadmap#readme
+        e1686 listitem "Gatling - Open-source load and performance testing framework based on Scala, ..." <li>
+          e1687 link "Gatling" <a> [interactive] href=https://github.com/aliesbelik/awesome-gatling#readme
+        e1688 listitem "CodeRabbit - AI-powered code review platform." <li>
+          e1689 link "CodeRabbit" <a> [interactive] href=https://github.com/coderabbitai/awesome-coderabbit#readme
+      e1690 heading "Miscellaneous" <h2> level=2
+      e1691 link "Permalink: Miscellaneous" <a> [interactive] href=#miscellaneous
+      e1692 list "Scientific Writing - Distraction-free scientific writing with Markdown, reStr..." <ul>
+        e1693 listitem "Scientific Writing - Distraction-free scientific writing with Markdown, reStr..." <li>
+          e1694 link "Scientific Writing" <a> [interactive] href=https://github.com/writing-resources/awesome-scientific-writing#readme
+        e1695 listitem "JSON - Text based data interchange format. GeoJSON Datasets" <li>
+          e1696 link "JSON" <a> [interactive] href=https://github.com/burningtree/awesome-json#readme
+          e1697 list "GeoJSON Datasets" <ul>
+            e1698 listitem "GeoJSON" <li>
+              e1699 link "GeoJSON" <a> [interactive] href=https://github.com/tmcw/awesome-geojson#readme
+            e1700 listitem "Datasets" <li>
+              e1701 link "Datasets" <a> [interactive] href=https://github.com/jdorfman/awesome-json-datasets#readme
+        e1702 listitem "CSV - A text file format that stores tabular data and uses a comma to separat..." <li>
+          e1703 link "CSV" <a> [interactive] href=https://github.com/secretGeek/awesomeCSV#readme
+        e1704 listitem "Discounts for Student Developers" <li>
+          e1705 link "Discounts for Student Developers" <a> [interactive] href=https://github.com/AchoArnold/discount-for-student-dev#readme
+        e1706 listitem "Radio" <li>
+          e1707 link "Radio" <a> [interactive] href=https://github.com/kyleterry/awesome-radio#readme
+        e1708 listitem "Awesome - Recursion illustrated." <li>
+          e1709 link "Awesome" <a> [interactive] href=https://github.com/sindresorhus/awesome#readme
+        e1710 listitem "Analytics" <li>
+          e1711 link "Analytics" <a> [interactive] href=https://github.com/0xnr/awesome-analytics#readme
+        e1712 listitem "REST" <li>
+          e1713 link "REST" <a> [interactive] href=https://github.com/marmelab/awesome-rest#readme
+        e1714 listitem "Continuous Integration and Continuous Delivery" <li>
+          e1715 link "Continuous Integration and Continuous Delivery" <a> [interactive] href=https://github.com/cicdops/awesome-ciandcd#readme
+        e1716 listitem "Services Engineering" <li>
+          e1717 link "Services Engineering" <a> [interactive] href=https://github.com/mmcgrana/services-engineering#readme
+        e1718 listitem "Free for Developers" <li>
+          e1719 link "Free for Developers" <a> [interactive] href=https://github.com/ripienaar/free-for-dev#readme
+        e1720 listitem "Answers - Stack Overflow, Quora, etc." <li>
+          e1721 link "Answers" <a> [interactive] href=https://github.com/cyberglot/awesome-answers#readme
+        e1722 listitem "Sketch - Design app for macOS." <li>
+          e1723 link "Sketch" <a> [interactive] href=https://github.com/diessica/awesome-sketch#readme
+        e1724 listitem "Boilerplate Projects" <li>
+          e1725 link "Boilerplate Projects" <a> [interactive] href=https://github.com/melvin0008/awesome-projects-boilerplates#readme
+        e1726 listitem "Readme" <li>
+          e1727 link "Readme" <a> [interactive] href=https://github.com/matiassingers/awesome-readme#readme
+        e1728 listitem "GitHub Wiki - Comprehensive documentation on GitHub beyond README." <li>
+          e1729 link "GitHub Wiki" <a> [interactive] href=https://github.com/MyHoneyBadger/awesome-github-wiki#readme
+        e1730 listitem "Design and Development Guides" <li>
+          e1731 link "Design and Development Guides" <a> [interactive] href=https://github.com/NARKOZ/guides#readme
+        e1732 listitem "Software Engineering Blogs" <li>
+          e1733 link "Software Engineering Blogs" <a> [interactive] href=https://github.com/kilimchoi/engineering-blogs#readme
+        e1734 listitem "Self Hosted" <li>
+          e1735 link "Self Hosted" <a> [interactive] href=https://github.com/awesome-selfhosted/awesome-selfhosted#readme
+        e1736 listitem "FOSS Production Apps" <li>
+          e1737 link "FOSS Production Apps" <a> [interactive] href=https://github.com/DataDaoDe/awesome-foss-apps#readme
+        e1738 listitem "Gulp - Task runner." <li>
+          e1739 link "Gulp" <a> [interactive] href=https://github.com/alferov/awesome-gulp#readme
+        e1740 listitem "AMA - Ask Me Anything. Answers" <li>
+          e1741 link "AMA" <a> [interactive] href=https://github.com/sindresorhus/amas#readme
+          e1742 list "Answers" <ul>
+            e1743 listitem "Answers" <li>
+              e1744 link "Answers" <a> [interactive] href=https://github.com/stoeffel/awesome-ama-answers#readme
+        e1745 listitem "Open Source Photography" <li>
+          e1746 link "Open Source Photography" <a> [interactive] href=https://github.com/ibaaj/awesome-OpenSourcePhotography#readme
+        e1747 listitem "OpenGL - Cross-platform API for rendering 2D and 3D graphics." <li>
+          e1748 link "OpenGL" <a> [interactive] href=https://github.com/eug/awesome-opengl#readme
+        e1749 listitem "GraphQL" <li>
+          e1750 link "GraphQL" <a> [interactive] href=https://github.com/chentsulin/awesome-graphql#readme
+        e1751 listitem "Urban & Regional Planning - Concerning the built environment and communities." <li>
+          e1752 link "Urban & Regional Planning" <a> [interactive] href=https://github.com/APA-Technology-Division/urban-and-regional-planning-resources#readme
+        e1753 listitem "Transit – Data standards, APIs, apps, tools, datasets, and research around ..." <li>
+          e1754 link "Transit" <a> [interactive] href=https://github.com/MobilityData/awesome-transit#readme
+        e1755 listitem "Research Tools" <li>
+          e1756 link "Research Tools" <a> [interactive] href=https://github.com/emptymalei/awesome-research#readme
+        e1757 listitem "Data Visualization" <li>
+          e1758 link "Data Visualization" <a> [interactive] href=https://github.com/javierluraschi/awesome-dataviz#readme
+        e1759 listitem "Microservices" <li>
+          e1760 link "Microservices" <a> [interactive] href=https://github.com/mfornos/awesome-microservices#readme
+        e1761 listitem "Unicode - Standards, quirks, packages and resources for Unicode. Code Points" <li>
+          e1762 link "Unicode" <a> [interactive] href=https://github.com/jagracey/Awesome-Unicode#readme
+          e1763 list "Code Points" <ul>
+            e1764 listitem "Code Points" <li>
+              e1765 link "Code Points" <a> [interactive] href=https://github.com/Codepoints/awesome-codepoints#readme
+        e1766 listitem "Beginner-Friendly Projects" <li>
+          e1767 link "Beginner-Friendly Projects" <a> [interactive] href=https://github.com/MunGell/awesome-for-beginners#readme
+        e1768 listitem "Katas" <li>
+          e1769 link "Katas" <a> [interactive] href=https://github.com/gamontal/awesome-katas#readme
+        e1770 listitem "Tools for Activism" <li>
+          e1771 link "Tools for Activism" <a> [interactive] href=https://github.com/drewrwilson/toolsforactivism#readme
+        e1772 listitem "Citizen Science - For community-based and non-institutional scientists." <li>
+          e1773 link "Citizen Science" <a> [interactive] href=https://github.com/dylanrees/citizen-science#readme
+        e1774 listitem "MQTT - \"Internet of Things\" connectivity protocol." <li>
+          e1775 link "MQTT" <a> [interactive] href=https://github.com/hobbyquaker/awesome-mqtt#readme
+        e1776 listitem "For Girls" <li>
+          e1777 link "For Girls" <a> [interactive] href=https://github.com/cristianoliveira/awesome4girls#readme
+        e1778 listitem "Vorpal - Node.js CLI framework." <li>
+          e1779 link "Vorpal" <a> [interactive] href=https://github.com/vorpaljs/awesome-vorpal#readme
+        e1780 listitem "Vulkan - Low-overhead, cross-platform 3D graphics and compute API." <li>
+          e1781 link "Vulkan" <a> [interactive] href=https://github.com/vinjn/awesome-vulkan#readme
+        e1782 listitem "LaTeX - Typesetting language." <li>
+          e1783 link "LaTeX" <a> [interactive] href=https://github.com/egeerardyn/awesome-LaTeX#readme
+        e1784 listitem "Economics - An economist's starter kit." <li>
+          e1785 link "Economics" <a> [interactive] href=https://github.com/antontarasenko/awesome-economics#readme
+        e1786 listitem "Funny Markov Chains" <li>
+          e1787 link "Funny Markov Chains" <a> [interactive] href=https://github.com/sublimino/awesome-funny-markov#readme
+        e1788 listitem "Bioinformatics" <li>
+          e1789 link "Bioinformatics" <a> [interactive] href=https://github.com/danielecook/Awesome-Bioinformatics#readme
+        e1790 listitem "Cheminformatics - Informatics techniques applied to problems in chemistry." <li>
+          e1791 link "Cheminformatics" <a> [interactive] href=https://github.com/hsiaoyi0504/awesome-cheminformatics#readme
+        e1792 listitem "Colorful - Choose your next color scheme." <li>
+          e1793 link "Colorful" <a> [interactive] href=https://github.com/Siddharth11/Colorful#readme
+        e1794 listitem "Steam - Digital distribution platform." <li>
+          e1795 link "Steam" <a> [interactive] href=https://github.com/scholtzm/awesome-steam#readme
+        e1796 listitem "Bots - Building bots." <li>
+          e1797 link "Bots" <a> [interactive] href=https://github.com/hackerkid/bots#readme
+        e1798 listitem "Site Reliability Engineering" <li>
+          e1799 link "Site Reliability Engineering" <a> [interactive] href=https://github.com/dastergon/awesome-sre#readme
+        e1800 listitem "DTrace - Dynamic tracing framework." <li>
+          e1801 link "DTrace" <a> [interactive] href=https://github.com/xen0l/awesome-dtrace#readme
+        e1802 listitem "Userscripts - Enhance your browsing experience." <li>
+          e1803 link "Userscripts" <a> [interactive] href=https://github.com/bvolpato/awesome-userscripts#readme
+        e1804 listitem "Pokémon - Resources for Pokémon and Pokémon GO." <li>
+          e1805 link "Pokémon" <a> [interactive] href=https://github.com/tobiasbueschel/awesome-pokemon#readme
+        e1806 listitem "ChatOps - Managing technical and business operations through a chat." <li>
+          e1807 link "ChatOps" <a> [interactive] href=https://github.com/exAspArk/awesome-chatops#readme
+        e1808 listitem "Falsehood - Falsehoods programmers believe in." <li>
+          e1809 link "Falsehood" <a> [interactive] href=https://github.com/kdeldycke/awesome-falsehood#readme
+        e1810 listitem "Domain-Driven Design - Software development approach for complex needs by con..." <li>
+          e1811 link "Domain-Driven Design" <a> [interactive] href=https://github.com/heynickc/awesome-ddd#readme
+        e1812 listitem "Quantified Self - Self-tracking through technology." <li>
+          e1813 link "Quantified Self" <a> [interactive] href=https://github.com/woop/awesome-quantified-self#readme
+        e1814 listitem "SaltStack - Python-based config management system." <li>
+          e1815 link "SaltStack" <a> [interactive] href=https://github.com/hbokh/awesome-saltstack#readme
+        e1816 listitem "Web Design - For digital designers." <li>
+          e1817 link "Web Design" <a> [interactive] href=https://github.com/nicolesaidy/awesome-web-design#readme
+        e1818 listitem "Creative Coding - Programming something expressive instead of something funct..." <li>
+          e1819 link "Creative Coding" <a> [interactive] href=https://github.com/terkelg/awesome-creative-coding#readme
+        e1820 listitem "No-Login Web Apps - Web apps that work without login." <li>
+          e1821 link "No-Login Web Apps" <a> [interactive] href=https://github.com/aviaryan/awesome-no-login-web-apps#readme
+        e1822 listitem "Free Software - Free as in freedom." <li>
+          e1823 link "Free Software" <a> [interactive] href=https://github.com/johnjago/awesome-free-software#readme
+        e1824 listitem "Framer - Prototyping interactive UI designs." <li>
+          e1825 link "Framer" <a> [interactive] href=https://github.com/podo/awesome-framer#readme
+        e1826 listitem "Markdown - Markup language." <li>
+          e1827 link "Markdown" <a> [interactive] href=https://github.com/BubuAnabelas/awesome-markdown#readme
+        e1828 listitem "Dev Fun - Funny developer projects." <li>
+          e1829 link "Dev Fun" <a> [interactive] href=https://github.com/mislavcimpersak/awesome-dev-fun#readme
+        e1830 listitem "Magento 2 - Open Source eCommerce built with PHP." <li>
+          e1831 link "Magento 2" <a> [interactive] href=https://github.com/DavidLambauer/awesome-magento2#readme
+        e1832 listitem "TikZ - Graph drawing packages for TeX/LaTeX/ConTeXt." <li>
+          e1833 link "TikZ" <a> [interactive] href=https://github.com/xiaohanyu/awesome-tikz#readme
+        e1834 listitem "Ad-Free - Alternatives without ads." <li>
+          e1835 link "Ad-Free" <a> [interactive] href=https://github.com/johnjago/awesome-ad-free#readme
+        e1836 listitem "Prometheus - Open-source monitoring system." <li>
+          e1837 link "Prometheus" <a> [interactive] href=https://github.com/roaldnefs/awesome-prometheus#readme
+        e1838 listitem "Homematic - Smart home devices." <li>
+          e1839 link "Homematic" <a> [interactive] href=https://github.com/homematic-community/awesome-homematic#readme
+        e1840 listitem "Ledger - Double-entry accounting on the command-line." <li>
+          e1841 link "Ledger" <a> [interactive] href=https://github.com/sfischer13/awesome-ledger#readme
+        e1842 listitem "Web Monetization - A free open web standard service that allows you to send m..." <li>
+          e1843 link "Web Monetization" <a> [interactive] href=https://github.com/thomasbnt/awesome-web-monetization#readme
+        e1844 listitem "Uncopyright - Public domain works." <li>
+          e1845 link "Uncopyright" <a> [interactive] href=https://github.com/johnjago/awesome-uncopyright#readme
+        e1846 listitem "Crypto Currency Tools & Algorithms - Digital currency where encryption is use..." <li>
+          e1847 link "Crypto Currency Tools & Algorithms" <a> [interactive] href=https://github.com/Zheaoli/awesome-coins#readme
+        e1848 listitem "Open Source Supporters - Companies that offer their tools and services for fr..." <li>
+          e1849 link "Open Source Supporters" <a> [interactive] href=https://github.com/zachflower/awesome-open-source-supporters#readme
+        e1850 listitem "Design Principles - Create better and more consistent designs and experiences." <li>
+          e1851 link "Design Principles" <a> [interactive] href=https://github.com/robinstickel/awesome-design-principles#readme
+        e1852 listitem "Theravada - Teachings from the Theravada Buddhist tradition." <li>
+          e1853 link "Theravada" <a> [interactive] href=https://github.com/johnjago/awesome-theravada#readme
+        e1854 listitem "inspectIT - Open source Java app performance management tool." <li>
+          e1855 link "inspectIT" <a> [interactive] href=https://github.com/inspectit-labs/awesome-inspectit#readme
+        e1856 listitem "Open Source Maintainers - The experience of being an open source maintainer." <li>
+          e1857 link "Open Source Maintainers" <a> [interactive] href=https://github.com/nayafia/awesome-maintainers#readme
+        e1858 listitem "Calculators - Tools for every platform." <li>
+          e1859 link "Calculators" <a> [interactive] href=https://github.com/xxczaki/awesome-calculators#readme
+        e1860 listitem "Captcha - A type of challenge–response test used in computing to determine ..." <li>
+          e1861 link "Captcha" <a> [interactive] href=https://github.com/ZYSzys/awesome-captcha#readme
+        e1862 listitem "Jupyter - Create and share documents that contain code, equations, visualizat..." <li>
+          e1863 link "Jupyter" <a> [interactive] href=https://github.com/markusschanta/awesome-jupyter#readme
+        e1864 listitem "FIRST Robotics Competition - International high school robotics championship." <li>
+          e1865 link "FIRST Robotics Competition" <a> [interactive] href=https://github.com/andrewda/awesome-frc#readme
+        e1866 listitem "Speakers - Conference and meetup speakers in the programming and design commu..." <li>
+          e1867 link "Speakers" <a> [interactive] href=https://github.com/karlhorky/awesome-speakers#readme
+        e1868 listitem "Board Games - Table-top gaming fun for all." <li>
+          e1869 link "Board Games" <a> [interactive] href=https://github.com/edm00se/awesome-board-games#readme
+        e1870 listitem "Software Patreons - Fund individual programmers or the development of open so..." <li>
+          e1871 link "Software Patreons" <a> [interactive] href=https://github.com/uraimo/awesome-software-patreons#readme
+        e1872 listitem "Parasite - Parasites and host-pathogen interactions." <li>
+          e1873 link "Parasite" <a> [interactive] href=https://github.com/ecohealthalliance/awesome-parasite#readme
+        e1874 listitem "Food - Projects on GitHub related to food." <li>
+          e1875 link "Food" <a> [interactive] href=https://github.com/jzarca01/awesome-food#readme
+        e1876 listitem "Bitcoin Payment Processors - Start accepting Bitcoin." <li>
+          e1877 link "Bitcoin Payment Processors" <a> [interactive] href=https://github.com/alexk111/awesome-bitcoin-payment-processors#readme
+        e1878 listitem "Scientific Computing - Solving complex scientific problems using computers." <li>
+          e1879 link "Scientific Computing" <a> [interactive] href=https://github.com/nschloe/awesome-scientific-computing#readme
+        e1880 listitem "Amazon Sellers" <li>
+          e1881 link "Amazon Sellers" <a> [interactive] href=https://github.com/ScaleLeap/awesome-amazon-seller#readme
+        e1882 listitem "Agriculture - Open source technology for farming and gardening." <li>
+          e1883 link "Agriculture" <a> [interactive] href=https://github.com/brycejohnston/awesome-agriculture#readme
+        e1884 listitem "Product Design - Design a product from the initial concept to production." <li>
+          e1885 link "Product Design" <a> [interactive] href=https://github.com/ttt30ga/awesome-product-design#readme
+        e1886 listitem "Prisma - Turn your database into a GraphQL API." <li>
+          e1887 link "Prisma" <a> [interactive] href=https://github.com/catalinmiron/awesome-prisma#readme
+        e1888 listitem "Software Architecture - The discipline of designing and building software." <li>
+          e1889 link "Software Architecture" <a> [interactive] href=https://github.com/simskij/awesome-software-architecture#readme
+        e1890 listitem "Connectivity Data and Reports - Better understand who has access to telecommu..." <li>
+          e1891 link "Connectivity Data and Reports" <a> [interactive] href=https://github.com/stevesong/awesome-connectivity-info#readme
+        e1892 listitem "Stacks - Tech stacks for building different apps and features." <li>
+          e1893 link "Stacks" <a> [interactive] href=https://github.com/stackshareio/awesome-stacks#readme
+        e1894 listitem "Cytodata - Image-based profiling of biological phenotypes for computational b..." <li>
+          e1895 link "Cytodata" <a> [interactive] href=https://github.com/cytodata/awesome-cytodata#readme
+        e1896 listitem "IRC - Open source messaging protocol." <li>
+          e1897 link "IRC" <a> [interactive] href=https://github.com/davisonio/awesome-irc#readme
+        e1898 listitem "Advertising - Programmatic media and ad tech for websites." <li>
+          e1899 link "Advertising" <a> [interactive] href=https://github.com/cenoura/awesome-ads#readme
+        e1900 listitem "Earth - Find ways to resolve the climate crisis." <li>
+          e1901 link "Earth" <a> [interactive] href=https://github.com/philsturgeon/awesome-earth#readme
+        e1902 listitem "Naming - Guides for naming things in computer science." <li>
+          e1903 link "Naming" <a> [interactive] href=https://github.com/gruhn/awesome-naming#readme
+        e1904 listitem "Web Archiving - An effort to preserve the Web for future generations." <li>
+          e1905 link "Web Archiving" <a> [interactive] href=https://github.com/iipc/awesome-web-archiving#readme
+        e1906 listitem "WP-CLI - Command-line interface for WordPress." <li>
+          e1907 link "WP-CLI" <a> [interactive] href=https://github.com/schlessera/awesome-wp-cli#readme
+        e1908 listitem "Credit Modeling - Methods for classifying credit applicants into risk classes." <li>
+          e1909 link "Credit Modeling" <a> [interactive] href=https://github.com/mourarthur/awesome-credit-modeling#readme
+        e1910 listitem "Ansible - A Python-based, open-source IT configuration management and automat..." <li>
+          e1911 link "Ansible" <a> [interactive] href=https://github.com/ansible-community/awesome-ansible#readme
+        e1912 listitem "Biological Visualizations - Interactive visualization of biological data on t..." <li>
+          e1913 link "Biological Visualizations" <a> [interactive] href=https://github.com/keller-mark/awesome-biological-visualizations#readme
+        e1914 listitem "QR Code - A type of matrix barcode that can be used to store and share a smal..." <li>
+          e1915 link "QR Code" <a> [interactive] href=https://github.com/make-github-pseudonymous-again/awesome-qr-code#readme
+        e1916 listitem "Veganism - Making the plant-based lifestyle easy and accessible." <li>
+          e1917 link "Veganism" <a> [interactive] href=https://github.com/sdassow/awesome-veganism#readme
+        e1918 listitem "Translations - The transfer of the meaning of a text from one language to ano..." <li>
+          e1919 link "Translations" <a> [interactive] href=https://github.com/mbiesiad/awesome-translations#readme
+        e1920 listitem "Scriptable - An iOS app for automation in JavaScript." <li>
+          e1921 link "Scriptable" <a> [interactive] href=https://github.com/dersvenhesse/awesome-scriptable#readme
+        e1922 listitem "WebXR - Enables immersive virtual reality and augmented reality content on th..." <li>
+          e1923 link "WebXR" <a> [interactive] href=https://github.com/msub2/awesome-webxr#readme
+        e1924 listitem "Computational Geometry - Computational approaches for problems in geometry." <li>
+          e1925 link "Computational Geometry" <a> [interactive] href=https://github.com/atkirtland/awesome-computational-geometry#readme
+        e1926 listitem "OpenStreetMap - An open data mapping project utilized by many apps and devices." <li>
+          e1927 link "OpenStreetMap" <a> [interactive] href=https://github.com/osmlab/awesome-openstreetmap#readme
+        e1928 listitem "Computational Biology - Computational approaches applied to problems in biology." <li>
+          e1929 link "Computational Biology" <a> [interactive] href=https://github.com/inoue0426/awesome-computational-biology#readme
+        e1930 listitem "Read the Docs - Example documentation projects to inspire and help bootstrap ..." <li>
+          e1931 link "Read the Docs" <a> [interactive] href=https://github.com/readthedocs-examples/awesome-read-the-docs#readme
+        e1932 listitem "Quarto - Scientific and technical open-source publishing system built on Pandoc." <li>
+          e1933 link "Quarto" <a> [interactive] href=https://github.com/mcanouil/awesome-quarto#readme
+        e1934 listitem "Biological Image Analysis - Interpreting biological phenomena using images." <li>
+          e1935 link "Biological Image Analysis" <a> [interactive] href=https://github.com/hallvaaw/awesome-biological-image-analysis#readme
+        e1936 listitem "ChatGPT - Artificial intelligence chatbot developed by OpenAI." <li>
+          e1937 link "ChatGPT" <a> [interactive] href=https://github.com/sindresorhus/awesome-chatgpt#readme
+        e1938 listitem "Whisper - Open-source AI-powered speech recognition system developed by OpenAI." <li>
+          e1939 link "Whisper" <a> [interactive] href=https://github.com/sindresorhus/awesome-whisper#readme
+        e1940 listitem "Stock Trading - Purchase and sale of equities of publicly traded companies to..." <li>
+          e1941 link "Stock Trading" <a> [interactive] href=https://github.com/shi-rudo/awesome-stock-trading#readme
+        e1942 listitem "Steam Deck - A handheld gaming computer developed by Valve." <li>
+          e1943 link "Steam Deck" <a> [interactive] href=https://github.com/airscripts/awesome-steam-deck#readme
+        e1944 listitem "Astrophotography - Photography of astronomical objects, celestial events, or ..." <li>
+          e1945 link "Astrophotography" <a> [interactive] href=https://github.com/lunohodov/awesome-astrophotography#readme
+        e1946 listitem "HPC - High Performance Computing." <li>
+          e1947 link "HPC" <a> [interactive] href=https://github.com/dstdev/awesome-hpc#readme
+        e1948 listitem "Geocaching - Outdoor treasure-hunting activity that uses GPS-enabled devices." <li>
+          e1949 link "Geocaching" <a> [interactive] href=https://github.com/FoxFil/awesome-geocaching#readme
+        e1950 listitem "Regex - Specialized language for matching patterns in text." <li>
+          e1951 link "Regex" <a> [interactive] href=https://github.com/slevithan/awesome-regex#readme
+        e1952 listitem "Event-Driven Architecture - A software architecture approach where services c..." <li>
+          e1953 link "Event-Driven Architecture" <a> [interactive] href=https://github.com/lutzh/awesome-event-driven-architecture#readme
+        e1954 listitem "Permacomputing - Resilient and regenerative computing practices inspired by p..." <li>
+          e1955 link "Permacomputing" <a> [interactive] href=https://github.com/idematos/awesome-permacomputing#readme
+        e1956 listitem "Standards - Proposals and standards that define and enhance software, languag..." <li>
+          e1957 link "Standards" <a> [interactive] href=https://github.com/donBarbos/awesome-standards#readme
+        e1958 listitem "Claude Code - Terminal-based AI coding assistant by Anthropic." <li>
+          e1959 link "Claude Code" <a> [interactive] href=https://github.com/hesreallyhim/awesome-claude-code#readme
+        e1960 listitem "Gemini CLI - Terminal-based AI coding assistant by Google." <li>
+          e1961 link "Gemini CLI" <a> [interactive] href=https://github.com/Piebald-AI/awesome-gemini-cli#readme
+        e1962 listitem "SAP Commerce - An e-commerce platform built with Java, Spring MVC, and Angular." <li>
+          e1963 link "SAP Commerce" <a> [interactive] href=https://github.com/eminyagiz42/awesome-sap-commerce#readme
+        e1964 listitem "Tech Ethics - Mitigating and avoiding the potential negative effects of techn..." <li>
+          e1965 link "Tech Ethics" <a> [interactive] href=https://github.com/sampart/awesome-tech-ethics#readme
+        e1966 listitem "Copilot Agents - AI pair programming assistant by GitHub that provides code s..." <li>
+          e1967 link "Copilot Agents" <a> [interactive] href=https://github.com/Code-and-Sorts/awesome-copilot-agents#readme
+      e1968 heading "Related" <h2> level=2
+      e1969 link "Permalink: Related" <a> [interactive] href=#related
+      e1970 list "All Awesome Lists - All the Awesome lists on GitHub. Awesome Search - Quick s..." <ul>
+        e1971 listitem "All Awesome Lists - All the Awesome lists on GitHub." <li>
+          e1972 link "All Awesome Lists" <a> [interactive] href=https://github.com/topics/awesome
+        e1973 listitem "Awesome Search - Quick search for Awesome lists." <li>
+          e1974 link "Awesome Search" <a> [interactive] href=https://awesomelists.top
+        e1975 listitem "StumbleUponAwesome - Discover random pages from the Awesome dataset using a b..." <li>
+          e1976 link "StumbleUponAwesome" <a> [interactive] href=https://github.com/basharovV/StumbleUponAwesome
+        e1977 listitem "Awesome CLI - A simple command-line tool to dive into Awesome lists." <li>
+          e1978 link "Awesome CLI" <a> [interactive] href=https://github.com/umutphp/awesome-cli
+        e1979 listitem "Track Awesome List - View the latest updates of Awesome lists." <li>
+          e1980 link "Track Awesome List" <a> [interactive] href=https://www.trackawesomelist.com
+    e1981 heading "About" <h2> level=2
+    e1982 paragraph "😎 Awesome lists about all kinds of interesting topics" <p>
+    e1983 heading "Topics" <h3> level=3
+    e1984 link "Topic: lists" <a> [interactive] href=/topics/lists
+    e1985 link "Topic: awesome" <a> [interactive] href=/topics/awesome
+    e1986 link "Topic: unicorns" <a> [interactive] href=/topics/unicorns
+    e1987 link "Topic: resources" <a> [interactive] href=/topics/resources
+    e1988 link "Topic: awesome-list" <a> [interactive] href=/topics/awesome-list
+    e1989 heading "Resources" <h3> level=3
+    e1990 link "Readme" <a> [interactive] href=#readme-ov-file
+    e1991 heading "License" <h3> level=3
+    e1992 link "CC0-1.0 license" <a> [interactive] href=#CC0-1.0-1-ov-file
+    e1993 heading "Code of conduct" <h3> level=3
+    e1994 link "Code of conduct" <a> [interactive] href=#coc-ov-file
+    e1995 heading "Contributing" <h3> level=3
+    e1996 link "Contributing" <a> [interactive] href=#contributing-ov-file
+    e1997 heading "Uh oh!" <h3> level=3
+    e1998 paragraph <p>
+    e1999 paragraph "There was an error while loading. Please reload this page." <p>
+    e2000 paragraph <p>
+    e2001 link "Activity" <a> [interactive] href=/sindresorhus/awesome/activity
+    e2002 heading "Stars" <h3> level=3
+    e2003 link "466k stars" <a> [interactive] href=/sindresorhus/awesome/stargazers
+    e2004 heading "Watchers" <h3> level=3
+    e2005 link "8.2k watching" <a> [interactive] href=/sindresorhus/awesome/watchers
+    e2006 heading "Forks" <h3> level=3
+    e2007 link "35k forks" <a> [interactive] href=/sindresorhus/awesome/forks
+    e2008 link "Report repository" <a> [interactive] href=/contact/report-content?content_url=https%3A%2F%2Fgithub.com%2Fsindresorhus%2Fawesome&report=sindresorhus+%28user%29
+    e2009 heading "Sponsor this project" <h2> level=2
+    e2010 list <ul>
+      e2011 listitem <li>
+    e2012 heading "Uh oh!" <h3> level=3
+    e2013 paragraph <p>
+    e2014 paragraph "There was an error while loading. Please reload this page." <p>
+    e2015 paragraph <p>
+    e2016 list "opencollective.com/sindresorhus buymeacoffee.com/sindresorhus https://sindres..." <ul>
+      e2017 listitem "opencollective.com/sindresorhus" <li>
+        e2018 image "open_collective" <img>
+        e2019 link "opencollective.com/sindresorhus" <a> [interactive] href=https://opencollective.com/sindresorhus
+      e2020 listitem "buymeacoffee.com/sindresorhus" <li>
+        e2021 image "buy_me_a_coffee" <img>
+        e2022 link "buymeacoffee.com/sindresorhus" <a> [interactive] href=https://buymeacoffee.com/sindresorhus
+      e2023 listitem "https://sindresorhus.com/donate" <li>
+        e2024 link "https://sindresorhus.com/donate" <a> [interactive] href=https://sindresorhus.com/donate
+    e2025 link "Learn more about GitHub Sponsors" <a> [interactive] href=/sponsors
+    e2026 heading "Uh oh!" <h3> level=3
+    e2027 paragraph <p>
+    e2028 paragraph "There was an error while loading. Please reload this page." <p>
+    e2029 paragraph <p>
+    e2030 heading "Contributors" <h2> level=2
+      e2031 link "Contributors" <a> [interactive] href=/sindresorhus/awesome/graphs/contributors
+    e2032 list <ul>
+      e2033 listitem <li>
+      e2034 listitem <li>
+      e2035 listitem <li>
+    e2036 heading "Uh oh!" <h3> level=3
+    e2037 paragraph <p>
+    e2038 paragraph "There was an error while loading. Please reload this page." <p>
+    e2039 paragraph <p>
+  e2040 contentinfo "Footer © 2026 GitHub, Inc. Footer navigation Terms Privacy Security Status C..." <footer>
+    e2041 heading "Footer" <h2> level=2
+    e2042 link "GitHub Homepage" <a> [interactive] href=https://github.com
+    e2043 navigation "Footer" <nav>
+      e2044 heading "Footer navigation" <h3> level=3
+      e2045 list "Terms Privacy Security Status Community Docs Contact Manage cookies Do not sh..." <ul>
+        e2046 listitem "Terms" <li>
+          e2047 link "Terms" <a> [interactive] href=https://docs.github.com/site-policy/github-terms/github-terms-of-service
+        e2048 listitem "Privacy" <li>
+          e2049 link "Privacy" <a> [interactive] href=https://docs.github.com/site-policy/privacy-policies/github-privacy-statement
+        e2050 listitem "Security" <li>
+          e2051 link "Security" <a> [interactive] href=https://github.com/security
+        e2052 listitem "Status" <li>
+          e2053 link "Status" <a> [interactive] href=https://www.githubstatus.com/
+        e2054 listitem "Community" <li>
+          e2055 link "Community" <a> [interactive] href=https://github.community/
+        e2056 listitem "Docs" <li>
+          e2057 link "Docs" <a> [interactive] href=https://docs.github.com/
+        e2058 listitem "Contact" <li>
+          e2059 link "Contact" <a> [interactive] href=https://support.github.com?tags=dotcom-footer
+        e2060 listitem "Manage cookies" <li>
+          e2061 button "Manage cookies" <button> [interactive]
+        e2062 listitem "Do not share my personal information" <li>
+          e2063 button "Do not share my personal information" <button> [interactive]
+  e2064 button "Dismiss error" <button> [interactive]
+  e2065 group <details> [interactive]
+    e2066 button "Close dialog" <summary> [interactive]
+    e2067 button "Close dialog" <button> [interactive]

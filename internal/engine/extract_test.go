@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/pinchtab/seaportal/internal/engine/leakcheck"
 )
 
 func TestFromURL_Basic(t *testing.T) {
@@ -168,11 +170,6 @@ func TestDedupe(t *testing.T) {
 	}
 }
 
-// TestFromURL_Markdown404NotSuccess is a regression test for the bug where
-// any text/markdown response was treated as a successful extraction with
-// Confidence=100 / Profile.Outcome=extract, regardless of HTTP status. A
-// 404 + text/markdown is still an error page and must not be classified
-// as a trustworthy extraction.
 func TestFromURL_Markdown404NotSuccess(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/markdown")
@@ -200,12 +197,8 @@ func TestFromURL_Markdown404NotSuccess(t *testing.T) {
 	}
 }
 
-// TestFromURL_Markdown406RetriesAsHTML is a regression test for the bug where
-// the content-negotiation retry only fired on 404. Spec-compliant servers
-// return 406 Not Acceptable when they cannot satisfy `Accept: text/markdown`,
-// and SeaPortal was extracting the 406 error body as content instead of
-// retrying with an HTML-only Accept.
 func TestFromURL_Markdown406RetriesAsHTML(t *testing.T) {
+	leakcheck.CheckLeak(t)
 	var attempts int
 	var firstAccept, secondAccept string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -247,8 +240,6 @@ func TestFromURL_Markdown406RetriesAsHTML(t *testing.T) {
 	}
 }
 
-// TestFromURL_Markdown503Blocked verifies that markdown responses with a
-// blocked-status code (503 here) still get the blocked-profile classification.
 func TestFromURL_Markdown503Blocked(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/markdown")
@@ -270,11 +261,6 @@ func TestFromURL_Markdown503Blocked(t *testing.T) {
 	}
 }
 
-// TestFromURL_MarkdownDedupeRecomputes is a regression test for the bug where
-// the markdown fast-path applied dedupe AFTER computing fingerprint /
-// paragraph count / quality, so derived fields drifted from the actual
-// returned content. With the fix, dedupe runs before metric computation and
-// every derived field reflects the final deduped content.
 func TestFromURL_MarkdownDedupeRecomputes(t *testing.T) {
 	body := "# Title\n\n" +
 		"This duplicate paragraph appears multiple times in this fixture content body.\n\n" +
@@ -315,7 +301,6 @@ func TestFromURL_MarkdownDedupeRecomputes(t *testing.T) {
 }
 
 func TestFastMode(t *testing.T) {
-	// SPA-like page that should trigger fast bailout
 	html := `<!DOCTYPE html>
 <html>
 <head><title>App</title></head>
@@ -334,8 +319,55 @@ func TestFastMode(t *testing.T) {
 
 	result := FromURLWithOptions(server.URL, Options{FastMode: true})
 
-	// Fast mode should detect SPA and bail early
 	if !result.IsSPA && result.Length > 100 {
 		t.Log("Note: Fast mode may still extract some content from minimal SPA pages")
+	}
+}
+
+func TestFromURL_UnreachableHostClassified(t *testing.T) {
+	result := FromURL("http://nonexistent.invalid.")
+	if result.Error == "" {
+		t.Fatal("expected an error on unreachable host, got none")
+	}
+	if result.Profile.Class == "" {
+		t.Fatalf("Profile.Class is empty on error path; every Result must be classified. Error=%q", result.Error)
+	}
+}
+
+func TestFromHTML_ReadabilityErrorClassified(t *testing.T) {
+	result := FromHTML("", "https://example.test/")
+	if result.Profile.Class == "" {
+		t.Fatalf("Profile.Class is empty for empty-HTML input; Error=%q", result.Error)
+	}
+}
+
+func TestExtract_LanguageFallback(t *testing.T) {
+	// No <html lang>, no og:locale, no Content-Language, no JSON-LD → the
+	// stopword fallback must populate Result.Language from the prose.
+	html := `<!DOCTYPE html>
+<html>
+<head><title>Sample article</title></head>
+<body>
+<article>
+<h1>Sample article</h1>
+<p>The quick brown fox jumps over the lazy dog. This is a sentence which has
+been used for many years to test fonts and keyboards. It contains every letter
+of the alphabet and is one of the most famous pangrams in the English
+language. There are other pangrams, but this one would always be the first
+that comes to mind for those who have ever typed on a typewriter. They have
+used this sentence in countless examples for decades and it has not lost its
+charm. From the early days of mechanical typewriters to the modern era of
+software, this pangram has been the canonical test string for new keyboards
+and fonts which need to verify that every glyph is reachable.</p>
+</article>
+</body>
+</html>`
+
+	result := FromHTML(html, "https://example.test/article")
+	if result.Error != "" {
+		t.Fatalf("extraction failed: %s", result.Error)
+	}
+	if result.Language != "en" {
+		t.Errorf("Language fallback: got %q, want %q (content length=%d)", result.Language, "en", len(result.Content))
 	}
 }

@@ -1,0 +1,12 @@
+# Illustrative declarative schema for an article page.
+# Used by TestLoadSchema_Example to confirm the loader handles a realistic
+# file shape. Each entry under `fields:` is one field; the parser applies
+# the CSS selector and (optionally) reads the named attribute.
+fields:
+  title:
+    selector: "h1.article-title"
+  author:
+    selector: ".byline .author-name"
+  publish_date:
+    selector: "time[datetime]"
+    attr: "datetime"

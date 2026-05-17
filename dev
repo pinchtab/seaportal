@@ -26,10 +26,12 @@ COMMANDS=(
   "fmt:✨:Format code"
   "vet:🩺:Run go vet"
   "fuzz:🎲:Run fuzz tests (30s)"
-  "benchmark:⚡:Run benchmarks"
+  "bench:⚡:Run seabench (./dev bench help for subcommands)"
+  "opt:🎯:Optimization baseline (./dev opt baseline)"
   "doctor:🏥:Check dev environment"
   "e2e:🐳:E2E tests (Docker)"
   "smoke:💨:Smoke tests (slow fixture suite)"
+  "install skills:🪄:Symlink ./skills into ./.claude/skills"
   "all:🎯:Run check + test + e2e"
 )
 
@@ -76,7 +78,7 @@ run_command() {
       echo ""
       shift_args="${2:-}"
       if [ "$shift_args" = "race" ]; then
-        go test ./... -count=1 -race -v
+        go test $(go list ./... | grep -v '/competitors/') -count=1 -race -v
       else
         exec bash scripts/test.sh
       fi
@@ -89,7 +91,7 @@ run_command() {
     "coverage")
       echo "  ${ACCENT}${BOLD}📊 Coverage${NC}"
       echo ""
-      go test ./... -count=1 -coverprofile=coverage.out -covermode=atomic
+      go test $(go list ./... | grep -v '/competitors/') -count=1 -coverprofile=coverage.out -covermode=atomic
       go tool cover -func=coverage.out | tail -1
       echo ""
       echo "  ${MUTED}Full report: go tool cover -html=coverage.out${NC}"
@@ -98,7 +100,7 @@ run_command() {
       echo "  ${ACCENT}${BOLD}🔍 Linting${NC}"
       echo ""
       if command -v golangci-lint &>/dev/null; then
-        golangci-lint run ./...
+        golangci-lint run $(go list ./... | grep -v '/competitors/')
         echo "  ${SUCCESS}✓${NC} golangci-lint"
       else
         echo "  ${ERROR}✗ golangci-lint not installed${NC}"
@@ -109,13 +111,13 @@ run_command() {
     "fmt")
       echo "  ${ACCENT}${BOLD}✨ Formatting${NC}"
       echo ""
-      gofmt -w .
-      echo "  ${SUCCESS}✓${NC} gofmt"
+      find . \( -path './competitors' -o -path './vendor' -o -path './.git' -o -path './node_modules' \) -prune -o -name '*.go' -type f -print | xargs gofmt -w
+      echo "  ${SUCCESS}✓${NC} gofmt (excluding competitors/)"
       ;;
     "vet")
       echo "  ${ACCENT}${BOLD}🩺 Vet${NC}"
       echo ""
-      go vet ./...
+      go vet $(go list ./... | grep -v '/competitors/')
       echo "  ${SUCCESS}✓${NC} go vet"
       ;;
     "fuzz")
@@ -134,14 +136,30 @@ run_command() {
       echo ""
       echo "  ${SUCCESS}✓${NC} Fuzz complete"
       ;;
-    "benchmark")
-      echo "  ${ACCENT}${BOLD}⚡ Benchmarks${NC}"
+    "bench")
+      echo "  ${ACCENT}${BOLD}⚡ Seabench${NC}"
       echo ""
-      if [ -d benchmark ]; then
-        go test ./benchmark/ -bench=. -benchmem -count=1
-      else
-        echo "  ${MUTED}No benchmark/ directory found${NC}"
-      fi
+      go build -o ./seabench ./cmd/seabench/
+      ./seabench "${@:2}"
+      ;;
+    "opt")
+      echo "  ${ACCENT}${BOLD}🎯 Optimization baseline${NC}"
+      echo ""
+      sub="${2:-baseline}"
+      case "$sub" in
+        baseline)
+          exec bash tests/optimization/run.sh
+          ;;
+        selftest)
+          go build -o ./seabench ./cmd/seabench/
+          exec ./seabench selftest "${@:3}"
+          ;;
+        *)
+          echo "  ${ERROR}Unknown opt subcommand: $sub${NC}"
+          echo "  ${MUTED}Available: baseline, selftest${NC}"
+          exit 2
+          ;;
+      esac
       ;;
     "doctor")
       echo "  ${ACCENT}${BOLD}🏥 Doctor${NC}"
@@ -154,6 +172,11 @@ run_command() {
       go test -tags=smoke -v -count=1 ./internal/engine/ -run 'TestFixture|TestExtended'
       echo ""
       echo "  ${SUCCESS}✓${NC} Smoke complete"
+      ;;
+    "install skills")
+      echo "  ${ACCENT}${BOLD}🪄 Installing skills${NC}"
+      echo ""
+      exec bash scripts/install-skills.sh
       ;;
     "all")
       echo "  ${ACCENT}${BOLD}🎯 All — check → test → e2e${NC}"
@@ -246,6 +269,14 @@ pick_with_select() {
 if [ $# -gt 0 ]; then
   case "$1" in
     -h|--help|help) show_help; exit 0 ;;
+    install)
+      if [ $# -ge 2 ]; then
+        run_command "install $2"
+      else
+        echo "  ${ERROR}install requires a target (e.g. 'skills')${NC}" >&2
+        exit 1
+      fi
+      ;;
     *) run_command "$1" ;;
   esac
   exit 0

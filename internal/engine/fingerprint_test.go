@@ -117,7 +117,6 @@ func TestChangeSignificance(t *testing.T) {
 }
 
 func TestContentChanged(t *testing.T) {
-	// Same semantic content with noise differences
 	old := "Last updated: 2024-01-15T10:30:00Z\nViews: 5234\nThis is the main content."
 	new := "Last updated: 2024-03-10T14:45:00Z\nViews: 8921\nThis is the main content."
 
@@ -125,7 +124,6 @@ func TestContentChanged(t *testing.T) {
 		t.Error("ContentChanged should return false for noise-only differences")
 	}
 
-	// Actually different content
 	old2 := "This article explains Go concurrency patterns."
 	new2 := "This article explains Rust memory management."
 

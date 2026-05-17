@@ -1,0 +1,16 @@
+fields:
+  title:
+    selector: h1
+  author:
+    selector: .author
+  tags:
+    selector: .tag
+    multiple: true
+  products:
+    selector: .product
+    fields:
+      name:
+        selector: .name
+      price:
+        selector: .price
+        attr: data-price

@@ -26,13 +26,11 @@ func TestBuildSnapshot_BasicStructure(t *testing.T) {
 		t.Errorf("expected root role 'document', got %q", snap.Role)
 	}
 
-	// Find main landmark
 	main := findNodeByRole(snap, "main")
 	if main == nil {
 		t.Fatal("expected to find main landmark")
 	}
 
-	// Find heading
 	heading := findNodeByRole(snap, "heading")
 	if heading == nil {
 		t.Fatal("expected to find heading")
@@ -128,7 +126,6 @@ func TestBuildSnapshot_FormControls(t *testing.T) {
 		t.Fatalf("BuildSnapshot failed: %v", err)
 	}
 
-	// Check textbox
 	textbox := findNodeByRole(snap, "textbox")
 	if textbox == nil {
 		t.Fatal("expected to find textbox")
@@ -140,7 +137,6 @@ func TestBuildSnapshot_FormControls(t *testing.T) {
 		t.Error("expected textbox to be interactive")
 	}
 
-	// Check checkbox
 	checkbox := findNodeByRole(snap, "checkbox")
 	if checkbox == nil {
 		t.Fatal("expected to find checkbox")
@@ -149,13 +145,11 @@ func TestBuildSnapshot_FormControls(t *testing.T) {
 		t.Error("expected checkbox to be checked")
 	}
 
-	// Check radio
 	radio := findNodeByRole(snap, "radio")
 	if radio == nil {
 		t.Fatal("expected to find radio")
 	}
 
-	// Check combobox
 	combo := findNodeByRole(snap, "combobox")
 	if combo == nil {
 		t.Fatal("expected to find combobox")
@@ -391,8 +385,6 @@ func TestBuildSnapshot_RefUniqueness(t *testing.T) {
 		t.Error("expected to find refs")
 	}
 
-	// All refs should be unique
-	// (collectRefs already ensures this by using a map)
 }
 
 func TestBuildSnapshot_NameTruncation(t *testing.T) {
@@ -439,7 +431,6 @@ func TestBuildSnapshot_InteractiveElements(t *testing.T) {
 				t.Fatalf("BuildSnapshot failed: %v", err)
 			}
 
-			// Find any node with Interactive set
 			found := findInteractiveNode(snap)
 			if tt.interactive {
 				if found == nil {
@@ -570,7 +561,6 @@ func TestBuildSnapshotWithOptions_FilterInteractive(t *testing.T) {
 		t.Fatalf("BuildSnapshotWithOptions failed: %v", err)
 	}
 
-	// Should find button and link
 	btn := findNodeByRole(snap, "button")
 	if btn == nil {
 		t.Error("expected to find interactive button")
@@ -580,13 +570,11 @@ func TestBuildSnapshotWithOptions_FilterInteractive(t *testing.T) {
 		t.Error("expected to find interactive link")
 	}
 
-	// Should NOT find standalone paragraph
 	para := findNodeByRole(snap, "paragraph")
 	if para != nil {
 		t.Error("expected paragraph to be filtered out")
 	}
 
-	// main should exist because it contains interactive children
 	main := findNodeByRole(snap, "main")
 	if main == nil {
 		t.Error("expected main to exist (contains interactive children)")
@@ -606,7 +594,6 @@ func TestBuildSnapshot_CompactFormat(t *testing.T) {
 		t.Error("expected non-empty compact output")
 	}
 
-	// Should contain key info
 	if !containsSubstring(compact, "navigation") {
 		t.Error("expected compact output to contain 'navigation'")
 	}
@@ -622,7 +609,6 @@ func TestBuildSnapshot_CompactFormat(t *testing.T) {
 }
 
 func TestBuildSnapshotWithOptions_MaxTokens(t *testing.T) {
-	// Create HTML with lots of content
 	var sb strings.Builder
 	sb.WriteString("<main>")
 	for i := 0; i < 100; i++ {
@@ -630,13 +616,11 @@ func TestBuildSnapshotWithOptions_MaxTokens(t *testing.T) {
 	}
 	sb.WriteString("</main>")
 
-	// Without limit
 	fullSnap, err := BuildSnapshot(sb.String())
 	if err != nil {
 		t.Fatalf("BuildSnapshot failed: %v", err)
 	}
 
-	// With limit
 	opts := SnapshotOptions{MaxTokens: 500}
 	limitedSnap, err := BuildSnapshotWithOptions(sb.String(), opts)
 	if err != nil {
@@ -650,8 +634,6 @@ func TestBuildSnapshotWithOptions_MaxTokens(t *testing.T) {
 		t.Errorf("expected limited output to have fewer paragraphs: %d vs %d", len(limitedParas), len(fullParas))
 	}
 }
-
-// Helper functions
 
 func containsSubstring(s, substr string) bool {
 	return strings.Contains(s, substr)

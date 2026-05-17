@@ -55,48 +55,6 @@ func init() {
 	}
 }
 
-// removeAttrElements removes elements (and their content) whose opening tag
-// matches attrPattern. Walks the input once, tracking nesting depth so the
-// close tag belongs to the matched opening tag — naive `strings.Index` of
-// `</tag` would match the first inner close on nested same-tag markup and
-// leave the outer close behind as broken HTML.
-func removeAttrElements(html string, attrPattern *regexp.Regexp) string {
-	reOpenTag := regexp.MustCompile(`(?i)<([a-z][a-z0-9]*)\b[^>]*` + attrPattern.String() + `[^>]*>`)
-
-	var sb strings.Builder
-	sb.Grow(len(html))
-
-	pos := 0
-	for pos < len(html) {
-		loc := reOpenTag.FindStringSubmatchIndex(html[pos:])
-		if loc == nil {
-			sb.WriteString(html[pos:])
-			return sb.String()
-		}
-		matchStart := pos + loc[0]
-		matchEnd := pos + loc[1]
-		tagName := strings.ToLower(html[pos+loc[2] : pos+loc[3]])
-
-		sb.WriteString(html[pos:matchStart])
-
-		// Self-closing (`<tag … />`) or void element: no close tag to find.
-		if (matchEnd-matchStart >= 2 && html[matchEnd-2] == '/') || isVoidElement(tagName) {
-			pos = matchEnd
-			continue
-		}
-
-		closeEnd := findMatchingClose(html, matchEnd, tagName)
-		if closeEnd < 0 {
-			// Unclosed: drop just the opening tag.
-			pos = matchEnd
-			continue
-		}
-		pos = closeEnd
-	}
-
-	return sb.String()
-}
-
 // findMatchingClose returns the absolute index just past the '>' of the
 // </tagName> close that balances an opening tag at openEnd, or -1 if no
 // balanced close exists before end-of-input.
@@ -249,29 +207,30 @@ func SanitizeHTML(html string) string {
 	html = reHTMLComments.ReplaceAllString(html, "")
 
 	// 2. Remove always-hidden tags (svg, canvas, style, meta, template, etc.).
-	for _, re := range tagRemovePatterns {
-		html = re.ReplaceAllString(html, "")
-	}
+	//
+	// performance: the previous implementation ran one regex per tag,
+	// each `(?is)<TAG\b[^>]*(?:/>|>[\s\S]*?</TAG\s*>)`. On a 1.3 MB
+	// Wikipedia fixture (which contains none of these tags) the NFA
+	// re-scanned the full document for each tag, accounting for >85%
+	// of total CPU in pprof. Replaced with a single-pass tokenizer.
+	html = removeAlwaysHiddenTagsSinglePass(html)
 
 	// 3. Remove input[type=hidden].
 	html = reInputHidden.ReplaceAllString(html, "")
 
-	// 4. Remove aria-hidden="true" elements.
-	html = removeAttrElements(html, reAttrAriaHidden)
-
-	// 5. Remove elements with hidden attribute (but not "hidden" as part of another attr value).
-	// Only target elements where hidden is a standalone attribute, not inside a value.
-	html = removeHiddenAttrElements(html)
-
-	// 6. Remove elements with hidden class names.
-	for _, re := range classAttrPatterns {
-		html = removeAttrElements(html, re)
-	}
-
-	// 7. Remove elements with hidden inline styles.
-	for _, re := range []*regexp.Regexp{reAttrDisplayNone, reAttrVisHidden, reAttrOpacityZero, reAttrFontSizeZero} {
-		html = removeAttrElements(html, re)
-	}
+	// 4-7. Remove elements whose opening tag matches ANY of the hidden
+	// predicates (aria-hidden, hidden bool attr, hidden classes, hidden
+	// inline styles) in a single pass over the document.
+	//
+	// performance: the previous implementation invoked removeAttrElements
+	// once per predicate. Each call ran a regex over the full remaining
+	// document inside a per-tag loop — on a 1.3 MB Wikipedia fixture the
+	// combined regex backtracking dominated wall time (>87% of CPU per
+	// pprof, ~13s/op). The single-pass scanner below tokenises the HTML
+	// once and tests each opening tag's attribute substring against the
+	// (already compiled) predicates locally, dropping the cost from
+	// O(N_predicates · M_tags · D_doc) to O(D_doc).
+	html = removeHiddenElementsSinglePass(html)
 
 	// 8. Strip invisible Unicode characters.
 	html = reInvisibleUnicode.ReplaceAllString(html, "")
@@ -279,8 +238,195 @@ func SanitizeHTML(html string) string {
 	return html
 }
 
-// reOpenTag matches an opening tag and captures the tag name and attribute string.
-var reOpenTag = regexp.MustCompile(`(?i)<([a-z][a-z0-9]*)(\s[^>]*)?>`)
+// removeAlwaysHiddenTagsSinglePass scans the HTML once and drops every
+// element whose tag name is in removeTags (svg, canvas, style, meta,
+// template, iframe, object, embed, noscript, link). Self-closing and void
+// forms are removed without seeking a close tag; otherwise the matching
+// `</tag>` (with depth tracking) is consumed too.
+func removeAlwaysHiddenTagsSinglePass(html string) string {
+	var out strings.Builder
+	out.Grow(len(html))
+	pos := 0
+	n := len(html)
+	for pos < n {
+		lt := strings.IndexByte(html[pos:], '<')
+		if lt < 0 {
+			out.WriteString(html[pos:])
+			break
+		}
+		tagStartAbs := pos + lt
+		if tagStartAbs+1 >= n {
+			out.WriteString(html[pos:])
+			break
+		}
+		c := html[tagStartAbs+1]
+		if (c < 'a' || c > 'z') && (c < 'A' || c > 'Z') {
+			// Not a candidate opening tag — copy `<` and continue.
+			out.WriteString(html[pos : tagStartAbs+1])
+			pos = tagStartAbs + 1
+			continue
+		}
+		nameStart := tagStartAbs + 1
+		nameEnd := nameStart
+		for nameEnd < n {
+			ch := html[nameEnd]
+			if (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') {
+				nameEnd++
+				continue
+			}
+			break
+		}
+		if nameEnd == nameStart {
+			out.WriteString(html[pos : tagStartAbs+1])
+			pos = tagStartAbs + 1
+			continue
+		}
+		tagEnd, selfClosing := scanTagEnd(html, tagStartAbs)
+		if tagEnd < 0 {
+			out.WriteString(html[pos:])
+			break
+		}
+		tagName := strings.ToLower(html[nameStart:nameEnd])
+		if !removeTags[tagName] {
+			out.WriteString(html[pos:tagEnd])
+			pos = tagEnd
+			continue
+		}
+		// Always-hidden tag — drop opening (and subtree if applicable).
+		out.WriteString(html[pos:tagStartAbs])
+		if selfClosing || isVoidElement(tagName) {
+			pos = tagEnd
+			continue
+		}
+		closeEnd := findMatchingClose(html, tagEnd, tagName)
+		if closeEnd < 0 {
+			pos = tagEnd
+			continue
+		}
+		pos = closeEnd
+	}
+	return out.String()
+}
+
+// hiddenAttrPredicates returns every compiled regex used to flag an opening
+// tag's attribute string as "this element should be removed". Order is
+// irrelevant — first match wins.
+func hiddenAttrPredicates() []*regexp.Regexp {
+	preds := []*regexp.Regexp{
+		reAttrAriaHidden,
+		reAttrDisplayNone,
+		reAttrVisHidden,
+		reAttrOpacityZero,
+		reAttrFontSizeZero,
+	}
+	preds = append(preds, classAttrPatterns...)
+	return preds
+}
+
+var hiddenPredicates = hiddenAttrPredicates()
+
+// removeHiddenElementsSinglePass walks the HTML once, locates every opening
+// tag, and removes the element when its attribute string matches any hidden
+// predicate OR carries a standalone `hidden` boolean attribute. Uses the
+// existing depth-tracking findMatchingClose so nested same-tag markup is
+// resolved correctly.
+func removeHiddenElementsSinglePass(html string) string {
+	var out strings.Builder
+	out.Grow(len(html))
+	pos := 0
+	n := len(html)
+	for pos < n {
+		lt := strings.IndexByte(html[pos:], '<')
+		if lt < 0 {
+			out.WriteString(html[pos:])
+			break
+		}
+		tagStartAbs := pos + lt
+
+		// Only consider opening tags `<[a-z]...>`. Skip `</`, `<!`, `<?`.
+		if tagStartAbs+1 >= n {
+			out.WriteString(html[pos:])
+			break
+		}
+		c := html[tagStartAbs+1]
+		if (c < 'a' || c > 'z') && (c < 'A' || c > 'Z') {
+			// Not an opening tag we care about; copy `<` and continue.
+			out.WriteString(html[pos : tagStartAbs+1])
+			pos = tagStartAbs + 1
+			continue
+		}
+
+		// Scan tag name.
+		nameStart := tagStartAbs + 1
+		nameEnd := nameStart
+		for nameEnd < n {
+			ch := html[nameEnd]
+			if (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') {
+				nameEnd++
+				continue
+			}
+			break
+		}
+		if nameEnd == nameStart {
+			out.WriteString(html[pos : tagStartAbs+1])
+			pos = tagStartAbs + 1
+			continue
+		}
+
+		// Find tag end (handles quoted attributes).
+		tagEnd, selfClosing := scanTagEnd(html, tagStartAbs)
+		if tagEnd < 0 {
+			out.WriteString(html[pos:])
+			break
+		}
+
+		attrs := ""
+		if nameEnd < tagEnd-1 {
+			attrs = html[nameEnd : tagEnd-1]
+			// Trim trailing '/' for self-closing.
+			if selfClosing && len(attrs) > 0 && attrs[len(attrs)-1] == '/' {
+				attrs = attrs[:len(attrs)-1]
+			}
+		}
+
+		matched := false
+		if attrs != "" {
+			if hasHiddenBoolAttr(attrs) {
+				matched = true
+			} else {
+				for _, re := range hiddenPredicates {
+					if re.MatchString(attrs) {
+						matched = true
+						break
+					}
+				}
+			}
+		}
+
+		if !matched {
+			out.WriteString(html[pos:tagEnd])
+			pos = tagEnd
+			continue
+		}
+
+		// Element is hidden — drop it (and its subtree if not self-closing/void).
+		tagName := strings.ToLower(html[nameStart:nameEnd])
+		out.WriteString(html[pos:tagStartAbs])
+
+		if selfClosing || isVoidElement(tagName) {
+			pos = tagEnd
+			continue
+		}
+		closeEnd := findMatchingClose(html, tagEnd, tagName)
+		if closeEnd < 0 {
+			// Unclosed: drop just the opening tag.
+			pos = tagEnd
+			continue
+		}
+		pos = closeEnd
+	}
+	return out.String()
+}
 
 // hasHiddenBoolAttr reports whether the attribute string contains a standalone
 // `hidden` boolean attribute. Quoted values are skipped so that class names
@@ -337,55 +483,6 @@ func hasHiddenBoolAttr(attrs string) bool {
 
 func isAttrTerminator(b byte) bool {
 	return b == ' ' || b == '\t' || b == '\n' || b == '\r' || b == '/' || b == '>'
-}
-
-// removeHiddenAttrElements removes elements with the HTML hidden boolean
-// attribute. Uses a quote-aware attribute scanner so "hidden" inside
-// attribute values (e.g. class="visually-hidden") is not matched, and
-// findMatchingClose so nested same-tag markup resolves to the right close.
-func removeHiddenAttrElements(html string) string {
-	var out strings.Builder
-	out.Grow(len(html))
-	pos := 0
-	for pos < len(html) {
-		loc := reOpenTag.FindStringSubmatchIndex(html[pos:])
-		if loc == nil {
-			out.WriteString(html[pos:])
-			break
-		}
-		matchStart := pos + loc[0]
-		matchEnd := pos + loc[1]
-		tagStart := pos + loc[2]
-		tagEnd := pos + loc[3]
-
-		var attrs string
-		if loc[4] >= 0 {
-			attrs = html[pos+loc[4] : pos+loc[5]]
-		}
-
-		if !hasHiddenBoolAttr(attrs) {
-			out.WriteString(html[pos:matchEnd])
-			pos = matchEnd
-			continue
-		}
-
-		tagName := strings.ToLower(html[tagStart:tagEnd])
-
-		out.WriteString(html[pos:matchStart])
-
-		if (matchEnd-matchStart >= 2 && html[matchEnd-2] == '/') || isVoidElement(tagName) {
-			pos = matchEnd
-			continue
-		}
-
-		closeEnd := findMatchingClose(html, matchEnd, tagName)
-		if closeEnd < 0 {
-			pos = matchEnd
-			continue
-		}
-		pos = closeEnd
-	}
-	return out.String()
 }
 
 // StripInvisibleUnicode removes zero-width and invisible Unicode characters

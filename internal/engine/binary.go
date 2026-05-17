@@ -4,11 +4,16 @@ package engine
 import "strings"
 
 // binaryContentTypes lists MIME type prefixes for binary content that should be skipped.
+//
+// NOTE: "application/pdf" is intentionally NOT listed. PDFs are extracted via
+// engine.ExtractPDFText and flow through the same Result.Content pipeline as
+// HTML. Callers that genuinely want to skip PDFs can set Options.NoPDF (or
+// pass --no-pdf), which restores the legacy "skipped binary content" behaviour
+// for application/pdf responses.
 var binaryContentTypes = []string{
 	"image/",
 	"audio/",
 	"video/",
-	"application/pdf",
 	"application/zip",
 	"application/gzip",
 	"application/x-tar",

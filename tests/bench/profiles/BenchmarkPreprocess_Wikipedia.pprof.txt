@@ -1,0 +1,27 @@
+File: engine.test
+Type: cpu
+Time: 2026-05-17 08:06:06 BST
+Duration: 404.05ms, Total samples = 350ms (86.62%)
+Showing nodes accounting for 350ms, 100% of 350ms total
+Showing top 20 nodes out of 105
+      flat  flat%   sum%        cum   cum%
+      90ms 25.71% 25.71%       90ms 25.71%  runtime.madvise
+      50ms 14.29% 40.00%       50ms 14.29%  runtime.pthread_cond_wait
+      40ms 11.43% 51.43%       40ms 11.43%  runtime.scanObjectsSmall
+      30ms  8.57% 60.00%       30ms  8.57%  runtime.kevent
+      30ms  8.57% 68.57%       30ms  8.57%  runtime.usleep
+      20ms  5.71% 74.29%       20ms  5.71%  golang.org/x/net/html.(*Tokenizer).readByte
+      20ms  5.71% 80.00%       20ms  5.71%  internal/runtime/atomic.(*UnsafePointer).Load (inline)
+      20ms  5.71% 85.71%       20ms  5.71%  runtime.memclrNoHeapPointers
+      10ms  2.86% 88.57%       30ms  8.57%  github.com/pinchtab/seaportal/internal/engine.unwrapLayoutTables
+      10ms  2.86% 91.43%       10ms  2.86%  golang.org/x/net/html.(*Tokenizer).readTagAttrVal
+      10ms  2.86% 94.29%       10ms  2.86%  internal/stringslite.Index
+      10ms  2.86% 97.14%       20ms  5.71%  runtime.growslice
+      10ms  2.86%   100%       10ms  2.86%  runtime.pthread_kill
+         0     0%   100%      100ms 28.57%  github.com/pinchtab/seaportal/internal/engine.BenchmarkPreprocess_Wikipedia
+         0     0%   100%      100ms 28.57%  github.com/pinchtab/seaportal/internal/engine.PreprocessHTML (inline)
+         0     0%   100%      100ms 28.57%  github.com/pinchtab/seaportal/internal/engine.PreprocessHTMLWithURL
+         0     0%   100%       10ms  2.86%  github.com/pinchtab/seaportal/internal/engine.detectCommentContainer
+         0     0%   100%       10ms  2.86%  github.com/pinchtab/seaportal/internal/engine.renderNode
+         0     0%   100%       10ms  2.86%  github.com/pinchtab/seaportal/internal/engine.replaceTwoslashButtons (inline)
+         0     0%   100%       10ms  2.86%  github.com/pinchtab/seaportal/internal/engine.scopeMainContent

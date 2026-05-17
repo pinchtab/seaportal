@@ -1,4 +1,3 @@
-// Package portal provides content extraction with SPA detection
 package engine
 
 import (
@@ -6,17 +5,31 @@ import (
 	"strings"
 )
 
-// CleanupMarkdown removes noise patterns from markdown output:
-// - Empty links [](url) that provide no value
-// - HTML comments <!--...--> that leak through
-// - Standalone bullet items with only empty links
-// - App download CTAs (QR codes, app store links)
+var (
+	cdataBareRE   = regexp.MustCompile(`(?s)<!\\?\[CDATA\\?\[(.*?)\\?\]\\?\]>`)
+	cdataEntityRE = regexp.MustCompile(`(?s)&lt;!\\?\[CDATA\\?\[(.*?)\\?\]\\?\]&gt;`)
+	// regression: wikidata-edit-property-pencil-leak — Wikipedia infobox edit
+	// pencils render as image-only links to Wikidata Q*#P* anchors. They're
+	// chrome, not content, and appear identically across every language
+	// edition (de/es/zh/ar/ru). URL-pattern match so the rule is cross-cutting,
+	// not site-specific.
+	wikidataEditPropertyRE = regexp.MustCompile(`\[!\[[^\]]*\]\([^)]*\)\]\(https?://(?:www\.)?wikidata\.org/wiki/Q\d+#P\d+(?:\s+"[^"]*")?\)`)
+	// regression: wikidata-edit-property-pencil-leak — MediaWiki section-edit
+	// anchors (`?action=edit`, `?veaction=edit`) render as text links like
+	// `[edit](...)`/`[تعديل](...)` and are pure chrome on every MediaWiki
+	// instance, not just Wikipedia.
+	mediaWikiEditLinkRE = regexp.MustCompile(`\[[^\]]*\]\(https?://[^)\s]*[?&](?:ve)?action=edit[^)]*\)`)
+)
+
 func CleanupMarkdown(md string) string {
+	md = cdataBareRE.ReplaceAllString(md, "$1")
+	md = cdataEntityRE.ReplaceAllString(md, "$1")
+	md = wikidataEditPropertyRE.ReplaceAllString(md, "")
+	md = mediaWikiEditLinkRE.ReplaceAllString(md, "")
+
 	commentRe := regexp.MustCompile(`<!--[^>]*-->`)
 	md = commentRe.ReplaceAllString(md, "")
 
-	// Remove standalone list items that are just empty links
-	// Matches: - [](url) on its own line
 	emptyLinkListRe := regexp.MustCompile(`(?m)^[\-\*\+]\s*\[\]\([^)]+\)\s*$`)
 	md = emptyLinkListRe.ReplaceAllString(md, "")
 

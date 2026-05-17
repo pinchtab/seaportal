@@ -1,0 +1,27 @@
+File: engine.test
+Type: cpu
+Time: 2026-05-17 08:06:08 BST
+Duration: 605.04ms, Total samples = 500ms (82.64%)
+Showing nodes accounting for 490ms, 98.00% of 500ms total
+Showing top 20 nodes out of 121
+      flat  flat%   sum%        cum   cum%
+     100ms 20.00% 20.00%      150ms 30.00%  regexp.(*machine).add
+      50ms 10.00% 30.00%      260ms 52.00%  regexp.(*machine).step
+      50ms 10.00% 40.00%       50ms 10.00%  unicode.SimpleFold
+      40ms  8.00% 48.00%       40ms  8.00%  runtime.madvise
+      40ms  8.00% 56.00%       40ms  8.00%  runtime.pthread_cond_wait
+      30ms  6.00% 62.00%       80ms 16.00%  regexp/syntax.(*Inst).MatchRunePos
+      20ms  4.00% 66.00%       20ms  4.00%  regexp.(*machine).alloc (inline)
+      20ms  4.00% 70.00%       20ms  4.00%  regexp.lazyFlag.match
+      20ms  4.00% 74.00%       20ms  4.00%  runtime.memmove
+      20ms  4.00% 78.00%       20ms  4.00%  runtime.usleep
+      10ms  2.00% 80.00%       10ms  2.00%  github.com/JohannesKaufmann/html-to-markdown/v2/internal/textutils.TrimConsecutiveNewlines
+      10ms  2.00% 82.00%       10ms  2.00%  github.com/JohannesKaufmann/html-to-markdown/v2/plugin/table.(*tablePlugin).writeRow
+      10ms  2.00% 84.00%       10ms  2.00%  regexp.(*inputString).step
+      10ms  2.00% 86.00%       10ms  2.00%  runtime.(*mspan).writeHeapBitsSmall
+      10ms  2.00% 88.00%       10ms  2.00%  runtime.(*spanInlineMarkBits).init
+      10ms  2.00% 90.00%       10ms  2.00%  runtime.(*spanSet).push
+      10ms  2.00% 92.00%       10ms  2.00%  runtime.memclrNoHeapPointers
+      10ms  2.00% 94.00%       10ms  2.00%  runtime.mmap
+      10ms  2.00% 96.00%       10ms  2.00%  runtime.pthread_cond_signal
+      10ms  2.00% 98.00%       10ms  2.00%  runtime.pthread_kill

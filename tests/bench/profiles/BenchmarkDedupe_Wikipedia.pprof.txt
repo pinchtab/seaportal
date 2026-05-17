@@ -1,0 +1,27 @@
+File: engine.test
+Type: cpu
+Time: 2026-05-17 08:06:09 BST
+Duration: 805.05ms, Total samples = 680ms (84.47%)
+Showing nodes accounting for 600ms, 88.24% of 680ms total
+Showing top 20 nodes out of 145
+      flat  flat%   sum%        cum   cum%
+     200ms 29.41% 29.41%      200ms 29.41%  runtime.madvise
+      70ms 10.29% 39.71%       80ms 11.76%  regexp.(*machine).add
+      50ms  7.35% 47.06%       50ms  7.35%  internal/runtime/atomic.(*UnsafePointer).Load
+      30ms  4.41% 51.47%      140ms 20.59%  regexp.(*machine).step
+      30ms  4.41% 55.88%       30ms  4.41%  runtime.kevent
+      30ms  4.41% 60.29%       30ms  4.41%  runtime.pthread_cond_wait
+      20ms  2.94% 63.24%       30ms  4.41%  github.com/pinchtab/seaportal/internal/engine.simhash
+      20ms  2.94% 66.18%       40ms  5.88%  regexp/syntax.(*Inst).MatchRunePos
+      20ms  2.94% 69.12%       20ms  2.94%  runtime.memmove
+      20ms  2.94% 72.06%       30ms  4.41%  runtime.scanObjectsSmall
+      20ms  2.94% 75.00%       20ms  2.94%  unicode.SimpleFold
+      10ms  1.47% 76.47%       10ms  1.47%  internal/runtime/atomic.(*UnsafePointer).StoreNoWB
+      10ms  1.47% 77.94%       10ms  1.47%  internal/stringslite.Index
+      10ms  1.47% 79.41%       10ms  1.47%  regexp.(*Regexp).backtrack
+      10ms  1.47% 80.88%       20ms  2.94%  regexp.(*Regexp).expand
+      10ms  1.47% 82.35%       10ms  1.47%  regexp.(*inputString).step
+      10ms  1.47% 83.82%       10ms  1.47%  regexp.(*machine).alloc (inline)
+      10ms  1.47% 85.29%      170ms 25.00%  regexp.(*machine).match
+      10ms  1.47% 86.76%       10ms  1.47%  runtime.(*mheap).initSpan
+      10ms  1.47% 88.24%       10ms  1.47%  runtime.(*spanInlineMarkBits).init

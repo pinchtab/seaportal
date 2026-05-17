@@ -49,12 +49,10 @@ func TestReplaceTwoslashButtons(t *testing.T) {
 }
 
 func TestPreprocessHTMLPreservesCodeContent(t *testing.T) {
-	// Simulate nodejs.org code block pattern
 	input := `<pre><code><span style="color:#569CD6"><button data-state="closed" class="twoslash-hover">const</button></span> { <span style="color:#4FC1FF"><button data-state="closed" class="twoslash-hover">createServer</button></span> } = <span style="color:#4FC1FF"><button data-state="closed" class="twoslash-hover">require</button></span>(<span style="color:#CE9178">'node:http'</span>);</code></pre>`
 
 	result := PreprocessHTML(input)
 
-	// Should preserve const, createServer, require
 	if !strings.Contains(result, "const") {
 		t.Error("Expected 'const' to be preserved")
 	}
@@ -64,7 +62,6 @@ func TestPreprocessHTMLPreservesCodeContent(t *testing.T) {
 	if !strings.Contains(result, "require") {
 		t.Error("Expected 'require' to be preserved")
 	}
-	// Should not contain button tags
 	if strings.Contains(result, "<button") {
 		t.Error("Expected button tags to be replaced")
 	}

@@ -1,9 +1,76 @@
 package engine
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
+
+func TestIndexFallback_TextNPR(t *testing.T) {
+	path := filepath.Join("..", "..", "testdata", "index", "text-npr.html")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read fixture: %v", err)
+	}
+
+	result := FromHTML(string(data), "https://text.npr.org/")
+
+	if len(result.Content) < 500 {
+		t.Errorf("Content length = %d, want > 500 (was 57 before fix). First 200 chars: %q",
+			len(result.Content), truncate(result.Content, 200))
+	}
+	anchorCount := strings.Count(result.Content, "](")
+	if anchorCount < 10 {
+		t.Errorf("anchor count (`](` occurrences) = %d, want >= 10", anchorCount)
+	}
+}
+
+func TestIndexFallback_ShortPageNotFallback(t *testing.T) {
+	html := `<!DOCTYPE html>
+<html><head><title>Example</title></head>
+<body>
+<h1>Example</h1>
+<p>Hello world. This is an example page with a tiny body.</p>
+</body></html>`
+
+	result := FromHTML(html, "https://example.com/")
+
+	for _, sig := range result.SPASignals {
+		if sig == "index-page-fallback" {
+			t.Errorf("expected no index-page-fallback for short page; got SPASignals=%v", result.SPASignals)
+		}
+	}
+}
+
+func TestIndexFallback_NavOnlyNotFallback(t *testing.T) {
+	html := `<!DOCTYPE html>
+<html><head><title>Tiny</title></head>
+<body>
+<ul>
+<li><a href="/a">News</a></li>
+<li><a href="/b">Culture</a></li>
+<li><a href="/c">Music</a></li>
+<li><a href="/d">Privacy</a></li>
+<li><a href="/e">About</a></li>
+<li><a href="/f">Contact</a></li>
+</ul>
+</body></html>`
+
+	result := FromHTML(html, "https://example.org/")
+	for _, sig := range result.SPASignals {
+		if sig == "index-page-fallback" {
+			t.Errorf("expected no index-page-fallback for nav-only page; got SPASignals=%v", result.SPASignals)
+		}
+	}
+}
+
+func truncate(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	return s[:n]
+}
 
 func TestDetectIndexPage(t *testing.T) {
 	tests := []struct {
@@ -131,7 +198,6 @@ func TestExtractCardItems(t *testing.T) {
 		t.Fatalf("Expected at least 2 items, got %d", len(result.Items))
 	}
 
-	// Check that we extracted URLs
 	hasURLs := false
 	for _, item := range result.Items {
 		if item.URL != "" {
@@ -188,7 +254,7 @@ func TestShouldUseIndexFallback(t *testing.T) {
 			readabilityHeadings: 5,
 			indexIsIndexPage:    true,
 			indexHeadlines:      20,
-			wantFallback:        false, // readability is good enough
+			wantFallback:        false,
 		},
 		{
 			name:                "poor readability, not index page",
@@ -204,7 +270,7 @@ func TestShouldUseIndexFallback(t *testing.T) {
 			readabilityHeadings: 1,
 			indexIsIndexPage:    true,
 			indexHeadlines:      2,
-			wantFallback:        false, // index not rich enough
+			wantFallback:        false,
 		},
 	}
 

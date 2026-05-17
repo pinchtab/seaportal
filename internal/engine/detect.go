@@ -17,6 +17,9 @@ var (
 		regexp.MustCompile(`<div\s+id=["']app["']\s*>`),
 		regexp.MustCompile(`<div\s+id=["']__next["']\s*>`),
 	}
+	bodyOpenRE      = regexp.MustCompile(`(?i)<body`)
+	bodyCloseRE     = regexp.MustCompile(`(?i)</body>`)
+	stripTagsRE     = regexp.MustCompile(`<[^>]*>`)
 	blockedPatterns = []*regexp.Regexp{
 		regexp.MustCompile(`(?i)captcha`),
 		regexp.MustCompile(`(?i)are\s+you\s+a\s+(human|robot)`),
@@ -48,14 +51,19 @@ func DetectSPA(html string) (signals []string, isSPA bool) {
 		}
 	}
 
-	bodyStart := strings.Index(strings.ToLower(html), "<body")
-	bodyEnd := strings.Index(strings.ToLower(html), "</body>")
-	if bodyStart > 0 && bodyEnd > bodyStart {
-		bodyContent := html[bodyStart:bodyEnd]
-		textOnly := regexp.MustCompile(`<[^>]*>`).ReplaceAllString(bodyContent, "")
-		textOnly = strings.TrimSpace(textOnly)
-		if len(textOnly) < 200 {
-			signals = append(signals, "minimal-body-content")
+	// regression: detect-spa-non-ascii-panic — case-insensitive search via
+	// regex returns indexes into the ORIGINAL string. The prior ToLower-then-
+	// slice approach broke on multi-byte input (Turkish İ, etc.) because
+	// ToLower can shift byte offsets, and indexes from the lowered string
+	// then sliced the original out-of-bounds.
+	if loc := bodyOpenRE.FindStringIndex(html); loc != nil {
+		bodyContentStart := loc[1]
+		if closeLoc := bodyCloseRE.FindStringIndex(html[bodyContentStart:]); closeLoc != nil {
+			bodyContent := html[bodyContentStart : bodyContentStart+closeLoc[0]]
+			textOnly := strings.TrimSpace(stripTagsRE.ReplaceAllString(bodyContent, ""))
+			if len(textOnly) < 200 {
+				signals = append(signals, "minimal-body-content")
+			}
 		}
 	}
 
@@ -69,6 +77,45 @@ func DetectSPA(html string) (signals []string, isSPA bool) {
 
 	isSPA = len(signals) >= 2
 	return
+}
+
+// DetectJSChallenge heuristically identifies "site returned 200 but shipped
+// a JS challenge instead of real content" — the missing complement to
+// DetectBlocked, which keys off head-level patterns (titles, well-known
+// challenge JS variables, etc.). Strategy: a small HTML response that
+// matches one of the cross-cutting CDN/anti-bot SIGNATURES (cf-mitigated,
+// challenge-platform, datadome, perimeterx, akamai-bm) is almost certainly
+// a challenge page. The 1500-byte cap is the key gatekeeper — real CDN-
+// served pages (which all mention Cloudflare in headers/scripts) are far
+// larger, so the length floor avoids "page mentions cloudflare in a
+// footer" false positives. No hostname-specific logic; signatures only.
+func DetectJSChallenge(html string, contentType string, length int) bool {
+	if !strings.Contains(strings.ToLower(contentType), "html") {
+		return false
+	}
+	if length > 1500 || length <= 0 {
+		return false
+	}
+	lower := strings.ToLower(html)
+	challengeSignals := []string{
+		"cf-mitigated",
+		"__cf_bm",
+		"challenge-platform",
+		"datadome",
+		"px-captcha",
+		"perimeterx",
+		"akamai-bm",
+		"challenge.akamaized",
+		"ddos protection by cloudflare",
+		"checking your browser",
+		"just a moment",
+	}
+	for _, sig := range challengeSignals {
+		if strings.Contains(lower, sig) {
+			return true
+		}
+	}
+	return false
 }
 
 // DetectBlocked: triggers on challenge pages (Cloudflare, captcha, etc.)
@@ -92,6 +139,16 @@ func DetectBlocked(html string) bool {
 		regexp.MustCompile(`(?i)csm-captcha-instrumentation`),               // Amazon captcha script
 		regexp.MustCompile(`(?i)AwsWafIntegration`),                         // AWS WAF JS challenge
 		regexp.MustCompile(`(?i)<div\s+id="challenge-container">\s*</div>`), // AWS WAF challenge container
+		// Akamai Bot Manager — body-only detection misses transparent _abck cookie passes.
+		regexp.MustCompile(`(?i)<script[^>]+src="/_sec/cp_challenge/`), // Akamai Bot Manager challenge script
+		regexp.MustCompile(`(?i)\bbm-verify\b`),                        // Akamai Bot Manager verify token
+		regexp.MustCompile(`(?i)Reference\s+#18\.[a-f0-9]+`),           // Akamai access-denied reference number
+		// DataDome — body-only detection misses transparent datadome cookie passes.
+		regexp.MustCompile(`(?i)src="[^"]*dd\.datadome\.co`), // DataDome challenge asset host
+		regexp.MustCompile(`(?i)\bdatadome\b\s*[:=]`),        // DataDome JS variable assignment
+		regexp.MustCompile(`(?i)gddRu\s*=`),                  // DataDome challenge token
+		// Imperva (modern) — text-based block message.
+		regexp.MustCompile(`(?i)Request\s+unsuccessful\.\s+Incapsula\s+incident\s+ID`), // Imperva modern block message
 	}
 	for _, p := range headPatterns {
 		if p.MatchString(html) {
@@ -99,29 +156,35 @@ func DetectBlocked(html string) bool {
 		}
 	}
 
-	// Second: check body content for blocked indicators (only if body is short)
-	htmlLower := strings.ToLower(html)
-	bodyStart := strings.Index(htmlLower, "<body")
-	bodyEnd := strings.Index(htmlLower, "</body>")
-	if bodyStart > 0 && bodyEnd > bodyStart {
-		bodyContent := html[bodyStart:bodyEnd]
-		// Strip both tags AND script content before measuring
-		noScripts := regexp.MustCompile(`(?is)<script[^>]*>.*?</script>`).ReplaceAllString(bodyContent, "")
-		noStyles := regexp.MustCompile(`(?is)<style[^>]*>.*?</style>`).ReplaceAllString(noScripts, "")
-		textOnly := regexp.MustCompile(`<[^>]*>`).ReplaceAllString(noStyles, "")
-		textOnly = strings.TrimSpace(textOnly)
+	// Second: check body content for blocked indicators (only if body is short).
+	// regression: detect-spa-non-ascii-panic — use regex (indexes into the
+	// original string) instead of ToLower + slice, which panics on input
+	// where lowercasing shifts byte offsets.
+	openLoc := bodyOpenRE.FindStringIndex(html)
+	if openLoc == nil {
+		return false
+	}
+	closeLoc := bodyCloseRE.FindStringIndex(html[openLoc[0]:])
+	if closeLoc == nil {
+		return false
+	}
+	bodyContent := html[openLoc[0] : openLoc[0]+closeLoc[0]]
+	// Strip both tags AND script content before measuring
+	noScripts := regexp.MustCompile(`(?is)<script[^>]*>.*?</script>`).ReplaceAllString(bodyContent, "")
+	noStyles := regexp.MustCompile(`(?is)<style[^>]*>.*?</style>`).ReplaceAllString(noScripts, "")
+	textOnly := regexp.MustCompile(`<[^>]*>`).ReplaceAllString(noStyles, "")
+	textOnly = strings.TrimSpace(textOnly)
 
-		// Only check body patterns on short pages to avoid false positives
-		if len(textOnly) > 1000 {
-			return false
-		}
+	// Only check body patterns on short pages to avoid false positives
+	if len(textOnly) > 1000 {
+		return false
+	}
 
-		// Check blocked patterns against the stripped body text (not full HTML)
-		// This avoids false positives from "captcha" in scripts/configs
-		for _, p := range blockedPatterns {
-			if p.MatchString(textOnly) {
-				return true
-			}
+	// Check blocked patterns against the stripped body text (not full HTML)
+	// This avoids false positives from "captcha" in scripts/configs
+	for _, p := range blockedPatterns {
+		if p.MatchString(textOnly) {
+			return true
 		}
 	}
 

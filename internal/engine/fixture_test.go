@@ -9,7 +9,6 @@ import (
 	"testing"
 )
 
-// fixtureDir returns the path to test fixtures, skipping if not present.
 func fixtureDir(t *testing.T) string {
 	t.Helper()
 	dir := filepath.Join("..", "..", "testdata", "fixtures")
@@ -28,33 +27,28 @@ func loadFixture(t *testing.T, name string) string {
 	return string(data)
 }
 
-// Baseline expectations from the original SeaPortal (before content negotiation).
-// These are the "before" numbers from the comparison report.
 type expectation struct {
 	name           string
-	fixture        string // HTML fixture filename
-	minChars       int    // Minimum content length we expect
+	fixture        string
+	minChars       int
 	minConfidence  int
 	minHeadings    int
-	mustContain    []string // Substrings that must appear in content
-	mustNotContain []string // Substrings that must NOT appear (junk detection)
-	notSPA         bool     // Must NOT be classified as SPA
-	notBlocked     bool     // Must NOT be classified as blocked
+	mustContain    []string
+	mustNotContain []string
+	notSPA         bool
+	notBlocked     bool
 }
 
-// Before: baseline numbers from original SeaPortal (HTML-only extraction, no markdown negotiation).
-// These are the FromHTML() results on the same fixtures — the "before" for docs-openclaw
-// and cloudflare reflects HTML-only extraction (without Accept: text/markdown).
 var baselineBefore = map[string]int{
 	"example.com":   149,
-	"hn":            10943,  // fixture content (varies by capture time)
-	"wikipedia":     43375,  // fixture-specific
-	"github-clay":   113657, // fixture-specific
-	"bbc":           7874,   // fixture-specific
-	"nytimes":       3392,   // fixture-specific (HTML extraction)
-	"docs-openclaw": 1610,   // HTML-only extraction (no markdown negotiation)
-	"react":         4000,   // fixture-specific
-	"cloudflare":    5804,   // HTML-only extraction (blocked/partial)
+	"hn":            10943,
+	"wikipedia":     43375,
+	"github-clay":   113657,
+	"bbc":           7874,
+	"nytimes":       3392,
+	"docs-openclaw": 1610,
+	"react":         4000,
+	"cloudflare":    5804,
 	"creepjs":       1147,
 }
 
@@ -177,7 +171,6 @@ func TestFixture_HTMLExtraction(t *testing.T) {
 				t.Error("should not be classified as blocked")
 			}
 
-			// Log stats for comparison
 			before := baselineBefore[exp.name]
 			delta := ""
 			if before > 0 {
@@ -194,8 +187,6 @@ func TestFixture_HTMLExtraction(t *testing.T) {
 	}
 }
 
-// TestFixture_MarkdownNegotiation tests the content-negotiation path
-// where servers return text/markdown directly.
 func TestFixture_MarkdownNegotiation(t *testing.T) {
 	cases := []struct {
 		name        string
@@ -236,7 +227,6 @@ func TestFixture_MarkdownNegotiation(t *testing.T) {
 				}
 			}
 
-			// Title extraction from markdown
 			title := extractMarkdownTitle(cleaned)
 			if title == "" {
 				t.Error("should extract title from markdown")
@@ -264,9 +254,7 @@ func TestFixture_MarkdownNegotiation(t *testing.T) {
 	}
 }
 
-// TestFixture_ComparisonSummary prints the full comparison table.
 func TestFixture_ComparisonSummary(t *testing.T) {
-	// web_fetch reference values from the original comparison
 	webFetchChars := map[string]int{
 		"example.com":   1256,
 		"hn":            10847,
@@ -275,7 +263,7 @@ func TestFixture_ComparisonSummary(t *testing.T) {
 		"bbc":           827,
 		"nytimes":       14570,
 		"docs-openclaw": 7056,
-		"react":         0, // 404 error
+		"react":         0,
 		"cloudflare":    29508,
 		"creepjs":       93,
 	}
@@ -292,14 +280,12 @@ func TestFixture_ComparisonSummary(t *testing.T) {
 
 	var rows []row
 
-	// HTML fixtures
 	for _, exp := range expectations {
 		html := loadFixture(t, exp.fixture)
 		result := FromHTML(html, "https://"+exp.name)
 		rows = append(rows, row{name: exp.name, after: result.Length})
 	}
 
-	// Markdown fixtures
 	for _, name := range []string{"docs-openclaw", "cloudflare"} {
 		mdFile := name + "-md.txt"
 		md := loadFixture(t, mdFile)
@@ -312,10 +298,10 @@ func TestFixture_ComparisonSummary(t *testing.T) {
 		before := baselineBefore[r.name]
 		wf := webFetchChars[r.name]
 		winner := "TIE"
-		if r.after > wf*12/10 { // SP > wf by 20%
+		if r.after > wf*12/10 {
 			winner = "SP"
 			spWins++
-		} else if wf > r.after*12/10 { // wf > SP by 20%
+		} else if wf > r.after*12/10 {
 			winner = "wf"
 			wfWins++
 		} else {
@@ -328,9 +314,7 @@ func TestFixture_ComparisonSummary(t *testing.T) {
 	t.Logf("Score: SeaPortal %d | web_fetch %d | Tie %d", spWins, wfWins, ties)
 }
 
-// TestFixture_NoRegression ensures current extraction is at least as good as baseline.
 func TestFixture_NoRegression(t *testing.T) {
-	// Allow up to 15% regression from baseline (network content varies)
 	const regressionThreshold = 0.85
 
 	for _, exp := range expectations {

@@ -25,6 +25,7 @@ go test ./...
 - Keep functions focused and small
 - Add tests for new functionality
 
+
 ## Reporting Issues
 
 - Check existing issues first

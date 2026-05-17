@@ -1,0 +1,27 @@
+File: engine.test
+Type: cpu
+Time: 2026-05-17 08:06:10 BST
+Duration: 302.81ms, Total samples = 200ms (66.05%)
+Showing nodes accounting for 200ms, 100% of 200ms total
+Showing top 20 nodes out of 89
+      flat  flat%   sum%        cum   cum%
+      40ms 20.00% 20.00%       40ms 20.00%  runtime.pthread_cond_wait
+      30ms 15.00% 35.00%       30ms 15.00%  runtime.madvise
+      20ms 10.00% 45.00%       20ms 10.00%  runtime.memclrNoHeapPointers
+      20ms 10.00% 55.00%       20ms 10.00%  runtime.pthread_kill
+      10ms  5.00% 60.00%       10ms  5.00%  golang.org/x/net/html.(*Tokenizer).readByte
+      10ms  5.00% 65.00%       10ms  5.00%  internal/runtime/atomic.(*UnsafePointer).Load (inline)
+      10ms  5.00% 70.00%       10ms  5.00%  runtime.(*mspan).init
+      10ms  5.00% 75.00%       10ms  5.00%  runtime.mallocgcSmallScanNoHeader
+      10ms  5.00% 80.00%       10ms  5.00%  runtime.newBucket
+      10ms  5.00% 85.00%       10ms  5.00%  runtime.pthread_cond_signal
+      10ms  5.00% 90.00%       10ms  5.00%  runtime.spanSetScans
+      10ms  5.00% 95.00%       10ms  5.00%  runtime.usleep
+      10ms  5.00%   100%       30ms 15.00%  strings.Fields
+         0     0%   100%       50ms 25.00%  github.com/pinchtab/seaportal/internal/engine.(*snapshotContext).buildNode
+         0     0%   100%       50ms 25.00%  github.com/pinchtab/seaportal/internal/engine.(*snapshotContext).traverseInto
+         0     0%   100%       80ms 40.00%  github.com/pinchtab/seaportal/internal/engine.BenchmarkSnapshot_Wikipedia
+         0     0%   100%       80ms 40.00%  github.com/pinchtab/seaportal/internal/engine.BuildSnapshot (inline)
+         0     0%   100%       80ms 40.00%  github.com/pinchtab/seaportal/internal/engine.BuildSnapshotWithOptions
+         0     0%   100%       50ms 25.00%  github.com/pinchtab/seaportal/internal/engine.BuildSnapshotWithOptions.func1
+         0     0%   100%       50ms 25.00%  github.com/pinchtab/seaportal/internal/engine.computeAccessibleName

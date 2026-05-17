@@ -21,7 +21,14 @@ section() {
   echo -e "  ${ACCENT}${BOLD}$1${NC}"
 }
 
-TARGET="${1:-./...}"
+# When called with no target, run all first-party packages (excluding
+# competitors/ which is third-party vendor code we don't own).
+if [ -n "${1:-}" ]; then
+  TARGET="$1"
+else
+  TARGET=$(go list ./... 2>/dev/null | grep -v '/competitors/' | tr '\n' ' ')
+  [ -z "$TARGET" ] && TARGET="./..."
+fi
 
 echo ""
 echo -e "  ${ACCENT}${BOLD}🌊 SeaPortal Tests${NC}"
@@ -51,7 +58,7 @@ resolve_gotestsum() {
 }
 
 if GOTESTSUM_BIN="$(resolve_gotestsum)"; then
-  if ! "$GOTESTSUM_BIN" --format=pkgname --hide-summary=output -- -count=1 -race -coverprofile=coverage.out "$TARGET"; then
+  if ! "$GOTESTSUM_BIN" --format=pkgname --hide-summary=output -- -count=1 -race -coverprofile=coverage.out $TARGET; then
     fail "Tests failed"
     exit 1
   fi
@@ -59,7 +66,7 @@ else
   echo -e "    ${MUTED}gotestsum not found — falling back to go test${NC}"
   echo -e "    ${MUTED}Install: go install gotest.tools/gotestsum@latest${NC}"
   echo ""
-  if ! go test -v -count=1 -race -coverprofile=coverage.out "$TARGET"; then
+  if ! go test -v -count=1 -race -coverprofile=coverage.out $TARGET; then
     fail "Tests failed"
     exit 1
   fi
