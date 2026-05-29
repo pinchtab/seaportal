@@ -108,10 +108,11 @@ func TestUnwrapLayoutTables_FlattensLayoutTable(t *testing.T) {
 }
 
 func TestUnwrapLayoutTables_PreservesNestedTableContent(t *testing.T) {
-	// Classic nested-<table> layout: the real content (links + a nested list
-	// table) lives inside an outer single-column layout table. Unwrapping the
-	// outer table must NOT discard the inner content — a prior text-only flatten
-	// dropped everything inside nested tables, gutting table-laid-out pages.
+	// regression: layout-table-nested-content-dropped — classic nested-<table>
+	// layout where the real content (links + a nested list table) lives inside
+	// an outer single-column layout table. Unwrapping the outer table must NOT
+	// discard the inner content; a prior text-only flatten dropped everything
+	// inside nested tables, gutting table-laid-out pages (e.g. Hacker News).
 	in := `<html><body><table id="outer"><tr><td>` +
 		`<a href="/story">Headline Story</a>` +
 		`<table class="inner"><tr><td><a href="/c1">comment one</a></td></tr>` +

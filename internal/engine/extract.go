@@ -1096,24 +1096,8 @@ func fromHTMLInternal(html string, targetURL string, start time.Time, opts Optio
 		}
 	}
 
-	// Preprocess-regression guard: the chrome/main-content heuristics are tuned
-	// for the common single-article shape and occasionally restructure the DOM
-	// such that readability scores a much smaller article than it would on the
-	// lightly-cleaned raw HTML — observed on link-dense home/index pages and
-	// JS-shell pages where the real content isn't one contiguous prose block.
-	// When the primary extraction captured well under half of the available
-	// sanitized text, re-run readability on the un-preprocessed (sanitize-only)
-	// HTML and adopt it if it yields materially more content. Gated by the same
-	// --no-prune-fallback opt-out (same intent: no automatic rescue).
-	if !opts.NoPruneFallback && result.Length > 0 && result.Length*2 < visibleTextLenOf(html) {
-		rawSan := SanitizeHTML(rawHTML)
-		if altArticle, altErr := readability.FromReader(strings.NewReader(rawSan), parsedURL); altErr == nil {
-			alt := processArticle(altArticle, targetURL, start, parseStart, parseEnd)
-			if alt.Length > result.Length*7/5 && alt.Length > result.Length+400 {
-				alt.ExtractionMethod = "preprocess-skip-fallback"
-				result = alt
-			}
-		}
+	if !opts.NoPruneFallback {
+		applyPreprocessSkipFallback(&result, html, rawHTML, targetURL, parsedURL, start, parseStart, parseEnd)
 	}
 
 	result.SPASignals = spaSignals
@@ -1317,6 +1301,42 @@ func fromHTMLInternal(html string, targetURL string, start time.Time, opts Optio
 	applyQueryRanking(&result, opts)
 
 	return result
+}
+
+// preprocessSkipThinFloor bounds the preprocess-skip rescue to thin
+// extractions. Above it, the primary extraction is substantial enough to
+// trust, so we skip the extra visible-text parse the guard would otherwise run
+// on every page — the rescue only ever matters when readability returned little.
+const preprocessSkipThinFloor = 8192
+
+// applyPreprocessSkipFallback rescues extractions where the preprocess
+// heuristics (chrome strip / main-content scope / table unwrap) restructured
+// the DOM enough that readability under-scored the article — observed on
+// link-dense home/index pages and JS-shell pages whose real content isn't one
+// contiguous prose block. When the primary result is thin AND captured well
+// under half the available sanitized text, it re-runs readability on the
+// un-preprocessed (sanitize-only) HTML and adopts it only if materially larger.
+// sanitizedHTML is the post-preprocess+sanitize body the primary pass used;
+// rawHTML is the pre-preprocess body. Mutates result in place when adopted.
+func applyPreprocessSkipFallback(result *Result, sanitizedHTML, rawHTML, targetURL string, parsedURL *url.URL, start, parseStart, parseEnd time.Time) {
+	// Cheap pre-gate: large extractions are healthy — skip the visible-text
+	// parse entirely. Then the accurate "< half the available text" check.
+	if result.Length == 0 || result.Length >= preprocessSkipThinFloor {
+		return
+	}
+	if result.Length*2 >= visibleTextLenOf(sanitizedHTML) {
+		return
+	}
+	altArticle, err := readability.FromReader(strings.NewReader(SanitizeHTML(rawHTML)), parsedURL)
+	if err != nil {
+		result.Warnings = append(result.Warnings, fmt.Sprintf("preprocess-skip fallback: readability failed: %v", err))
+		return
+	}
+	alt := processArticle(altArticle, targetURL, start, parseStart, parseEnd)
+	if alt.Length > result.Length*7/5 && alt.Length > result.Length+400 {
+		alt.ExtractionMethod = "preprocess-skip-fallback"
+		*result = alt
+	}
 }
 
 // applyQueryRanking populates Result.RankedSections from Result.Content when
