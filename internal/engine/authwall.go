@@ -2,8 +2,17 @@ package engine
 
 import (
 	"net/url"
+	"regexp"
 	"strings"
 )
+
+// authWallTitlePatterns match a <title> that *is* a login/signup prompt
+// ("Log In or Sign Up") — anchored so "How to sign in to X" / "Signing bonus"
+// don't match. High precision: real articles don't title themselves this way.
+var authWallTitlePatterns = []*regexp.Regexp{
+	regexp.MustCompile(`(?i)\b(log ?in|sign ?in|join)\b[^.]{0,20}\bor\b[^.]{0,20}\b(sign ?up|register|log ?in|join)\b`),
+	regexp.MustCompile(`(?i)^\s*(log ?in|sign ?in|sign ?up)\b`),
+}
 
 // authWallURLPathHints are URL path substrings that strongly suggest the page
 // IS a login/signup wall (the URL is honest about its purpose).
@@ -54,6 +63,8 @@ var authWallLinkPaths = []string{"/signup", "/sign-up", "/signin", "/sign-in", "
 //     etc. inside markdown link targets in the body. Catches landing pages
 //     whose chrome links to signup/login from many nav/footer positions even
 //     when the visible prose looks article-shaped.
+//  6. Auth-prompt title ("Log In or Sign Up"): catches content-rich logged-out
+//     walls whose marketing prose defeats signals 3/4. Pairs with 5 (LinkedIn).
 func detectAuthWallByContent(result Result) (bool, string) {
 	parsedURL, err := url.Parse(result.URL)
 	if err != nil {
@@ -138,6 +149,14 @@ func detectAuthWallByContent(result Result) (bool, string) {
 	}
 	if authLinkHits >= 2 {
 		signals++
+	}
+
+	// Signal 6 — auth-prompt title.
+	for _, re := range authWallTitlePatterns {
+		if re.MatchString(result.Title) {
+			signals++
+			break
+		}
 	}
 
 	if signals < 2 {
