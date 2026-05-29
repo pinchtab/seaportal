@@ -107,6 +107,27 @@ func TestUnwrapLayoutTables_FlattensLayoutTable(t *testing.T) {
 	}
 }
 
+func TestUnwrapLayoutTables_PreservesNestedTableContent(t *testing.T) {
+	// Classic nested-<table> layout: the real content (links + a nested list
+	// table) lives inside an outer single-column layout table. Unwrapping the
+	// outer table must NOT discard the inner content — a prior text-only flatten
+	// dropped everything inside nested tables, gutting table-laid-out pages.
+	in := `<html><body><table id="outer"><tr><td>` +
+		`<a href="/story">Headline Story</a>` +
+		`<table class="inner"><tr><td><a href="/c1">comment one</a></td></tr>` +
+		`<tr><td><a href="/c2">comment two</a></td></tr></table>` +
+		`</td></tr></table></body></html>`
+	out := unwrapLayoutTables(in)
+	for _, needle := range []string{"Headline Story", "comment one", "comment two", `href="/c1"`} {
+		if !strings.Contains(out, needle) {
+			t.Fatalf("expected nested content %q to survive unwrap, got: %s", needle, out)
+		}
+	}
+	if strings.Contains(out, `id="outer"`) {
+		t.Fatalf("expected outer layout table removed, got: %s", out)
+	}
+}
+
 func TestUnwrapLayoutTables_LeavesDataTableIntact(t *testing.T) {
 	in := `<html><body><table><thead><tr><th>A</th><th>B</th></tr></thead>` +
 		`<tbody><tr><td>1</td><td>2</td></tr><tr><td>3</td><td>4</td></tr></tbody></table></body></html>`

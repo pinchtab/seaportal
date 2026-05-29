@@ -28,6 +28,17 @@ func PreprocessHTMLWithURL(htmlStr string, _ *url.URL) string {
 	return htmlStr
 }
 
+// visibleTextLenOf parses htmlStr and returns its visible-text length (script/
+// style/noscript excluded). Returns 0 on parse failure so callers treat the
+// measurement as unavailable rather than as "empty".
+func visibleTextLenOf(htmlStr string) int {
+	doc, err := html.Parse(strings.NewReader(htmlStr))
+	if err != nil {
+		return 0
+	}
+	return visibleTextLen(doc)
+}
+
 var twoslashButtonPattern = regexp.MustCompile(`<button\s+[^>]*class=["'][^"']*twoslash[^"']*["'][^>]*>(.*?)</button>`)
 
 func replaceTwoslashButtons(htmlStr string) string {

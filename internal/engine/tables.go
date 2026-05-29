@@ -142,16 +142,24 @@ func unwrapLayoutTables(htmlStr string) string {
 		if parent == nil {
 			continue
 		}
-		cellTexts := collectCellTexts(t)
-		// Build a sequence of <div> nodes (one per non-empty cell) and insert
-		// them in place of the table.
+		// Build a <div> per cell, re-parenting the cell's child *nodes* (links,
+		// formatting, and crucially any nested tables that hold the real
+		// content) instead of flattening to text. A previous text-only flatten
+		// silently discarded everything inside nested tables, which destroyed
+		// table-laid-out pages (e.g. classic nested-<table> layouts where the
+		// article/list lives in an inner table).
 		var divs []*xhtml.Node
-		for _, txt := range cellTexts {
-			if txt == "" {
+		for _, cell := range collectOwnCells(t) {
+			div := &xhtml.Node{Type: xhtml.ElementNode, Data: "div", DataAtom: atom.Div}
+			for c := cell.FirstChild; c != nil; {
+				next := c.NextSibling
+				cell.RemoveChild(c)
+				div.AppendChild(c)
+				c = next
+			}
+			if div.FirstChild == nil {
 				continue
 			}
-			div := &xhtml.Node{Type: xhtml.ElementNode, Data: "div", DataAtom: atom.Div}
-			div.AppendChild(&xhtml.Node{Type: xhtml.TextNode, Data: txt})
 			divs = append(divs, div)
 		}
 		next := t.NextSibling
@@ -220,11 +228,13 @@ func collectOuterTables(root *xhtml.Node) []*xhtml.Node {
 	return out
 }
 
-// collectCellTexts returns the cleaned text of every <td>/<th> descendant of
-// the table, in document order. Empty cells produce empty strings (caller
-// decides whether to keep them).
-func collectCellTexts(table *xhtml.Node) []string {
-	var out []string
+// collectOwnCells returns the <td>/<th> cells that belong directly to table,
+// in document order, without descending into nested tables. A nested table is
+// treated as opaque content that travels with its enclosing cell — so the
+// caller can re-parent each cell's full subtree (including the nested table)
+// rather than discarding it.
+func collectOwnCells(table *xhtml.Node) []*xhtml.Node {
+	var out []*xhtml.Node
 	var visit func(n *xhtml.Node)
 	visit = func(n *xhtml.Node) {
 		if n == nil {
@@ -234,7 +244,7 @@ func collectCellTexts(table *xhtml.Node) []string {
 			return
 		}
 		if n.Type == xhtml.ElementNode && (n.DataAtom == atom.Td || n.DataAtom == atom.Th) {
-			out = append(out, cellText(n))
+			out = append(out, n)
 			return
 		}
 		for c := n.FirstChild; c != nil; c = c.NextSibling {

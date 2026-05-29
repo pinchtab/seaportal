@@ -1096,6 +1096,26 @@ func fromHTMLInternal(html string, targetURL string, start time.Time, opts Optio
 		}
 	}
 
+	// Preprocess-regression guard: the chrome/main-content heuristics are tuned
+	// for the common single-article shape and occasionally restructure the DOM
+	// such that readability scores a much smaller article than it would on the
+	// lightly-cleaned raw HTML — observed on link-dense home/index pages and
+	// JS-shell pages where the real content isn't one contiguous prose block.
+	// When the primary extraction captured well under half of the available
+	// sanitized text, re-run readability on the un-preprocessed (sanitize-only)
+	// HTML and adopt it if it yields materially more content. Gated by the same
+	// --no-prune-fallback opt-out (same intent: no automatic rescue).
+	if !opts.NoPruneFallback && result.Length > 0 && result.Length*2 < visibleTextLenOf(html) {
+		rawSan := SanitizeHTML(rawHTML)
+		if altArticle, altErr := readability.FromReader(strings.NewReader(rawSan), parsedURL); altErr == nil {
+			alt := processArticle(altArticle, targetURL, start, parseStart, parseEnd)
+			if alt.Length > result.Length*7/5 && alt.Length > result.Length+400 {
+				alt.ExtractionMethod = "preprocess-skip-fallback"
+				result = alt
+			}
+		}
+	}
+
 	result.SPASignals = spaSignals
 	result.IsSPA = isSPA
 	result.IsBlocked = isBlocked
