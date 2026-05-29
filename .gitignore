@@ -1,10 +1,10 @@
 # Binaries
 bin/
 !npm/bin/
-seaportal
-!cmd/seaportal
-seabench
-!cmd/seabench
+# Anchored to repo root so the built binaries are ignored without also
+# matching same-named paths elsewhere (e.g. cmd/seaportal, skills/seaportal).
+/seaportal
+/seabench
 *.exe
 *.test
 
