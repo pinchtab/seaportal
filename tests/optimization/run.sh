@@ -38,11 +38,35 @@ done
 command -v seaportal >/dev/null || { echo "seaportal not on PATH" >&2; exit 1; }
 command -v jq        >/dev/null || { echo "jq not on PATH" >&2; exit 1; }
 
-# Portable timeout: prefer `timeout`, then `gtimeout` (brew coreutils), else no timeout.
+# Portable timeout: prefer `timeout`, then `gtimeout` (brew coreutils). On a
+# bare macOS neither exists, so fall back to a background-launch + kill watcher
+# (pure bash — no coreutils). Without this, a host that stalls the connection
+# wedges the whole run indefinitely (the --timeout flag was a silent no-op).
 if   command -v timeout  >/dev/null; then TIMEOUT_CMD="timeout"
 elif command -v gtimeout >/dev/null; then TIMEOUT_CMD="gtimeout"
 else TIMEOUT_CMD=""
 fi
+
+# run_bounded <secs> <cmd...> — run cmd, killing it if it overruns secs.
+# Command stdout passes through to the caller's stdout (so `$(run_bounded …)`
+# captures it). Sends SIGTERM, then SIGKILL after a 2s grace period.
+run_bounded() {
+  local secs="$1"; shift
+  if [[ -n "$TIMEOUT_CMD" ]]; then
+    "$TIMEOUT_CMD" "${secs}s" "$@"
+    return $?
+  fi
+  "$@" &
+  local cmd_pid=$!
+  ( sleep "$secs"; kill -TERM "$cmd_pid" 2>/dev/null; sleep 2; kill -KILL "$cmd_pid" 2>/dev/null ) &
+  local watcher_pid=$!
+  wait "$cmd_pid" 2>/dev/null
+  local rc=$?
+  kill -TERM "$watcher_pid" 2>/dev/null
+  wait "$watcher_pid" 2>/dev/null
+  return $rc
+}
+export -f run_bounded
 
 mkdir -p "$RESULTS_DIR"
 
@@ -51,11 +75,7 @@ probe_one() {
   local out
   local t0 t1 elapsed
   t0=$(date +%s)
-  if [[ -n "$TIMEOUT_CMD" ]]; then
-    out=$("$TIMEOUT_CMD" "${TIMEOUT}s" seaportal --json --fast "$url" 2>/dev/null)
-  else
-    out=$(seaportal --json --fast "$url" 2>/dev/null)
-  fi
+  out=$(run_bounded "$TIMEOUT" seaportal --json --fast "$url" 2>/dev/null)
   if [[ -z "$out" ]]; then
     t1=$(date +%s); elapsed=$((t1 - t0))
     jq -nc \
