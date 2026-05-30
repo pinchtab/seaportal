@@ -24,15 +24,40 @@ const (
 	OutcomeNeedsBrowser   ExtractionOutcome = "needs-browser"
 )
 
+// BrowserDecision is the single routing category a caller (e.g. PinchTab) reads
+// to decide whether to fall through to a real browser. It refines Outcome with
+// transport/status context; BrowserRecommended is the one boolean to branch on.
+type BrowserDecision string
+
+const (
+	DecisionStaticHighConfidence BrowserDecision = "static-high-confidence"
+	DecisionStaticOK             BrowserDecision = "static-ok"
+	DecisionStaticCaution        BrowserDecision = "static-caution"
+	DecisionBrowserNeeded        BrowserDecision = "browser-needed"
+	DecisionBlocked              BrowserDecision = "blocked"
+	DecisionUnreachable          BrowserDecision = "unreachable"
+	DecisionNotFound             BrowserDecision = "not-found"
+	DecisionUnsupported          BrowserDecision = "unsupported"
+)
+
 type PageProfile struct {
-	Class       PageClass         `json:"class"`
-	Outcome     ExtractionOutcome `json:"outcome"`
-	Reasons     []string          `json:"reasons"`
-	Confidence  int               `json:"confidence"`
-	Trustworthy bool              `json:"trustworthy"`
+	Class              PageClass         `json:"class"`
+	Outcome            ExtractionOutcome `json:"outcome"`
+	Decision           BrowserDecision   `json:"decision"`
+	BrowserRecommended bool              `json:"browserRecommended"`
+	Reasons            []string          `json:"reasons"`
+	Confidence         int               `json:"confidence"`
+	Trustworthy        bool              `json:"trustworthy"`
 }
 
+// ClassifyPage determines the page profile and the browser-routing decision.
 func ClassifyPage(result Result) PageProfile {
+	profile := classifyPageInternal(result)
+	profile.Decision, profile.BrowserRecommended = deriveDecision(result, profile)
+	return profile
+}
+
+func classifyPageInternal(result Result) PageProfile {
 	profile := PageProfile{
 		Confidence: result.Confidence,
 	}
@@ -178,6 +203,71 @@ func ClassifyPage(result Result) PageProfile {
 	return profile
 }
 
+// deriveDecision maps a resolved profile + result onto the BrowserDecision
+// contract (docs/reference/browser-discriminator.md). Terminal/transport states
+// win first; then the classifier's Outcome drives the static tiers. It routes on
+// outcome/class/trustworthy/length rather than the `quality` float, which is too
+// noisy to be a standalone routing signal (good SSR pages can score near zero).
+func deriveDecision(result Result, profile PageProfile) (BrowserDecision, bool) {
+	// Resource type SeaPortal can't evaluate (binary/image/etc.).
+	if isBinarySkipError(result.Error) || isBinaryContentType(result.ResponseContentType) {
+		return DecisionUnsupported, false
+	}
+	// Transport failure with no usable HTTP response (DNS/TLS/conn/timeout).
+	if result.Error != "" && result.StatusCode == 0 {
+		return DecisionUnreachable, false
+	}
+	// Hard or soft 404.
+	if result.StatusCode == 404 || result.IsSoft404 || reasonsContain(profile.Reasons, "http-404-not-found") {
+		return DecisionNotFound, false
+	}
+	// Bot protection / captcha / access denied. Chrome may still need a policy.
+	if result.IsBlocked || profile.Class == PageBlocked {
+		return DecisionBlocked, true
+	}
+
+	okStatus := result.StatusCode == 0 || (result.StatusCode >= 200 && result.StatusCode < 300)
+
+	switch profile.Outcome {
+	case OutcomeNeedsBrowser, OutcomeFailFast:
+		// needs-browser dominates length/quality: an auth-wall or SPA shell can
+		// carry many bytes and still require a browser.
+		return DecisionBrowserNeeded, true
+	case OutcomeExtract:
+		staticClass := profile.Class == PageStatic || profile.Class == PageSSR || profile.Class == PageHydrated
+		if okStatus && staticClass && profile.Trustworthy && result.Length >= 1000 {
+			return DecisionStaticHighConfidence, false
+		}
+		if okStatus && result.Length >= 500 {
+			return DecisionStaticOK, false
+		}
+		// Extract succeeded but the body is thin (incl. intentionally minimal
+		// pages). The classifier trusted it, so don't spend a browser — flag
+		// caution so callers can still escalate for completeness checks.
+		return DecisionStaticCaution, false
+	case OutcomeExtractWarning:
+		if result.Length >= 500 {
+			return DecisionStaticCaution, false
+		}
+		return DecisionBrowserNeeded, true
+	default:
+		return DecisionBrowserNeeded, true
+	}
+}
+
+func isBinarySkipError(errStr string) bool {
+	return strings.HasPrefix(errStr, "skipped binary content")
+}
+
+func reasonsContain(reasons []string, want string) bool {
+	for _, r := range reasons {
+		if r == want {
+			return true
+		}
+	}
+	return false
+}
+
 func isMinimalStaticPage(result Result) bool {
 	if result.Confidence < 40 || result.Confidence >= 80 || result.Length < 100 {
 		return false
@@ -290,6 +380,11 @@ func ensureProfile(result *Result) {
 		result.Profile = ClassifyPage(*result)
 	}
 	result.PageClass = result.Profile.Class
+	// Re-derive on the final result so paths that set Profile directly (404,
+	// binary, blocked, QuickNeedsBrowser) and any post-classify reason edits are
+	// reflected in the routing decision. Pure function of result+profile, so
+	// recomputing when ClassifyPage already ran is harmless.
+	result.Profile.Decision, result.Profile.BrowserRecommended = deriveDecision(*result, result.Profile)
 }
 
 func hasLoginFormMarkers(loweredContent string) bool {

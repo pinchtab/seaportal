@@ -215,6 +215,8 @@ e5 heading "Welcome" <h1> level=1
 
 Also escalate if `needsBrowser: true` or `validationOk: false`. Use `--fast` when you want seaportal to bail early on any of these instead of doing full extraction.
 
+For programmatic routing, prefer `profile.decision` + `profile.browserRecommended` over mapping `pageClass` yourself: one explicit decision (`static-high-confidence` / `static-ok` / `static-caution` / `browser-needed` / `blocked` / `unreachable` / `not-found` / `unsupported`), where `browserRecommended: true` means a real browser is likely to help. See docs/reference/browser-discriminator.md.
+
 ## Thin Markdown? Try the snapshot before escalating
 
 If seaportal classified the page as `static`/`ssr`/`hydrated` (i.e. it thinks extraction succeeded) but the Markdown body looks thin — `length` < ~1500, no real paragraphs, mostly headings or naked links — **don't escalate yet**. Readability sometimes prunes link-heavy or table-heavy sections that the accessibility tree still has in full. Retry with:

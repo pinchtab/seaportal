@@ -100,6 +100,22 @@ type PageClass = engine.PageClass
 // ExtractionOutcome indicates whether content is usable or needs a browser.
 type ExtractionOutcome = engine.ExtractionOutcome
 
+// BrowserDecision is the routing category exposed on Profile.Decision for
+// callers (e.g. PinchTab) deciding whether to fall through to a real browser.
+type BrowserDecision = engine.BrowserDecision
+
+// Browser-routing decisions. See docs/reference/browser-discriminator.md.
+const (
+	DecisionStaticHighConfidence = engine.DecisionStaticHighConfidence
+	DecisionStaticOK             = engine.DecisionStaticOK
+	DecisionStaticCaution        = engine.DecisionStaticCaution
+	DecisionBrowserNeeded        = engine.DecisionBrowserNeeded
+	DecisionBlocked              = engine.DecisionBlocked
+	DecisionUnreachable          = engine.DecisionUnreachable
+	DecisionNotFound             = engine.DecisionNotFound
+	DecisionUnsupported          = engine.DecisionUnsupported
+)
+
 // Validation holds extraction quality validation results.
 type Validation = engine.Validation
 
