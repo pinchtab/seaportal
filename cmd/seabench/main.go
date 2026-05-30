@@ -36,6 +36,8 @@ func main() {
 		runDiff(os.Args[2:])
 	case "selftest":
 		runSelftest(os.Args[2:])
+	case "sweep":
+		runSweep(os.Args[2:])
 	case "help", "--help", "-h":
 		printUsage()
 	default:
@@ -56,5 +58,6 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  seabench cachebench [--n 200] [--hot-ratio 0.8] [--hot N] [--cold N] [--seed 42] [--output DIR]")
 	fmt.Fprintln(os.Stderr, "  seabench diff [--corpus FILE] [--output DIR] [--snippet-chars 400]")
 	fmt.Fprintln(os.Stderr, "  seabench selftest [--input FILE.jsonl] [--group FILE.md] [--output DIR]")
+	fmt.Fprintln(os.Stderr, "  seabench sweep [--sites FILE] [--concurrency 16] [--timeout 15s] [--limit N] [--fast] [--output DIR]")
 	fmt.Fprintln(os.Stderr, "  seabench help")
 }

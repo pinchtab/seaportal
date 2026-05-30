@@ -452,7 +452,15 @@ func FromURLWithOptions(targetURL string, opts Options) (result Result) {
 		}
 		break
 	}
-	defer func() { _ = resp.Body.Close() }()
+	// resp is reassigned later (e.g. the markdown-negotiation retry at the
+	// second client.Do); if that re-fetch errors, resp is left nil before this
+	// deferred close runs. Guard against the nil so a transport failure on the
+	// retry path can't panic the whole extraction.
+	defer func() {
+		if resp != nil && resp.Body != nil {
+			_ = resp.Body.Close()
+		}
+	}()
 
 	result.Protocol = negotiatedProtocol(req, resp)
 

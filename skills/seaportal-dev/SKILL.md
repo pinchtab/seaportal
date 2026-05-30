@@ -46,7 +46,7 @@ cmd/
   seaportal/        # CLI entry: extract (default), sitemap, feed, mcp
   seabench/         # Benchmark + competitor-comparison harness
                     # subcommands: eval, stress, classify, tokens,
-                    # cachebench, diff, selftest
+                    # cachebench, diff, selftest, sweep (live)
 internal/
   engine/           # Core extraction pipeline + cache + classifier
     mock/           # Record/replay HTTP mock for hermetic tests
@@ -72,18 +72,22 @@ testdata/           # Test fixtures, organised by class:
   fixtures/         # Misc legacy
   mocks/            # Replay JSONL for internal/engine/mock
 tests/
-  bench/            # seabench output reports + per-phase pprof baselines
+  bench/            # seabench reports (eval_*, sweep_*, classify_*, ...) +
+                    # per-phase pprof baselines
+    sites-sample.csv  # 50-site live-sweep smoke list (evenly spaced by rank)
   e2e/              # Docker-based CLI scenarios (5 scripts under scenarios/)
   eval/             # Quality eval corpus.yaml (40 entries, all classes)
   optimization/     # Agent-driven capability suite
                     # group-00..13.md + group-selftest.md (curated 10)
                     # sites.tsv (143 real-site assertions, 18+ categories)
   release/          # .goreleaser.yml sanity test (matrix + naming)
+competitors/        # Competitor repos for comparison +
+                    # top-1000-sites-tranco.csv (live-sweep default list,
+                    # DNS-dead infra domains pruned)
 skills/             # Project-local Claude Code skills
   seaportal/        # Read-only web fetching skill (consumer-facing)
   seaportal-dev/    # This skill — dev workflow reference
   seaportal-opt/    # Capability-suite runner
-  seaportal-todo/   # Two-phase todo pipeline
 ```
 
 ## Pre-push gate
@@ -96,6 +100,38 @@ skills/             # Project-local Claude Code skills
 
 Anything that touches `internal/engine/extract.go` should also run
 `./dev bench eval` to confirm no regression on the corpus.
+
+## Evaluating a change
+
+Pick the lane by what the change touches. The first four are offline,
+deterministic, and CI-safe (fixtures only); `sweep` is the only **live**
+(real-network) lane.
+
+| Change touches | Run | Reads |
+|---|---|---|
+| Extraction / cleanup / readability | `./dev bench eval` | quality F1 vs 3 baselines |
+| Classifier / SPA-detect / routing decision | `./dev bench classify` | confusion matrix vs corpus labels |
+| Cache | `./dev bench cachebench` | hit-rate + latency |
+| Link/token shaping | `./dev bench tokens` | token ratio per retention mode |
+| Real-world reach, latency, block/escalation rates | `./dev bench sweep` | live capability + latency sweep |
+
+`sweep` fetches a whole site list live and reports reliability counts
+(ok / blocked / errors / timed-out / browser-recommended), latency
+percentiles, and pageClass / outcome / decision distributions; when the list
+carries `expect_class` labels it also reports classification accuracy.
+
+```bash
+./dev bench sweep --sites tests/bench/sites-sample.csv --timeout 20s   # fast 50-site smoke (~30s)
+./dev bench sweep                                                      # full list (competitors/top-1000-sites-tranco.csv, 776 sites)
+./dev bench sweep --sites tests/optimization/sites.tsv                 # labelled TSV → also reports accuracy
+```
+
+Flags: `--concurrency` (default 16), `--timeout` (per-site, default 15s;
+bump to 20–30s to avoid counting slow-but-fine sites as timeouts), `--limit N`,
+`--fast`. Reports land in `tests/bench/reports/sweep_<ts>.{md,json}`. The
+list auto-detects three forms: `rank,domain` CSV (Tranco), `sites.tsv` TSV,
+or one URL/domain per line. Regenerate the sample at any size with an
+evenly-spaced stride over the cleaned list (`tests/bench/sites-sample.csv`).
 
 ## Adding a feature
 
@@ -145,5 +181,7 @@ Beyond the table above:
 - `./dev bench stress --preset quick|small|medium|large` — sustained throughput
 - `./dev bench cachebench` — cache hit-rate + latency under mixed traffic
 - `./dev bench diff` — pairwise output diff across cleanup variants
+- `./dev bench sweep` — **live** capability + latency sweep over a site list
+  (default `competitors/top-1000-sites-tranco.csv`; `--sites tests/bench/sites-sample.csv` for a fast smoke)
 - `./dev opt baseline` — scripted real-site capability suite (`sites.tsv`)
 - `./dev opt selftest` — agent-driven 10-task curated suite
