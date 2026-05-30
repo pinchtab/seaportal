@@ -30,10 +30,12 @@ URL → HTTP Fetch → Bot Detection → Classification → Extraction → Clean
 ## Directory Structure
 
 ```
-cmd/seaportal/     CLI entry point
-pkg/portal/        Core extraction engine (public API)
-pkg/quality/       Content quality scoring
-internal/          Test infrastructure
+seaportal.go       Public API (package seaportal — re-exports internal/engine)
+cmd/seaportal/     CLI entry point (extract, sitemap, feed, mcp)
+cmd/seabench/      Benchmark / evaluation harness
+internal/engine/   Core extraction, classification, quality scoring, snapshots
+internal/mcp/      MCP server (JSON-RPC over stdio)
+internal/testserver/  Hermetic test fixtures
 testdata/          HTML fixtures for testing
 tests/e2e/         Docker-based end-to-end tests
 ```

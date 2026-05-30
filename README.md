@@ -23,9 +23,16 @@ seaportal --snapshot https://pinchtab.com   # Accessibility tree
 seaportal --fast https://pinchtab.com       # Bail early if browser needed
 seaportal --no-dedupe https://pinchtab.com  # Disable deduplication
 
+# Subcommands
+seaportal sitemap https://pinchtab.com/sitemap.xml  # Flatten a sitemap
+seaportal feed https://pinchtab.com/feed.xml        # Parse RSS / Atom / JSON Feed
+seaportal mcp                                       # Run as an MCP server over stdio
+
 # Version
 seaportal --version
 ```
+
+The full flag list and subcommands are in the [CLI reference](docs/reference/cli.md). SeaPortal also runs as an [MCP server](docs/reference/mcp.md) (`seaportal mcp`), and ships `seabench`, a [benchmark/evaluation harness](docs/reference/seabench.md).
 
 ## Accessibility Snapshot
 
@@ -93,31 +100,36 @@ document
 
 ## As a Library
 
+The public package is the module root, `github.com/pinchtab/seaportal`:
+
 ```go
-import "github.com/pinchtab/seaportal/pkg/portal"
+import "github.com/pinchtab/seaportal"
 
 // Extract content
-result := portal.FromURL("https://pinchtab.com")
+result := seaportal.FromURL("https://pinchtab.com")
+fmt.Println(result.Content) // extracted Markdown
 
 // With options
-result := portal.FromURLWithOptions("https://pinchtab.com", portal.Options{
+result := seaportal.FromURLWithOptions("https://pinchtab.com", seaportal.Options{
     Dedupe:   true,
     FastMode: true,
 })
 
 // Build accessibility snapshot
-snapshot, err := portal.BuildSnapshot(htmlString)
+snapshot, err := seaportal.BuildSnapshot(htmlString)
 
 // Snapshot with options (filter, max tokens)
-opts := portal.SnapshotOptions{
+opts := seaportal.SnapshotOptions{
     FilterInteractive: true,
     MaxTokens:         2000,
 }
-snapshot, err := portal.BuildSnapshotWithOptions(htmlString, opts)
+snapshot, err := seaportal.BuildSnapshotWithOptions(htmlString, opts)
 
 // Compact text output
 fmt.Println(snapshot.ToCompact())
 ```
+
+See the [API reference](docs/reference/api.md) for the full surface.
 
 ## Features
 
@@ -153,7 +165,7 @@ Automatically detects:
 - Full browser rendering
 - Cookie/session management
 
-For JS-heavy pages, use a browser and pass HTML to `portal.FromHTML()`.
+For JS-heavy pages, use a browser and pass HTML to `seaportal.FromHTML()`.
 
 ## License
 

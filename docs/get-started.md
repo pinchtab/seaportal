@@ -34,22 +34,32 @@ seaportal --snapshot https://example.com
 seaportal --fast https://example.com
 ```
 
+### Subcommands
+
+```bash
+seaportal sitemap https://example.com/sitemap.xml   # flatten a sitemap
+seaportal feed https://example.com/feed.xml         # parse RSS / Atom / JSON Feed
+seaportal mcp                                       # run as an MCP server over stdio
+```
+
+See the [CLI reference](reference/cli.md) for all flags and the [MCP reference](reference/mcp.md) for the server tools.
+
 ## As a Library
+
+The public package is the module root, `github.com/pinchtab/seaportal`:
 
 ```go
 package main
 
 import (
     "fmt"
-    "github.com/pinchtab/seaportal/pkg/portal"
+
+    "github.com/pinchtab/seaportal"
 )
 
 func main() {
-    result, err := portal.Extract("https://example.com", nil)
-    if err != nil {
-        panic(err)
-    }
-    fmt.Println(result.Markdown)
+    result := seaportal.FromURL("https://example.com")
+    fmt.Println(result.Content) // extracted Markdown
 }
 ```
 
@@ -57,4 +67,5 @@ func main() {
 
 - [Architecture](architecture/design.md) — how SeaPortal works
 - [Contributing](guides/contributing.md) — how to contribute
-- [API Reference](reference/api.md) — full API docs
+- [API Reference](reference/api.md) — Go library API
+- [CLI Reference](reference/cli.md) — command-line flags and subcommands
