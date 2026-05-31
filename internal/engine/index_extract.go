@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"net/url"
 	"regexp"
 	"sort"
 	"strings"
@@ -175,12 +176,9 @@ func extractCardItemsFromListAnchors(doc *html.Node) []CardItem {
 		if a == nil {
 			continue
 		}
-		href := getAttr(a, "href")
+		href := sanitizeCardHref(getAttr(a, "href"))
 		title := cleanText(getTextContent(a))
 		if href == "" || title == "" {
-			continue
-		}
-		if strings.HasPrefix(href, "#") || strings.HasPrefix(strings.ToLower(href), "javascript:") {
 			continue
 		}
 		if len(title) < 15 && len(strings.Fields(title)) < 3 {
@@ -198,7 +196,7 @@ func extractCardFromArticle(article *html.Node) CardItem {
 		if h := findFirstElement(article, tag); h != nil {
 			item.Title = cleanText(getTextContent(h))
 			if a := findFirstElement(h, "a"); a != nil {
-				item.URL = getAttr(a, "href")
+				item.URL = sanitizeCardHref(getAttr(a, "href"))
 			}
 			break
 		}
@@ -206,7 +204,7 @@ func extractCardFromArticle(article *html.Node) CardItem {
 
 	if item.URL == "" {
 		if a := findFirstElement(article, "a"); a != nil {
-			item.URL = getAttr(a, "href")
+			item.URL = sanitizeCardHref(getAttr(a, "href"))
 			if item.Title == "" {
 				item.Title = cleanText(getTextContent(a))
 			}
@@ -238,12 +236,12 @@ func extractCardFromHeading(h *html.Node) CardItem {
 
 	if a := findFirstElement(h, "a"); a != nil {
 		item.Title = cleanText(getTextContent(a))
-		item.URL = getAttr(a, "href")
+		item.URL = sanitizeCardHref(getAttr(a, "href"))
 	} else {
 		item.Title = cleanText(getTextContent(h))
 		if parent := h.Parent; parent != nil {
 			if a := findFirstElement(parent, "a"); a != nil {
-				item.URL = getAttr(a, "href")
+				item.URL = sanitizeCardHref(getAttr(a, "href"))
 			}
 		}
 	}
@@ -251,6 +249,24 @@ func extractCardFromHeading(h *html.Node) CardItem {
 	item.Teaser = findTeaserAfterHeading(h)
 
 	return item
+}
+
+func sanitizeCardHref(href string) string {
+	href = strings.TrimSpace(href)
+	if href == "" || href == "#" || strings.HasPrefix(href, "#") {
+		return ""
+	}
+	ref, err := url.Parse(href)
+	if err != nil {
+		return ""
+	}
+	if ref.Scheme != "" {
+		switch strings.ToLower(ref.Scheme) {
+		case "javascript", "mailto", "tel", "data", "vbscript":
+			return ""
+		}
+	}
+	return href
 }
 
 func findTeaserAfterHeading(h *html.Node) string {

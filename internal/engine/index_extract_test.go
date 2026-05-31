@@ -210,6 +210,28 @@ func TestExtractCardItems(t *testing.T) {
 	}
 }
 
+// regression: index-extract-skip-unsafe-schemes
+func TestDetectIndexPage_SkipsUnsafeHrefSchemes(t *testing.T) {
+	html := `
+		<html><body>
+			<article><h2><a href="javascript:alert(1)">Unsafe One Long Enough</a></h2></article>
+			<article><h2><a href="data:text/html,hi">Unsafe Two Long Enough</a></h2></article>
+			<article><h2><a href="vbscript:msgbox(1)">Unsafe Three Long Enough</a></h2></article>
+			<article><h2><a href="/safe">Safe Headline Long Enough</a></h2></article>
+		</body></html>
+	`
+
+	result := DetectIndexPage(html)
+	for _, item := range result.Items {
+		if strings.HasPrefix(item.URL, "javascript:") || strings.HasPrefix(item.URL, "data:") || strings.HasPrefix(item.URL, "vbscript:") {
+			t.Fatalf("unsafe URL leaked into card items: %+v", item)
+		}
+	}
+	if len(result.Items) != 1 || result.Items[0].URL != "/safe" {
+		t.Fatalf("expected only safe item, got %+v", result.Items)
+	}
+}
+
 func TestFormatIndexMarkdown(t *testing.T) {
 	items := []CardItem{
 		{Title: "First Article", URL: "/article1", Teaser: "First teaser"},
