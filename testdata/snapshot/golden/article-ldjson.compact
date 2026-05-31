@@ -1,0 +1,5 @@
+document
+  e1 article "Demo ArticleBody text that is sufficiently long to make readability happy and..." <article>
+    e2 heading "Demo Article" <h1> level=1
+    e3 paragraph "Body text that is sufficiently long to make readability happy and produce a r..." <p>
+    e4 paragraph "A second paragraph with additional content so the readability scorer treats t..." <p>

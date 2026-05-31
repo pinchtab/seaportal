@@ -13,19 +13,22 @@ var reLDJSON = regexp.MustCompile(`(?is)<script\s+type\s*=\s*["']application/ld\
 
 // LDJSONBlock represents a single LD+JSON structured data block.
 type LDJSONBlock struct {
-	Type        string `json:"type,omitempty"`          // @type field
-	Headline    string `json:"headline,omitempty"`      // Article headline
-	Description string `json:"description,omitempty"`   // Article description/abstract
-	Author      string `json:"author,omitempty"`        // Author name(s)
-	DatePub     string `json:"datePublished,omitempty"` // Publication date
-	Publisher   string `json:"publisher,omitempty"`     // Publisher name
-	URL         string `json:"url,omitempty"`           // Canonical URL
-	Keywords    string `json:"keywords,omitempty"`      // Keywords/tags
+	Type        string `json:"type,omitempty"`
+	Headline    string `json:"headline,omitempty"`
+	Description string `json:"description,omitempty"`
+	Author      string `json:"author,omitempty"`
+	DatePub     string `json:"datePublished,omitempty"`
+	Publisher   string `json:"publisher,omitempty"`
+	URL         string `json:"url,omitempty"`
+	Keywords    string `json:"keywords,omitempty"`
+	Language    string `json:"inLanguage,omitempty"` // BCP-47 language tag
+	Section     string `json:"articleSection,omitempty"`
+	Body        string `json:"articleBody,omitempty"` // may be HTML or plain text
 }
 
 // ExtractLDJSON extracts and parses all LD+JSON blocks from HTML.
 func ExtractLDJSON(html string) []LDJSONBlock {
-	matches := reLDJSON.FindAllStringSubmatch(html, 10) // max 10 blocks
+	matches := reLDJSON.FindAllStringSubmatch(html, 10)
 	if len(matches) == 0 {
 		return nil
 	}
@@ -90,10 +93,9 @@ func LDJSONToMarkdown(blocks []LDJSONBlock) string {
 func parseLDJSONBlock(raw string) LDJSONBlock {
 	var block LDJSONBlock
 
-	// Try parsing as object first.
 	var obj map[string]interface{}
 	if err := json.Unmarshal([]byte(raw), &obj); err != nil {
-		// Try as array (some sites wrap in array). Use []interface{} so mixed
+		// Some sites wrap the block in an array. Use []interface{} so mixed
 		// element types (object | string | nested array) parse cleanly.
 		var arr []interface{}
 		if err2 := json.Unmarshal([]byte(raw), &arr); err2 != nil || len(arr) == 0 {
@@ -146,6 +148,15 @@ func extractFromObj(obj map[string]interface{}) LDJSONBlock {
 	// Author can be string, object, or array.
 	block.Author = extractAuthor(obj["author"])
 
+	// inLanguage: string or {"@type":"Language","name":"English"}.
+	block.Language = extractStringOrNamedObj(obj["inLanguage"])
+
+	// articleSection: string or array of strings (take first).
+	block.Section = extractFirstString(obj["articleSection"])
+
+	// articleBody: prose content; may be HTML or plain text.
+	block.Body = strings.TrimSpace(jsonStr(obj, "articleBody"))
+
 	// Publisher can be object with name.
 	if pub, ok := obj["publisher"].(map[string]interface{}); ok {
 		block.Publisher = jsonStr(pub, "name")
@@ -153,7 +164,6 @@ func extractFromObj(obj map[string]interface{}) LDJSONBlock {
 		block.Publisher = jsonStr(obj, "publisher")
 	}
 
-	// Fallback: name field if no headline.
 	if block.Headline == "" {
 		block.Headline = jsonStr(obj, "name")
 	}
@@ -183,6 +193,40 @@ func extractAuthor(v interface{}) string {
 			}
 		}
 		return strings.Join(names, ", ")
+	}
+	return ""
+}
+
+// extractStringOrNamedObj returns the value if it's a string, or `name` if it's
+// a {"@type":"...","name":"..."} object. Empty string otherwise.
+func extractStringOrNamedObj(v interface{}) string {
+	if v == nil {
+		return ""
+	}
+	switch s := v.(type) {
+	case string:
+		return s
+	case map[string]interface{}:
+		return jsonStr(s, "name")
+	}
+	return ""
+}
+
+// extractFirstString returns the value if it's a string, or the first string
+// element if it's an array. Empty string otherwise.
+func extractFirstString(v interface{}) string {
+	if v == nil {
+		return ""
+	}
+	switch s := v.(type) {
+	case string:
+		return s
+	case []interface{}:
+		for _, item := range s {
+			if str, ok := item.(string); ok && str != "" {
+				return str
+			}
+		}
 	}
 	return ""
 }

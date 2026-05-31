@@ -1,0 +1,26 @@
+<!doctype html>
+<html>
+<head><title>List and table</title></head>
+<body>
+<article>
+<h1>List and table regression</h1>
+<p>This fixture exercises both an unordered list and a small data table, mirroring reader-mode issues 1212 and 1213 where structural elements were flattened during extraction. The surrounding prose keeps readability above its minimum content threshold so the structure has a chance to survive.</p>
+<ul>
+<li>Alpha item one</li>
+<li>Bravo item two</li>
+<li>Charlie item three</li>
+</ul>
+<p>Following the list, a compact two-by-two table representing rows and columns that must reach the Markdown output as a real table, not flattened into paragraph text.</p>
+<table>
+<thead>
+<tr><th>HeaderOne</th><th>HeaderTwo</th></tr>
+</thead>
+<tbody>
+<tr><td>CellOneA</td><td>CellOneB</td></tr>
+<tr><td>CellTwoA</td><td>CellTwoB</td></tr>
+</tbody>
+</table>
+<p>A closing paragraph to ensure the article body remains comfortably above the readability prune threshold and to provide context after the structured elements.</p>
+</article>
+</body>
+</html>

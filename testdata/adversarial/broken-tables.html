@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head><title>Broken Tables</title></head>
+<body>
+<h1>Pathological Table Markup</h1>
+<table>
+  <tr><td>cell 1<td>cell 2 unclosed
+  <tr><td>row 2 col 1</td><td>row 2 col 2
+  <td>orphan cell outside tr</td>
+  <tr><th>header mid-table<td>more</td>
+    <tr><td>nested <tr><td>row</td></tr></td></tr>
+  </tr>
+  <td>another orphan
+</table>
+<table><tbody><tr><td>only opening
+<table>
+  <thead><tr><th>A<th>B<th>C
+  <tbody>
+    <tr><td>1<td>2
+    <tr><td>3<td>4<td>5<td>6<td>7
+  <tfoot><tr><td colspan="99">footer
+</table>
+<p>tail content after broken tables.</p>
+</body>
+</html>

@@ -1,0 +1,54 @@
+# Held-out classifier validation set.
+#
+# Purpose: `./dev bench classify` reports 40/40 on tests/eval/corpus.yaml — but
+# the classifier rules were tuned against that same corpus, so it measures fit,
+# not generalization. This file is an INDEPENDENT held-out slice: ~30 well-known
+# live sites that are NOT in tests/eval/corpus.yaml and NOT in
+# tests/optimization/sites.tsv, labelled by inspection of the real fetch.
+#
+# Run:   ./dev bench sweep --sites tests/optimization/holdout.tsv --timeout 20s
+# Output reports the per-class confusion matrix + accuracy (live, point-in-time).
+#
+# Format (shared with sites.tsv): category<TAB>url<TAB>expect_class<TAB>expect_marker<TAB>notes
+#   expect_class: static|ssr|hydrated|spa|dynamic|blocked|any (any = don't score)
+#   Lines starting with # are comments.
+#
+# Labelling rule: ground truth is judged from whether the main content is present
+# in the HTTP response (extractable → static/ssr/hydrated) or genuinely absent
+# (needs a browser → spa/dynamic, or a bot wall → blocked). App sites are labelled
+# by their MARKETING HOMEPAGE (server-rendered), not the in-app SPA.
+#
+# category	url	expect_class	expect_marker	notes
+docs	https://www.python.org/	ssr	Python	server-rendered marketing/landing
+docs	https://www.php.net/	ssr	PHP	dense server-rendered docs/home
+docs	https://www.kernel.org/	static	Linux	minimal static HTML
+docs	https://www.docker.com/	ssr	Docker	marketing homepage
+tech	https://www.apple.com/	ssr	Apple	marketing homepage
+tech	https://www.microsoft.com/	ssr	Microsoft	marketing homepage
+tech	https://www.mozilla.org/	ssr	-	marketing homepage
+tech	https://www.figma.com/	ssr	Figma	SSR marketing home (app is SPA)
+tech	https://www.notion.so/	ssr	Notion	SSR marketing home (app is SPA)
+tech	https://discord.com/	ssr	Discord	SSR marketing home (app is SPA)
+tech	https://trello.com/	ssr	Trello	SSR marketing home (app is SPA)
+tech	https://www.canva.com/	ssr	Canva	SSR marketing home (app is SPA)
+tech	https://www.netflix.com/	ssr	-	SSR landing (app is SPA)
+news	https://www.theguardian.com/	ssr	-	dense server-rendered news index
+news	https://www.cnbc.com/	ssr	-	server-rendered news index
+news	https://www.theverge.com/	ssr	Verge	server-rendered news index
+news	https://arstechnica.com/	ssr	-	server-rendered news index
+ref	https://www.britannica.com/	ssr	-	server-rendered encyclopedia
+ref	https://www.wikihow.com/	ssr	-	server-rendered how-to
+ref	https://www.w3schools.com/	ssr	-	server-rendered tutorials
+gov	https://www.usa.gov/	ssr	-	server-rendered gov portal
+gov	https://www.nasa.gov/	ssr	NASA	server-rendered (WordPress)
+gov	https://www.cdc.gov/	ssr	-	server-rendered gov site
+shop	https://www.walmart.com/	ssr	-	server-rendered storefront (content present)
+spa	https://www.reddit.com/	spa	-	JS-only shell, no content over HTTP
+spa	https://x.com/	spa	-	JS-only shell, no content over HTTP
+spa	https://open.spotify.com/	spa	-	JS-only web player, no content over HTTP
+blocked	https://www.w3.org/	blocked	-	returned HTTP 403 to the fetch
+blocked	https://www.imdb.com/	blocked	-	HTTP 202 bot interstitial, empty body
+blocked	https://www.espn.com/	blocked	-	HTTP 202 bot interstitial, empty body
+dynamic	https://www.healthline.com/	dynamic	-	HTTP 200 but ~88 chars; content needs JS
+shop	https://www.target.com/	any	-	thin (~433 chars) — extractable vs JS-gated unresolved
+tech	https://www.nginx.com/	any	-	thin (~299 chars) — redirect/landing unresolved

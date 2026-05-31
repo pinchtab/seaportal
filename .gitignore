@@ -1,16 +1,22 @@
 # Binaries
 bin/
 !npm/bin/
-seaportal
-!cmd/seaportal
+# Anchored to repo root so the built binaries are ignored without also
+# matching same-named paths elsewhere (e.g. cmd/seaportal, skills/seaportal).
+/seaportal
+/seabench
 *.exe
 *.test
+
+# Vendored competitor clones (research only, not part of the project)
+competitors/
 
 # Test artifacts
 results/
 results.json
 test_urls.json
 renders/
+tests/bench/reports/
 
 # IDE
 .idea/
@@ -21,3 +27,5 @@ coverage.out
 dist/
 *.swp
 .DS_Store
+
+.claude/

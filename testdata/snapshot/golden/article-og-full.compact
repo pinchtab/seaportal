@@ -1,0 +1,4 @@
+document
+  e1 article "OG DemoBody content goes here. This is a paragraph with enough words so that ..." <article>
+    e2 heading "OG Demo" <h1> level=1
+    e3 paragraph "Body content goes here. This is a paragraph with enough words so that readabi..." <p>

@@ -1,0 +1,27 @@
+File: engine.test
+Type: cpu
+Time: 2026-05-17 08:06:07 BST
+Duration: 505.03ms, Total samples = 320ms (63.36%)
+Showing nodes accounting for 320ms, 100% of 320ms total
+Showing top 20 nodes out of 61
+      flat  flat%   sum%        cum   cum%
+      80ms 25.00% 25.00%      180ms 56.25%  regexp.(*Regexp).tryBacktrack
+      50ms 15.62% 40.62%       50ms 15.62%  regexp/syntax.IsWordChar (inline)
+      30ms  9.38% 50.00%       30ms  9.38%  regexp.(*inputString).step
+      30ms  9.38% 59.38%       40ms 12.50%  regexp/syntax.(*Inst).MatchRunePos
+      10ms  3.12% 62.50%       10ms  3.12%  internal/bytealg.IndexByteString
+      10ms  3.12% 65.62%       10ms  3.12%  internal/runtime/atomic.(*UnsafePointer).Load (inline)
+      10ms  3.12% 68.75%      220ms 68.75%  regexp.(*Regexp).backtrack
+      10ms  3.12% 71.88%       30ms  9.38%  regexp.(*machine).add
+      10ms  3.12% 75.00%       10ms  3.12%  regexp.(*machine).alloc (inline)
+      10ms  3.12% 78.12%       20ms  6.25%  regexp.(*machine).step
+      10ms  3.12% 81.25%       60ms 18.75%  regexp.lazyFlag.match
+      10ms  3.12% 84.38%       10ms  3.12%  runtime.madvise
+      10ms  3.12% 87.50%       10ms  3.12%  runtime.memmove
+      10ms  3.12% 90.62%       10ms  3.12%  runtime.pthread_cond_signal
+      10ms  3.12% 93.75%       10ms  3.12%  runtime.usleep
+      10ms  3.12% 96.88%       10ms  3.12%  unicode.SimpleFold
+      10ms  3.12%   100%       10ms  3.12%  unicode/utf8.DecodeRuneInString (inline)
+         0     0%   100%      290ms 90.62%  github.com/pinchtab/seaportal/internal/engine.BenchmarkSanitize_Wikipedia
+         0     0%   100%      290ms 90.62%  github.com/pinchtab/seaportal/internal/engine.SanitizeHTML
+         0     0%   100%      230ms 71.88%  github.com/pinchtab/seaportal/internal/engine.removeHiddenElementsSinglePass

@@ -32,7 +32,10 @@ echo -e "  ${MUTED}Running pre-push checks (matches GitHub Actions CI)...${NC}"
 
 section "Format"
 
-unformatted=$(gofmt -l .)
+# Format/vet/lint targets exclude competitors/ (third-party vendor code) and
+# vendor/. Use find with prune so the exclusion is consistent across tools.
+GO_FILES=$(find . \( -path './competitors' -o -path './vendor' -o -path './.git' -o -path './node_modules' \) -prune -o -name '*.go' -type f -print)
+unformatted=$(echo "$GO_FILES" | xargs gofmt -l 2>/dev/null)
 if [ -n "$unformatted" ]; then
   fail "gofmt" "Files not formatted:"
   echo "$unformatted" | while read f; do hint "  $f"; done
@@ -40,10 +43,10 @@ if [ -n "$unformatted" ]; then
   printf "  Fix formatting now? (Y/n) "
   read -r answer
   if [ "$answer" != "n" ] && [ "$answer" != "N" ]; then
-    gofmt -w .
+    echo "$GO_FILES" | xargs gofmt -w
     ok "gofmt (fixed)"
   else
-    hint "Run: gofmt -w ."
+    hint "Run: gofmt -w <files>  (excluding competitors/)"
     exit 1
   fi
 else
@@ -54,7 +57,9 @@ fi
 
 section "Vet"
 
-if ! go vet ./... 2>&1; then
+# Limit to first-party packages; competitors/ is third-party vendor code.
+GO_PKGS=$(go list ./... 2>/dev/null | grep -v '/competitors/')
+if ! go vet $GO_PKGS 2>&1; then
   fail "go vet"
   exit 1
 fi

@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "captured_at": "2026-05-17T07:19:28Z",
+  "go_version": "go1.26.0",
+  "gomaxprocs": 12,
+  "benchtime": "3x",
+  "tolerance_pct": 15,
+  "benchmarks": {
+    "BenchmarkExtract_Local": {"b_per_op": 619034, "allocs_per_op": 4603},
+    "BenchmarkFromHTML_WikipediaLatinPhrases": {"b_per_op": 407072984, "allocs_per_op": 2249285},
+    "BenchmarkPreprocess_Wikipedia": {"b_per_op": 72665578, "allocs_per_op": 645432},
+    "BenchmarkSanitize_Wikipedia": {"b_per_op": 13457480, "allocs_per_op": 67},
+    "BenchmarkCleanup_Wikipedia": {"b_per_op": 26029056, "allocs_per_op": 354},
+    "BenchmarkDedupe_Wikipedia": {"b_per_op": 60263109, "allocs_per_op": 562130},
+    "BenchmarkSnapshot_Wikipedia": {"b_per_op": 48193370, "allocs_per_op": 275312}
+  }
+}

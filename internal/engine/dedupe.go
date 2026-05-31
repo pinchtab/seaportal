@@ -1,21 +1,33 @@
-// Package portal provides content extraction with SPA detection
 package engine
 
 import (
 	"crypto/sha256"
+	"encoding/binary"
 	"encoding/hex"
+	"math/bits"
 	"regexp"
 	"strings"
 	"unicode"
+
+	"golang.org/x/crypto/blake2b"
+)
+
+// Near-duplicate detection knobs. These are intentionally the only dials.
+const (
+	nearDupHammingThreshold = 3
+	nearDupMinLength        = 40
+	shingleSize             = 4
 )
 
 // DedupeResult holds deduplication metrics and output
 type DedupeResult struct {
-	Content          string   // Deduplicated content
-	OriginalBlocks   int      // Number of blocks before deduplication
-	UniqueBlocks     int      // Number of unique blocks retained
-	DuplicatesFound  int      // Number of duplicate blocks removed
-	DuplicateSignals []string // Types of duplicates detected (nav, heading, etc.)
+	Content              string   `json:"content,omitempty"`
+	OriginalBlocks       int      `json:"originalBlocks,omitempty"`
+	UniqueBlocks         int      `json:"uniqueBlocks,omitempty"`
+	DuplicatesFound      int      `json:"duplicatesFound,omitempty"` // exact-hash matches
+	DuplicateSignals     []string `json:"duplicateSignals,omitempty"`
+	NearDuplicatesFound  int      `json:"nearDuplicatesFound,omitempty"` // simhash matches
+	NearDuplicateSignals []string `json:"nearDuplicateSignals,omitempty"`
 }
 
 // DedupeOptions configures deduplication behavior
@@ -27,6 +39,10 @@ type DedupeOptions struct {
 	NormalizeWhitespace bool
 	// CaseSensitive controls whether duplicate detection is case-sensitive
 	CaseSensitive bool
+	// NearDup enables simhash-based near-duplicate detection after the exact-hash
+	// check misses. Only blocks whose normalised length is >= nearDupMinLength are
+	// compared; matches within nearDupHammingThreshold bits are dropped.
+	NearDup bool
 }
 
 // DefaultDedupeOptions returns sensible defaults for content deduplication
@@ -35,6 +51,7 @@ func DefaultDedupeOptions() DedupeOptions {
 		MinBlockLen:         20, // Ignore blocks under 20 chars
 		NormalizeWhitespace: true,
 		CaseSensitive:       false,
+		NearDup:             true,
 	}
 }
 
@@ -54,7 +71,6 @@ func DedupeWithOptions(content string, opts DedupeOptions) DedupeResult {
 		return result
 	}
 
-	// Split into blocks (double newline separated, or heading-delimited)
 	blocks := splitIntoBlocks(content)
 	result.OriginalBlocks = len(blocks)
 
@@ -63,10 +79,13 @@ func DedupeWithOptions(content string, opts DedupeOptions) DedupeResult {
 	}
 
 	seen := make(map[string]bool)
+	var signatures []uint64
 	var uniqueBlocks []string
 	var signals []string
+	var nearSignals []string
 
 	signalCounts := make(map[string]int)
+	nearSignalCounts := make(map[string]int)
 
 	for _, block := range blocks {
 		trimmed := strings.TrimSpace(block)
@@ -84,7 +103,6 @@ func DedupeWithOptions(content string, opts DedupeOptions) DedupeResult {
 			continue
 		}
 
-		// Normalize for comparison
 		normalized := normalizeBlock(trimmed, opts)
 		hash := hashBlock(normalized)
 
@@ -92,10 +110,32 @@ func DedupeWithOptions(content string, opts DedupeOptions) DedupeResult {
 			signal := classifyDuplicate(trimmed)
 			signalCounts[signal]++
 			result.DuplicatesFound++
-		} else {
-			seen[hash] = true
-			uniqueBlocks = append(uniqueBlocks, block)
+			continue
 		}
+		seen[hash] = true
+
+		// Near-duplicate pass — only for sufficiently long blocks. The exact-hash
+		// path above remains primary; this catches templated boilerplate that
+		// differs only by a date / counter / A/B-tested word.
+		if opts.NearDup && len(normalized) >= nearDupMinLength {
+			sig := simhash(normalized)
+			matched := false
+			for _, prev := range signatures {
+				if hammingDistance(sig, prev) <= nearDupHammingThreshold {
+					matched = true
+					break
+				}
+			}
+			if matched {
+				signal := classifyDuplicate(trimmed)
+				nearSignalCounts[signal]++
+				result.NearDuplicatesFound++
+				continue
+			}
+			signatures = append(signatures, sig)
+		}
+
+		uniqueBlocks = append(uniqueBlocks, block)
 	}
 
 	for signal, count := range signalCounts {
@@ -103,10 +143,16 @@ func DedupeWithOptions(content string, opts DedupeOptions) DedupeResult {
 			signals = append(signals, signal)
 		}
 	}
+	for signal, count := range nearSignalCounts {
+		if count > 0 {
+			nearSignals = append(nearSignals, signal)
+		}
+	}
 
 	result.UniqueBlocks = len(uniqueBlocks) - countEmptyBlocks(uniqueBlocks)
 	result.Content = strings.Join(uniqueBlocks, "\n\n")
 	result.DuplicateSignals = signals
+	result.NearDuplicateSignals = nearSignals
 
 	result.Content = cleanupWhitespace(result.Content)
 
@@ -114,12 +160,10 @@ func DedupeWithOptions(content string, opts DedupeOptions) DedupeResult {
 }
 
 func splitIntoBlocks(content string) []string {
-	// Split on double newlines (paragraph boundaries)
 	rawBlocks := strings.Split(content, "\n\n")
 
 	var blocks []string
 	for _, block := range rawBlocks {
-		// Further split blocks that contain headings to isolate them
 		parts := splitOnHeadings(block)
 		blocks = append(blocks, parts...)
 	}
@@ -150,7 +194,6 @@ func splitOnHeadings(block string) []string {
 		}
 	}
 
-	// Don't forget trailing content
 	if len(current) > 0 {
 		result = append(result, strings.Join(current, "\n"))
 	}
@@ -171,8 +214,7 @@ func normalizeBlock(block string, opts DedupeOptions) string {
 		s = strings.TrimSpace(s)
 	}
 
-	// Remove markdown formatting for comparison
-	// This helps catch duplicates that differ only in formatting
+	// Strip markdown formatting so duplicates that differ only in formatting collapse.
 	s = stripMarkdownFormatting(s)
 
 	return s
@@ -281,7 +323,6 @@ func NearDuplicateScore(a, b string) int {
 		return 100
 	}
 
-	// Simple word overlap score
 	wordsA := extractDedupeWords(normA)
 	wordsB := extractDedupeWords(normB)
 
@@ -308,6 +349,67 @@ func NearDuplicateScore(a, b string) int {
 	}
 
 	return (overlap * 100) / union
+}
+
+// simhash computes a 64-bit simhash signature for a normalised block, using
+// 4-word shingles hashed with Blake2b. Returns 0 if the block has fewer than
+// shingleSize tokens (caller should not compare such blocks).
+func simhash(block string) uint64 {
+	tokens := simhashTokens(block)
+	if len(tokens) < shingleSize {
+		return 0
+	}
+
+	var accum [64]int
+	for i := 0; i+shingleSize <= len(tokens); i++ {
+		shingle := strings.Join(tokens[i:i+shingleSize], " ")
+		sum := blake2b.Sum256([]byte(shingle))
+		// Fold 256 bits into 64 by XORing the four 64-bit lanes.
+		h := binary.LittleEndian.Uint64(sum[0:8]) ^
+			binary.LittleEndian.Uint64(sum[8:16]) ^
+			binary.LittleEndian.Uint64(sum[16:24]) ^
+			binary.LittleEndian.Uint64(sum[24:32])
+
+		for b := 0; b < 64; b++ {
+			if h&(uint64(1)<<b) != 0 {
+				accum[b]++
+			} else {
+				accum[b]--
+			}
+		}
+	}
+
+	var sig uint64
+	for b := 0; b < 64; b++ {
+		if accum[b] > 0 {
+			sig |= uint64(1) << b
+		}
+	}
+	return sig
+}
+
+// simhashTokens splits a string on whitespace, lowercases each token, and
+// strips non-alphanumeric runes. Empty tokens are skipped.
+func simhashTokens(s string) []string {
+	fields := strings.Fields(s)
+	out := make([]string, 0, len(fields))
+	for _, f := range fields {
+		var b strings.Builder
+		for _, r := range f {
+			if unicode.IsLetter(r) || unicode.IsDigit(r) {
+				b.WriteRune(unicode.ToLower(r))
+			}
+		}
+		if b.Len() > 0 {
+			out = append(out, b.String())
+		}
+	}
+	return out
+}
+
+// hammingDistance returns the number of differing bits between two uint64s.
+func hammingDistance(a, b uint64) int {
+	return bits.OnesCount64(a ^ b)
 }
 
 func extractDedupeWords(s string) []string {

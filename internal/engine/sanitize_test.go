@@ -5,9 +5,6 @@ import (
 	"testing"
 )
 
-// TestSanitizeHTML_NestedAriaHidden is a regression test for the nesting bug
-// in removeAttrElements: a naive `</tag` lookup matched the FIRST inner close
-// for nested same-tag markup, leaving the outer close behind as broken HTML.
 func TestSanitizeHTML_NestedAriaHidden(t *testing.T) {
 	input := `<div aria-hidden="true"><div>inner</div></div><p>keep</p>`
 	got := SanitizeHTML(input)
@@ -38,8 +35,6 @@ func TestSanitizeHTML_NestedHiddenAttr(t *testing.T) {
 	}
 }
 
-// Sanity: ensure the depth tracker doesn't over-consume when the matched
-// element has a sibling of the same tag name that also has the attribute.
 func TestSanitizeHTML_SiblingsBothHidden(t *testing.T) {
 	input := `<div aria-hidden="true">a</div><div aria-hidden="true">b</div><p>c</p>`
 	got := SanitizeHTML(input)
@@ -52,8 +47,6 @@ func TestSanitizeHTML_SiblingsBothHidden(t *testing.T) {
 	}
 }
 
-// Sanity: the matching close is the BALANCED one, even when the inner
-// (non-hidden) sibling closes first.
 func TestSanitizeHTML_DeepNesting(t *testing.T) {
 	input := `<div aria-hidden="true"><div><div>deep</div></div></div>after`
 	got := SanitizeHTML(input)

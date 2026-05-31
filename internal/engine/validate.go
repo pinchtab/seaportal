@@ -1,4 +1,3 @@
-// Package portal provides content extraction with SPA detection
 package engine
 
 import (
@@ -6,19 +5,17 @@ import (
 	"strings"
 )
 
-// Validation holds post-extraction validation results
 type Validation struct {
 	IsValid       bool     `json:"isValid"`
 	NeedsBrowser  bool     `json:"needsBrowser"`
-	Confidence    float64  `json:"confidence"`    // 0-1 confidence in extraction quality
-	Issues        []string `json:"issues"`        // List of detected issues
-	LinkDensity   float64  `json:"linkDensity"`   // Links per paragraph (high = nav-heavy)
-	SkeletonScore float64  `json:"skeletonScore"` // 0-1 how much content looks like skeleton/stubs
-	ContentRatio  float64  `json:"contentRatio"`  // Ratio of real content vs boilerplate
+	Confidence    float64  `json:"confidence"`
+	Issues        []string `json:"issues"`
+	LinkDensity   float64  `json:"linkDensity"`
+	SkeletonScore float64  `json:"skeletonScore"`
+	ContentRatio  float64  `json:"contentRatio"`
 }
 
 var (
-	// Skeleton patterns - content that looks like loading stubs
 	skeletonPatterns = []string{
 		"view more",
 		"load more",
@@ -36,9 +33,6 @@ var (
 		"create an account",
 	}
 
-	// Nav-heavy patterns - likely navigation not content
-
-	// Bot protection patterns
 	botProtectionPatterns = []*regexp.Regexp{
 		regexp.MustCompile(`(?i)checking your browser`),
 		regexp.MustCompile(`(?i)please wait while we verify`),
@@ -50,7 +44,6 @@ var (
 		regexp.MustCompile(`(?i)verify you are human`),
 	}
 
-	// Paywall patterns
 	paywallPatterns = []*regexp.Regexp{
 		regexp.MustCompile(`(?i)subscribe to read`),
 		regexp.MustCompile(`(?i)subscribers only`),
@@ -71,7 +64,8 @@ func ValidateExtraction(r *Result) Validation {
 	content := strings.ToLower(r.Content)
 	lines := strings.Split(r.Content, "\n")
 
-	// Check for empty/minimal content
+	bodyTrusted := r.Length >= 20000 && r.ParagraphCount >= 10 && r.HeadingCount >= 2
+
 	wordCount := len(strings.Fields(r.Content))
 	if wordCount < 50 {
 		v.Issues = append(v.Issues, "minimal-content")
@@ -82,19 +76,19 @@ func ValidateExtraction(r *Result) Validation {
 		}
 	}
 
-	// Calculate link density (links per paragraph)
 	if r.ParagraphCount > 0 {
 		v.LinkDensity = float64(r.LinkCount) / float64(r.ParagraphCount)
 		if v.LinkDensity > 3.0 {
 			v.Issues = append(v.Issues, "nav-heavy")
-			v.Confidence -= 0.2
+			if !bodyTrusted {
+				v.Confidence -= 0.2
+			}
 		}
-		if v.LinkDensity > 5.0 {
+		if v.LinkDensity > 5.0 && !bodyTrusted {
 			v.NeedsBrowser = true
 		}
 	}
 
-	// Check for skeleton/stub content
 	skeletonHits := 0
 	for _, pattern := range skeletonPatterns {
 		if strings.Contains(content, pattern) {
@@ -108,18 +102,18 @@ func ValidateExtraction(r *Result) Validation {
 		v.NeedsBrowser = true
 	}
 
-	// Check for bot protection
-	for _, pattern := range botProtectionPatterns {
-		if pattern.MatchString(content) {
-			v.Issues = append(v.Issues, "bot-protection")
-			v.NeedsBrowser = true
-			v.IsValid = false
-			v.Confidence = 0.1
-			break
+	if !bodyTrusted {
+		for _, pattern := range botProtectionPatterns {
+			if pattern.MatchString(content) {
+				v.Issues = append(v.Issues, "bot-protection")
+				v.NeedsBrowser = true
+				v.IsValid = false
+				v.Confidence = 0.1
+				break
+			}
 		}
 	}
 
-	// Check for paywall
 	for _, pattern := range paywallPatterns {
 		if pattern.MatchString(content) {
 			v.Issues = append(v.Issues, "paywall-detected")
@@ -128,7 +122,6 @@ func ValidateExtraction(r *Result) Validation {
 		}
 	}
 
-	// Check heading-to-content ratio (many headings, little content = nav)
 	if r.HeadingCount > 0 && r.ParagraphCount > 0 {
 		headingRatio := float64(r.HeadingCount) / float64(r.ParagraphCount)
 		if headingRatio > 0.8 {
@@ -137,7 +130,6 @@ func ValidateExtraction(r *Result) Validation {
 		}
 	}
 
-	// Check for repetitive short lines (menu items)
 	shortLines := 0
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
@@ -153,13 +145,11 @@ func ValidateExtraction(r *Result) Validation {
 		}
 	}
 
-	// Calculate content ratio (real paragraphs vs total elements)
 	totalElements := r.HeadingCount + r.ParagraphCount + r.LinkCount
 	if totalElements > 0 {
 		v.ContentRatio = float64(r.ParagraphCount) / float64(totalElements)
 	}
 
-	// Clamp confidence
 	if v.Confidence < 0 {
 		v.Confidence = 0
 	}
@@ -170,12 +160,9 @@ func ValidateExtraction(r *Result) Validation {
 	return v
 }
 
-// QuickNeedsBrowser performs fast pre-extraction check on raw HTML
-// Returns true if browser is definitely needed (fast-mode bail)
 func QuickNeedsBrowser(html string) (needsBrowser bool, reason string) {
 	htmlLower := strings.ToLower(html)
 
-	// Check for SPA framework shells
 	spaMarkers := []struct {
 		pattern string
 		reason  string
@@ -191,12 +178,9 @@ func QuickNeedsBrowser(html string) (needsBrowser bool, reason string) {
 
 	for _, marker := range spaMarkers {
 		if strings.Contains(htmlLower, marker.pattern) {
-			// Check if there's actual content too
-			// Many SSR sites have these markers but also have content
 			bodyStart := strings.Index(htmlLower, "<body")
 			if bodyStart > -1 {
 				body := htmlLower[bodyStart:]
-				// If body has very little text content, it's likely empty shell
 				textContent := stripHTMLTags(body)
 				if len(strings.Fields(textContent)) < 100 {
 					return true, marker.reason
@@ -205,7 +189,6 @@ func QuickNeedsBrowser(html string) (needsBrowser bool, reason string) {
 		}
 	}
 
-	// Check for bot protection pages
 	botMarkers := []struct {
 		pattern string
 		reason  string

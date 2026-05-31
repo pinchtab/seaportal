@@ -1,0 +1,50 @@
+document
+  e1 banner <header>
+  e2 complementary <aside>
+  e3 main "GitLab Project information GitLab is an open source end-to-end software devel..." <main>
+    e4 banner "GitLab" <header>
+      e5 image "GitLab" <img>
+      e6 heading "GitLab" <h1> level=1
+        e7 button "Public - The project can be accessed without any authentication." <button> [interactive]
+    e8 complementary "Project information GitLab is an open source end-to-end software development ..." <aside>
+      e9 heading "Project information" <h2> level=2
+      e10 paragraph "GitLab is an open source end-to-end software development platform with built-..." <p>
+      e11 button "Expand project information" <button> [interactive]
+      e12 link "hacktoberfest" <a> [interactive] href=/explore/projects/topics/hacktoberfest
+      e13 link "Ruby" <a> [interactive] href=/explore/projects/topics/ruby
+      e14 link "Vue.js" <a> [interactive] href=/explore/projects/topics/vue.js
+      e15 button "Show 1 more" <button> [interactive]
+      e16 link "JavaScript" <a> [interactive] href=/explore/projects/topics/javascript
+      e17 link <a> [interactive] href=https://gitlab.com/gitlab-org/gitlab/commits/master
+        e18 image "Project badge" <img>
+      e19 link <a> [interactive] href=https://gitlab-org.gitlab.io/gitlab/coverage-ruby/
+        e20 image "Project badge" <img>
+      e21 link <a> [interactive] href=https://gitlab-org.gitlab.io/gitlab/coverage-frontend/lcov-report/
+        e22 image "Project badge" <img>
+      e23 link <a> [interactive] href=https://gitlab.com/gitlab-community/gitlab-org/gitlab
+        e24 image "Project badge" <img>
+      e25 navigation "531,534 Commits 26,942 Branches 2,576 Tags 171 Releases 531 Environments" <nav>
+        e26 list "531,534 Commits 26,942 Branches 2,576 Tags 171 Releases 531 Environments" <ul>
+          e27 listitem "531,534 Commits" <li>
+            e28 link "531,534 Commits" <a> [interactive] href=/gitlab-org/gitlab/-/commits/master
+          e29 listitem "26,942 Branches" <li>
+            e30 link "26,942 Branches" <a> [interactive] href=/gitlab-org/gitlab/-/branches
+          e31 listitem "2,576 Tags" <li>
+            e32 link "2,576 Tags" <a> [interactive] href=/gitlab-org/gitlab/-/tags
+          e33 listitem "171 Releases" <li>
+            e34 link "171 Releases" <a> [interactive] href=/gitlab-org/gitlab/-/releases
+          e35 listitem "531 Environments" <li>
+            e36 link "531 Environments" <a> [interactive] href=/gitlab-org/gitlab/-/environments
+      e37 list "README MIT License CHANGELOG CONTRIBUTING GitLab Pages" <ul>
+        e38 listitem "README" <li>
+          e39 link "README" <a> [interactive] href=/gitlab-org/gitlab/-/blob/master/README.md
+        e40 listitem "MIT License" <li>
+          e41 link "MIT License" <a> [interactive] href=/gitlab-org/gitlab/-/blob/master/LICENSE
+        e42 listitem "CHANGELOG" <li>
+          e43 link "CHANGELOG" <a> [interactive] href=/gitlab-org/gitlab/-/blob/master/CHANGELOG-EE.md
+        e44 listitem "CONTRIBUTING" <li>
+          e45 link "CONTRIBUTING" <a> [interactive] href=/gitlab-org/gitlab/-/blob/master/CONTRIBUTING.md
+        e46 listitem "GitLab Pages" <li>
+          e47 link "GitLab Pages" <a> [interactive] href=https://gitlab-org.gitlab.io/gitlab
+      e48 paragraph "Created on" <p>
+    e49 status "Loading" <div>

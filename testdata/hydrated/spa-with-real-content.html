@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Synthetic Hydrated SPA Fixture</title>
+<meta name="description" content="A SPA-root page that ships substantial first-paint HTML, used to exercise the round-2 spa->hydrated downgrade.">
+</head>
+<body>
+<noscript>You need JavaScript for interactive features, but core content is here below.</noscript>
+<div id="app">
+  <header><h1>Synthetic Hydrated Page Demonstrating SPA Bootstrap With Real Content</h1></header>
+  <main>
+    <article>
+      <h2>Introduction</h2>
+      <p>This page advertises itself as a single-page application by exposing the conventional <code>#app</code> root element and a noscript warning, but the server has already shipped substantial prose content for the first paint. Search engines and lightweight HTTP clients should be able to extract everything below without ever executing a single byte of JavaScript, and the SeaPortal classifier should recognise that pattern.</p>
+      <h2>Why this matters for the classifier</h2>
+      <p>The classifier round-2 task documents three observed mis-classification clusters in real-world capability-suite runs. One of them is exactly this shape: frameworks such as Nuxt SSR, Next.js static export, MkDocs Material, Discourse forums and many marketing landing pages all ship full HTML for first paint and then mount a SPA shell purely for navigation enhancements. The first-paint content is real, accessible, and complete.</p>
+      <p>Calling such pages <em>spa</em> forces every agent to escalate to a real headless browser when they could have just consumed the markdown projection of the already-rendered HTML. The honest label for this shape is <em>hydrated</em>: server-rendered for first paint, then hydrated client-side for interaction. That is the label the round-2 fix introduces here.</p>
+      <h2>How the gate works</h2>
+      <p>The gate that decides spa-versus-hydrated checks three signals in tandem: extracted body Length must exceed two thousand bytes, the heading count must reach at least two, and the paragraph count must reach at least three. All three together avoid promoting genuinely empty SPA shells (twitter, instagram, bluesky-loggedout, mkdocs-with-extraction-failure) into the hydrated bucket where they would falsely advertise extractable content.</p>
+      <p>The thresholds were tuned against the round-one corpus so that no previously-correct fixture regressed when the new branch fired. They are starting points, not constants: future fixtures that surface real hydrated pages just below these thresholds can drive further tuning.</p>
+      <h2>Conclusion</h2>
+      <p>SeaPortal now downgrades SPA to hydrated when extracted content is substantive. Agents can extract instead of escalating, and the round-one corpus accuracy stays at one point zero. For the curious reader, the synthetic fixture intentionally clears all three thresholds (Length above two thousand, headings at three, paragraphs at five) so the new branch in <code>ClassifyPage</code> fires reliably under <code>go test</code>.</p>
+    </article>
+  </main>
+</div>
+</body>
+</html>

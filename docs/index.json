@@ -1,0 +1,17 @@
+{
+  "main": [
+    "README.md",
+    "get-started.md"
+  ],
+  "guides": [
+    "guides/contributing.md",
+    "guides/security-checklist.md",
+    "fixtures.md"
+  ],
+  "architecture": [
+    "*"
+  ],
+  "reference": [
+    "*"
+  ]
+}

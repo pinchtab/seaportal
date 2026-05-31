@@ -1,0 +1,40 @@
+# my-auth-library
+
+A small library for handling user authentication in Go.
+
+## Usage
+
+To log in a user, call the Login function with a username and password. The function will return a session token on success.
+
+```go
+err := auth.Login(username, password)
+if err != nil {
+    return err
+}
+```
+
+To sign up a new user, use the Register function. It validates the email and stores a hashed password.
+
+```go
+err := auth.Register(email, password)
+```
+
+## API
+
+The library exposes three main functions: Login, Register, and Logout. Each is documented in the godoc page linked from the project README.
+
+## Examples
+
+The examples directory contains a working demo that wires a sign-in form and a sign-up form to a SQLite store. Run it with `go run ./examples/web`.
+
+## Security notes
+
+Passwords are stored with bcrypt. Sessions are stored as opaque tokens, not JWTs. Welcome contributions — please open an issue before submitting a PR.
+
+## Contributing
+
+Fork the repository, create a feature branch, and submit a pull request. All contributors must agree to the project's code of conduct.
+
+## License
+
+MIT.

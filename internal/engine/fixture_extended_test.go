@@ -11,10 +11,10 @@ import (
 
 type siteTest struct {
 	name         string
-	fixture      string // HTML fixture
-	mdFixture    string // Markdown fixture (if content-negotiation available)
+	fixture      string
+	mdFixture    string
 	url          string
-	category     string // "docs", "news", "social", "reference", "api-docs", "academic"
+	category     string
 	minChars     int
 	minConf      int
 	mustContain  []string
@@ -23,7 +23,6 @@ type siteTest struct {
 }
 
 var extendedSites = []siteTest{
-	// === Original 10 ===
 	{name: "example.com", fixture: "example.com.html", url: "https://example.com", category: "static",
 		minChars: 50, minConf: 30, mustContain: []string{"Example Domain"}, mustNotSPA: true, mustNotBlock: true},
 	{name: "hn", fixture: "hn.html", url: "https://news.ycombinator.com", category: "social",
@@ -45,11 +44,10 @@ var extendedSites = []siteTest{
 	{name: "cloudflare", mdFixture: "cloudflare-md.txt", fixture: "cloudflare.html", url: "https://www.cloudflare.com", category: "docs",
 		minChars: 15000, minConf: 80, mustContain: []string{"Cloudflare"}, mustNotBlock: true},
 
-	// === New sites ===
 	{name: "stackoverflow", fixture: "stackoverflow.html", url: "https://stackoverflow.com/questions/11227809", category: "reference",
 		minChars: 1000, minConf: 50, mustContain: []string{"sorted array"}, mustNotSPA: true, mustNotBlock: true},
 	{name: "medium", fixture: "medium.html", url: "https://medium.com/@karpathy/software-2-0-a64152b37c35", category: "news",
-		minChars: 0, minConf: 0}, // Cloudflare challenge page — extraction correctly fails
+		minChars: 0, minConf: 0},
 	{name: "reddit", fixture: "reddit.html", url: "https://old.reddit.com/r/programming/top/?t=week", category: "social",
 		minChars: 500, minConf: 50, mustNotSPA: true, mustNotBlock: true},
 	{name: "python-docs", fixture: "python-docs.html", url: "https://docs.python.org/3/tutorial/classes.html", category: "docs",
@@ -65,21 +63,20 @@ var extendedSites = []siteTest{
 }
 
 type extractResult struct {
-	name       string
-	category   string
-	chars      int
-	confidence int
-	headings   int
-	links      int
-	paragraphs int
-	quality    float64
-	isSPA      bool
-	isBlocked  bool
-	extractMs  int64
-	title      string
-	// Content quality checks
-	hasStructure   bool // has headings + paragraphs
-	hasLinks       bool // has navigation/reference links
+	name           string
+	category       string
+	chars          int
+	confidence     int
+	headings       int
+	links          int
+	paragraphs     int
+	quality        float64
+	isSPA          bool
+	isBlocked      bool
+	extractMs      int64
+	title          string
+	hasStructure   bool
+	hasLinks       bool
 	contentPreview string
 }
 
@@ -96,7 +93,6 @@ func extractFixture(t *testing.T, st siteTest) extractResult {
 	var extractMs int64
 
 	if st.mdFixture != "" {
-		// Test markdown negotiation path
 		md := loadFixture(t, st.mdFixture)
 		start := time.Now()
 		cleaned := CleanupMarkdown(md)
@@ -132,7 +128,6 @@ func extractFixture(t *testing.T, st siteTest) extractResult {
 	if len(preview) > 200 {
 		preview = preview[:200] + "..."
 	}
-	// Remove newlines for compact preview
 	preview = strings.ReplaceAll(preview, "\n", " ")
 
 	return extractResult{
@@ -170,7 +165,6 @@ func TestExtended_AllSites(t *testing.T) {
 			}
 			for _, s := range st.mustContain {
 				if !strings.Contains(r.contentPreview+"..."+r.title, s) {
-					// Check full content
 					html := loadFixture(t, st.fixture)
 					result := FromHTML(html, st.url)
 					if !strings.Contains(result.Content, s) && !strings.Contains(result.Title, s) {
@@ -192,7 +186,6 @@ func TestExtended_AllSites(t *testing.T) {
 }
 
 func TestExtended_QualityReport(t *testing.T) {
-	// Collect all results with content previews for manual quality review
 	t.Log("")
 	t.Log("═══════════════════════════════════════════════════════════════")
 	t.Log("                    CONTENT QUALITY REPORT")
@@ -254,7 +247,6 @@ func TestExtended_PerformanceBenchmark(t *testing.T) {
 		raw := loadFixture(t, fixture)
 		htmlBytes := len(raw)
 
-		// Run 3 times and take median
 		var times []int64
 		var lastChars int
 		for i := 0; i < 3; i++ {
@@ -273,7 +265,6 @@ func TestExtended_PerformanceBenchmark(t *testing.T) {
 			}
 		}
 
-		// Sort for median
 		for i := 0; i < len(times)-1; i++ {
 			for j := i + 1; j < len(times); j++ {
 				if times[j] < times[i] {
@@ -311,7 +302,6 @@ func TestExtended_PerformanceBenchmark(t *testing.T) {
 }
 
 func TestExtended_ComparisonTable(t *testing.T) {
-	// web_fetch reference values (rawLength from actual web_fetch calls, 2026-03-26)
 	webFetchRef := map[string]int{
 		"example.com":   1256,
 		"hn":            10847,
@@ -320,15 +310,15 @@ func TestExtended_ComparisonTable(t *testing.T) {
 		"bbc":           827,
 		"nytimes":       14570,
 		"docs-openclaw": 7056,
-		"react":         0, // 404 error from web_fetch
+		"react":         0,
 		"cloudflare":    29508,
 		"creepjs":       93,
-		"stackoverflow": 22645, // rawLength from web_fetch
+		"stackoverflow": 22645,
 		"medium":        8419,
 		"reddit":        626,
 		"python-docs":   35350,
 		"mdn":           28908,
-		"stripe-docs":   49229, // rawLength, extractor=raw (text/plain)
+		"stripe-docs":   49229,
 		"arxiv":         8337,
 		"hn-item":       769,
 	}

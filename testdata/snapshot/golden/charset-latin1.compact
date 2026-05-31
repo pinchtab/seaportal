@@ -1,0 +1,4 @@
+document
+  e1 heading "Le caf\xe9 \xe0 Paris" <h1> level=1
+  e2 paragraph "Voici une histoire \xe0 propos d'un caf\xe9 fran\xe7ais situ\xe9 pr\xe8s de la Seine. Les cl..." <p>
+  e3 paragraph "Les habitu\xe9s viennent ici depuis des d\xe9cennies pour discuter, lire le journal..." <p>

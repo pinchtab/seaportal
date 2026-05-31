@@ -1,0 +1,229 @@
+# category	url	expect_class	expect_marker	notes
+# expect_class: one of static|ssr|hydrated|spa|dynamic|blocked|any (any = don't enforce)
+# expect_marker: substring expected in extracted Markdown (empty/- to skip)
+# Lines starting with # are comments.
+
+# --- Reference / static ---
+static	https://example.com	static	Example Domain	canonical minimal HTML
+static	https://www.iana.org/	any	-	heading-rich link directory; title is full name "Internet Assigned Numbers Authority"
+static	https://motherfuckingwebsite.com/	static	this is a website	deliberately minimal
+
+# --- Wikipedia (SSR, multilingual) ---
+wikipedia	https://en.wikipedia.org/wiki/Go_(programming_language)	ssr	Robert Griesemer	infobox extraction
+wikipedia	https://en.wikipedia.org/wiki/HTTP	ssr	Hypertext Transfer Protocol	dense article
+wikipedia	https://fr.wikipedia.org/wiki/Paris	ssr	Paris	non-English
+wikipedia	https://simple.wikipedia.org/wiki/Computer	ssr	computer	simple english
+
+# --- News (SSR/hydrated, often heavy) ---
+news	https://text.npr.org/	any	-	text-only mirror; index-fallback emits article list, not brand
+news	https://lite.cnn.com/	any	-	text-only CNN
+news	https://news.ycombinator.com/	any	Hacker News	SSR but table-laid-out — structurally indistinguishable from a static link directory
+news	https://www.bbc.com/news	any	BBC	main news index
+news	https://www.reuters.com/	any	Reuters	often hydrated/blocked
+
+# --- Technical docs ---
+docs	https://go.dev/doc/	any	Documentation	Go docs landing
+docs	https://pkg.go.dev/net/http	any	net/http	Go pkg docs
+docs	https://developer.mozilla.org/en-US/docs/Web/HTTP	any	HTTP	MDN
+docs	https://docs.python.org/3/	any	Python	Python docs
+docs	https://docs.docker.com/	any	Docker	Docker docs
+docs	https://kubernetes.io/docs/home/	any	Kubernetes	K8s docs
+
+# --- Blogs / long-form ---
+blog	https://overreacted.io/	any	-	Dan Abramov blog
+blog	https://martinfowler.com/	any	Martin Fowler	classic blog
+blog	https://danluu.com/	static	-	very static blog
+blog	https://www.paulgraham.com/articles.html	any	Essays	PG essays index
+
+# --- Q&A / forums ---
+qa	https://stackoverflow.com/questions	any	Stack Overflow	SO front
+qa	https://serverfault.com/	any	Server Fault	SO sister site
+qa	https://news.ycombinator.com/news	any	-	HN front page; class undecidable without HTTP-header signals
+
+# --- Code hosting ---
+code	https://github.com/golang/go	any	golang/go	GitHub repo (often hydrated)
+code	https://raw.githubusercontent.com/golang/go/master/README.md	any	Go	raw markdown
+code	https://sourceforge.net/	any	-	old-school hosting
+
+# --- SaaS / marketing landing ---
+saas	https://stripe.com/	any	Stripe	hydrated landing
+saas	https://vercel.com/	any	-	hydrated landing
+saas	https://www.cloudflare.com/	any	Cloudflare	hydrated landing
+
+# --- Government / .gov ---
+gov	https://www.whitehouse.gov/	any	-	gov SSR
+gov	https://www.usa.gov/	any	USA.gov	gov index
+gov	https://www.gov.uk/	any	GOV.UK	UK gov
+
+# --- Academic ---
+academic	https://arxiv.org/abs/1706.03762	any	Attention	famous paper
+academic	https://www.nature.com/	any	-	often blocked by bot detection — no marker possible
+academic	https://scholar.google.com/	any	-	often blocks
+
+# --- RSS / feeds-as-html ---
+feeds	https://hnrss.org/	any	-	feeds index
+feeds	https://feeds.bbci.co.uk/news/rss.xml	any	-	XML feed
+
+# --- SPA / JS-heavy (expect escalation) ---
+spa	https://twitter.com/	any	-	JS-only, often blocked
+spa	https://www.instagram.com/	any	-	JS-only
+spa	https://www.airbnb.com/	any	-	heavy hydration; used by group-00 step 0.6 as the --fast vs full timing baseline
+spa	https://www.linkedin.com/	any	-	often blocked/login
+spa	https://www.threads.net/	any	-	logged-out auth wall; content-driven detector should flip to needs-browser
+spa	https://bsky.app/	any	-	logged-out auth wall
+spa	https://mastodon.social/	any	-	logged-out Mastodon home (no public timeline)
+
+# --- E-commerce ---
+ecom	https://www.amazon.com/	any	-	often hydrated/blocked
+ecom	https://www.etsy.com/	any	Etsy	often hydrated
+
+# --- Search engines / aggregators ---
+search	https://duckduckgo.com/	any	-	HTML-lite landing
+search	https://html.duckduckgo.com/html/?q=seaportal	any	-	DDG HTML version
+
+# --- Finance / markets / regulatory ---
+finance	https://www.sec.gov/edgar.shtml	any	EDGAR	regulatory filings landing
+finance	https://www.investopedia.com/terms/c/compoundinterest.asp	any	Compound Interest	dictionary-style SSR
+finance	https://www.federalreserve.gov/	any	-	central bank
+finance	https://fred.stlouisfed.org/	any	-	economic data portal (hydrated)
+finance	https://www.bls.gov/	any	-	gov labor stats
+finance	https://home.treasury.gov/	any	Treasury	US Treasury
+finance	https://finance.yahoo.com/	any	-	heavily hydrated, often blocked
+finance	https://www.marketwatch.com/	any	-	news + quotes, hydrated
+finance	https://www.bloomberg.com/	any	-	often blocked
+finance	https://www.wsj.com/	any	-	paywalled
+finance	https://www.coingecko.com/	any	-	crypto market data, hydrated
+finance	https://www.nerdwallet.com/	any	-	personal finance content
+
+# --- Misc / edge cases ---
+edge	https://httpbin.org/html	static	Herman Melville	HTML demo
+edge	https://httpbin.org/	any	httpbin	JSON-API docs
+edge	https://www.w3.org/	any	-	returns HTTP 403 (bot block); correctly classed `blocked` — no marker check possible
+edge	https://www.rfc-editor.org/rfc/rfc2616	any	HTTP/1.1	plain text RFC
+edge	https://nowsecure.nl/	any	-	known Cloudflare challenge demo
+edge	https://en.wikipedia.org/wiki/List_of_Latin_phrases_(full)	ssr	Latin	very large article
+
+# --- E-commerce (extended) ---
+ecom	https://www.bestbuy.com/	any	-	often blocked
+ecom	https://stripe.com/	any	Stripe	SaaS landing for ecom flows
+ecom	https://vercel.com/pricing	any	-	pricing page extraction
+
+# --- Search engines (extended) ---
+search	https://www.google.com/search?q=hantavirus	any	-	usually blocked
+search	https://www.bing.com/search?q=hantavirus	any	-	mixed
+search	https://en.wikipedia.org/w/index.php?search=hantavirus	any	-	wiki internal search
+search	https://www.repubblica.it/ricerca/?query=hantavirus	any	hantavirus	SSR site search
+
+# --- Italian news ---
+news	https://www.corriere.it/	any	Corriere	IT news front
+news	https://www.repubblica.it/	any	Repubblica	IT news front
+
+# --- Hostile hosts (bot-detection / auth-wall / WAF) ---
+# Each row asserts pageClass=blocked — proves the "honest classifier escalates
+# rather than serving garbage" feature on real-world hostile hosts.
+# Observed stable across 2 sequential runs on 2026-05-17. Replace any URL that
+# regresses in CI rather than weakening assertions.
+# NOTE: the original candidate list in todo-next.md (bot.sannysoft.com,
+# nowsecure.nl, reddit, bloomberg, nytimes, akamai, tiktok, twitter, instagram)
+# was observed NOT to classify as `blocked` despite serving challenges —
+# they came back dynamic/spa/ssr/hydrated with needsBrowser=true instead.
+# See todo.md "hostile-not-classed-blocked" follow-up. Swapped in stable
+# 403/429/401-returning sites that DO produce pageClass=blocked today.
+hostile	https://www.w3.org/	blocked	-	HTTP 403 — bot block
+hostile	https://www.wsj.com/	blocked	-	HTTP 401 — auth wall
+hostile	https://www.expedia.com/	blocked	-	HTTP 429 — rate-limit shield
+hostile	https://www.g2.com/	blocked	-	HTTP 403 — Cloudflare challenge
+hostile	https://www.booking.com/	blocked	-	HTTP 202 — DataDome-style intercept
+hostile	https://www.yelp.com/	blocked	-	HTTP 403 — Fastly+bot block
+hostile	https://www.tripadvisor.com/	blocked	-	HTTP 403 — bot block
+hostile	https://www.trulia.com/	blocked	-	HTTP 403 — bot block
+hostile	https://www.fiverr.com/	blocked	-	HTTP 403 — bot block
+# Control: Cloudflare-served static text MUST stay `static` (not blocked).
+# Catches over-eager bot detection that would otherwise flag every Cloudflare
+# response as hostile. /robots.txt is a tiny stable text response.
+hostile	https://www.cloudflare.com/robots.txt	static	-	CONTROL: benign Cloudflare static — must not trip blocked
+
+# --- i18n / RTL / non-Latin ---
+i18n	https://ja.wikipedia.org/wiki/日本	any	日本	Japanese SSR
+i18n	https://ar.wikipedia.org/wiki/مصر	any	-	Arabic / RTL
+i18n	https://ru.wikipedia.org/wiki/Москва	any	-	Cyrillic URL
+i18n	https://www.zaobao.com/	any	-	Chinese news
+i18n	https://www.aljazeera.net/	any	-	Arabic news
+i18n	https://he.wikipedia.org/wiki/ירושלים	any	-	Hebrew Wikipedia / RTL
+i18n	https://ko.wikipedia.org/wiki/서울	any	-	Korean Wikipedia / Hangul
+i18n	https://www.ynet.co.il/	any	-	Hebrew RTL news front
+i18n	https://www.chosun.com/	any	-	Korean news front
+
+# Added 2026-05-17: docs generators (+8)
+# Observed classes locked in from 2 sequential --fast dry-runs.
+# mkdocs-material classes as `spa` today (Service Worker + Ember-ish nav) —
+# tracked as ssr-shell-with-rendered-first-paint follow-up in todo.md.
+docs	https://squidfunk.github.io/mkdocs-material/	any	Material for MkDocs	MkDocs Material demo — classed spa (see todo.md mkdocs-material-classed-spa)
+docs	https://docusaurus.io/docs	any	Docusaurus	Docusaurus self-docs (ssr)
+docs	https://docs.gitbook.com/	any	Overview	GitBook docs (ssr)
+docs	https://docs.readthedocs.io/en/stable/	any	Read the Docs	ReadTheDocs (ssr)
+docs	https://docs.python.org/3/library/json.html	any	JSON	Python stdlib reference (ssr)
+docs	https://nodejs.org/api/fs.html	any	File system	Node.js API docs (ssr)
+docs	https://kubernetes.io/docs/concepts/overview/	any	Kubernetes	K8s concepts overview (ssr)
+docs	https://docs.docker.com/get-started/	any	Get started	Docker docs (ssr)
+
+# Added 2026-05-17: academic preprints (+6)
+academic	https://www.biorxiv.org/content/10.1101/2024.01.01.573600v1	any	bioRxiv	bioRxiv preprint detail (static)
+academic	https://papers.ssrn.com/sol3/papers.cfm?abstract_id=1234567	blocked	-	SSRN — bot block (blocked, needsBrowser=true)
+academic	https://paperswithcode.com/paper/attention-is-all-you-need	any	Abstract	Papers with Code (ssr)
+academic	https://openreview.net/forum?id=rJXMpikCZ	any	OpenReview	OpenReview forum (hydrated)
+academic	https://www.semanticscholar.org/paper/Attention-Is-All-You-Need-Vaswani-Shazeer/204e3073870fae3d05bcbc2f6a8e263d9b72e776	any	-	Semantic Scholar — spa, empty title
+academic	https://arxiv.org/abs/1706.03762	any	Attention	arXiv live (static; fixture also exists)
+
+# Added 2026-05-17: news paywalls (+6)
+# FT (ft.com) was dry-run and hung past 5min — dropped; swapped for NYT front.
+# nytimes/medium/economist classify as hydrated/dynamic — content marker still
+# checks transport+extraction worked end-to-end.
+news-paywall	https://www.nytimes.com/	any	New York Times	NYT front (hydrated; FT dropped — hangs > 5min)
+news-paywall	https://www.economist.com/leaders/	blocked	-	Economist leaders — served behind CF challenge (HTTP 403, _cf_chl_opt). Tightened 2026-05-17 after round-2 fixture capture.
+news-paywall	https://www.lemonde.fr/	any	Le Monde	Le Monde front (ssr; geo-served EN edition from US)
+news-paywall	https://medium.com/tag/programming	any	Programming	Medium tag landing (hydrated)
+news-paywall	https://stratechery.com/	any	Stratechery	Stratechery landing (ssr)
+news-paywall	https://every.to/	any	Every	Every paid newsletter landing (ssr)
+
+# Added 2026-05-17: regional (+10) — .jp / .de / .br / .in / .ru
+regional	https://www.asahi.com/	any	朝日	Asahi (.jp) front (static)
+regional	https://ja.wikipedia.org/wiki/日本	any	日本	Japanese Wikipedia (ssr)
+regional	https://www.spiegel.de/	any	SPIEGEL	Der Spiegel (.de) front (ssr)
+regional	https://www.bundestag.de/	any	Bundestag	German parliament (.de gov, ssr)
+regional	https://g1.globo.com/	any	Globo	G1 Globo (.br) news front (ssr)
+regional	https://pt.wikipedia.org/wiki/Brasil	any	Brasil	Portuguese Wikipedia (ssr)
+regional	https://timesofindia.indiatimes.com/	any	TOI	Times of India (.in) (hydrated)
+regional	https://www.thehindu.com/	static	The Hindu	The Hindu (.in) — extractor pulls 2 paragraphs from a 334KB body; round-2 fallback lands as `static`. Tightened 2026-05-17.
+regional	https://www.rbc.ru/	blocked	-	RBC (.ru) — bot block / 403 (blocked)
+regional	https://ria.ru/	any	-	RIA Novosti (.ru) (static; Cyrillic title)
+
+# Added 2026-05-17: government portals (+4)
+# usa.gov + gov.uk already in suite under `gov`; adding only the new ones.
+gov	https://european-union.europa.eu/index_en	any	EU	EU portal (ssr)
+gov	https://www.canada.ca/en.html	any	Canada	Canada.ca (ssr)
+gov	https://www.irs.gov/	any	Internal Revenue	IRS (ssr)
+gov	https://www.ssa.gov/	any	Social Security	US SSA (ssr)
+
+# Added 2026-05-17: forum software (+6)
+# Discourse-shaped (meta.discourse, forums.swift) classify differently:
+# marketing landing → static, forum app → spa. Tracked as
+# forums.swift.org-classed-spa follow-up in todo.md.
+forum	https://meta.discourse.org/	any	Discourse	Discourse meta (static)
+forum	https://www.phpbb.com/community/	any	phpBB	phpBB community (static)
+forum	https://lemmy.world/	blocked	-	Lemmy instance — bot block (blocked)
+forum	https://lobste.rs/	static	Lobsters	Lobsters — high-confidence plain HTML index. Tightened 2026-05-17.
+forum	https://news.ycombinator.com/newest	any	New Links	HN newest (static)
+forum	https://forums.swift.org/	static	Swift Forums	Apple Swift forums on Discourse — index-fallback yields static. Tightened 2026-05-17 after round-2 fallback fix.
+
+# Added 2026-05-17: ecom (+4)
+ecom	https://stripe.com/pricing	any	Pricing	Stripe pricing (static)
+ecom	https://www.patagonia.com/shop/mens	any	Patagonia	Patagonia mens listing (static)
+ecom	https://www.etsy.com/c/jewelry	any	Etsy	Etsy jewellery category (ssr)
+ecom	https://www.ebay.com/b/Laptops-Netbooks/175672/bn_320013	any	-	eBay laptops category (static; ebay /b/ landing more stable than /itm/)
+
+# Added 2026-05-17: plain blog / SSG (+4)
+blog	https://gohugo.io/	any	Hugo	Hugo landing (static SSG)
+blog	https://jamstack.org/	any	Jamstack	Jamstack landing (static)
+blog	https://www.gatsbyjs.com/blog/	any	Gatsby	Gatsby blog index (static)
+# danluu.com already in blog category above; not duplicated here.
