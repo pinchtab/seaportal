@@ -133,10 +133,11 @@ func TestAdversarial_Inputs(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			// The 10MB size-bomb takes ~3 minutes under the race
-			// detector (vs ~9s without). Skip under -race so
-			// `./dev all` stays fast; non-race lanes still cover it.
-			if isRaceEnabled && tc.name == "10mb-single-line" {
-				t.Skip("10MB size-bomb skipped under -race (3m+ wall-clock); covered by non-race lane. See todo.md follow-up.")
+			// detector (vs ~9s without). Skip under -race and in the
+			// fast -short lane so `./dev all` / `./dev test` stay quick;
+			// the full non-race lane still covers it.
+			if tc.name == "10mb-single-line" && (isRaceEnabled || testing.Short()) {
+				t.Skip("10MB size-bomb skipped under -race (3m+ wall-clock) and -short (fast lane); covered by the full non-race lane.")
 			}
 			leakcheck.CheckLeak(t)
 

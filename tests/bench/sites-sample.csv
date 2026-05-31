@@ -1,3 +1,8 @@
+# SeaPortal live-sweep smoke sample — 50 sites.
+# Evenly-spaced stride (~15.5) over the cleaned Tranco top-1000 list, ranked by
+# popularity — NOT a hand-picked in-niche/flatter set. It is a fair cross-section
+# of the open web, so its results mirror the full sweep's niche behaviour, not a
+# best case. Lines starting with `#` are ignored by `seabench sweep`.
 rank,domain
 1,google.com
 18,live.com

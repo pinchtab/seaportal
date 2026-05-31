@@ -14,7 +14,7 @@ URL → HTTP Fetch → Bot Detection → Classification → Extraction → Clean
 
 1. **HTTP Fetch** — TLS fingerprint-resistant requests via uTLS
 2. **Bot Detection** — Identifies Cloudflare, PerimeterX, Incapsula challenges
-3. **Classification** — Categorises pages: static, SSR, hydrated, dynamic, blocked
+3. **Classification** — Categorises pages: static, SSR, hydrated, spa, dynamic, blocked
 4. **Extraction** — Readability-based content extraction + HTML-to-Markdown
 5. **Cleanup** — Deduplication, preprocessing, quality scoring
 6. **Output** — Markdown text, JSON, or accessibility snapshot

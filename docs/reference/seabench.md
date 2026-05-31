@@ -38,13 +38,45 @@ seabench sweep [--sites FILE] [--concurrency 16] [--timeout 15s] [--limit N] [--
 
 The default `eval` corpus lives at `tests/eval/corpus.yaml`.
 
+Each lane also prints a one-line headline to stdout (e.g. `eval: seaportal
+F1=0.763 …`, `classify: 39/40 correct (accuracy=0.975) …`), so you can read the
+result without opening the report.
+
+## `./dev bench all` — run everything, get a summary
+
+```bash
+./dev bench all
+```
+
+Runs every **offline** (deterministic, no-network) lane — `eval`, `classify`,
+`tokens`, `cachebench`, `stress --preset quick` — and collects each lane's
+headline into a single recap:
+
+```
+━━━ Bench summary ━━━
+  eval: seaportal F1=0.763 (P=0.644 R=0.935). See tests/bench/reports/eval_…md
+  classify: 39/40 correct (accuracy=0.975). See …
+  tokens: all-mode mean ratio=0.481 (40 fixtures × 4 modes). See …
+  cachebench: ttl-24h hit=84% p50=1ms, swr-10m hit=84%. See …
+  stress: 202 urls/s, 100% success, p50=4ms (n=50, quick). See …
+```
+
+The live `sweep` lane is excluded (it hits the network and isn't reproducible);
+run it explicitly when you want a real-world capability check.
+
 ## `sweep` (live)
 
 ```bash
 seabench sweep                                   # default: competitors/top-1000-sites-tranco.csv
 seabench sweep --sites tests/optimization/sites.tsv   # labelled TSV → also reports accuracy
+seabench sweep --sites tests/optimization/holdout.tsv # held-out classifier validation (see below)
 seabench sweep --limit 50 --concurrency 8        # quick sample
 ```
+
+`tests/optimization/holdout.tsv` is a held-out labelled set (sites in neither the
+eval corpus nor `sites.tsv`) used to measure classifier *generalization* — see
+[classifier-validation.md](classifier-validation.md). The in-corpus `classify`
+score (40/40) is fit, not generalization.
 
 The site list is auto-detected per line:
 

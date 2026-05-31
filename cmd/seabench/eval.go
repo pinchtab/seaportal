@@ -110,6 +110,15 @@ func runEval(args []string) {
 		}
 		fmt.Println("wrote", baselinePath)
 	}
+
+	// One-line headline so `./dev bench all` (and a quick eyeball) can read the
+	// result without opening the report.
+	for _, a := range aggregates {
+		if a.Extractor == "seaportal" {
+			fmt.Printf("eval: seaportal F1=%.3f (P=%.3f R=%.3f). See %s\n", a.F1, a.Precision, a.Recall, out)
+			break
+		}
+	}
 }
 
 // buildExtractors returns the fixed roster of in-process extractors. Order

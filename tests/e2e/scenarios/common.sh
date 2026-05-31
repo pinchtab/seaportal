@@ -14,6 +14,11 @@ NC='\033[0m'
 FIXTURES_URL="${FIXTURES_URL:-http://localhost:8080}"
 RESULTS_DIR="${RESULTS_DIR:-/results}"
 
+# The fixtures server runs on the private Docker network (e.g. 172.18.0.2), so
+# every CLI call opts into the SSRF escape hatch — these targets are trusted by
+# construction. Prepended to all invocations; harmless for --version/--help.
+SP_FLAGS="${SP_FLAGS:---allow-internal}"
+
 # Test tracking
 TESTS_PASSED=0
 TESTS_FAILED=0
@@ -49,13 +54,13 @@ fail_test() {
 # ─────────────────────────────────────────────────────────────────
 
 sp() {
-  SP_OUT=$(seaportal "$@" 2>&1) || SP_EXIT=$?
+  SP_OUT=$(seaportal $SP_FLAGS "$@" 2>&1) || SP_EXIT=$?
   SP_EXIT=${SP_EXIT:-0}
 }
 
 sp_ok() {
   SP_EXIT=0
-  SP_OUT=$(seaportal "$@" 2>&1) || SP_EXIT=$?
+  SP_OUT=$(seaportal $SP_FLAGS "$@" 2>&1) || SP_EXIT=$?
   if [ "$SP_EXIT" -ne 0 ]; then
     fail_test "expected exit 0, got $SP_EXIT"
     echo "    stdout: $SP_OUT"
@@ -66,7 +71,7 @@ sp_ok() {
 
 sp_fail() {
   SP_EXIT=0
-  SP_OUT=$(seaportal "$@" 2>&1) || SP_EXIT=$?
+  SP_OUT=$(seaportal $SP_FLAGS "$@" 2>&1) || SP_EXIT=$?
   if [ "$SP_EXIT" -eq 0 ]; then
     fail_test "expected non-zero exit, got 0"
     return 1

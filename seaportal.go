@@ -19,6 +19,18 @@ type Result = engine.Result
 // Options controls extraction behaviour.
 type Options = engine.Options
 
+// SecurityPolicy is the opt-in SSRF / private-IP / redirect / decompression
+// guard threaded through the fetch path. Set it on Options.Security. A nil
+// policy keeps the historical unguarded behaviour.
+type SecurityPolicy = engine.SecurityPolicy
+
+// DefaultSecurityPolicy returns the recommended secure-by-default policy:
+// block private/internal IPs, http/https only, a 10-redirect cap with per-hop
+// revalidation, and 50 MiB raw / 200 MiB decompressed body caps.
+func DefaultSecurityPolicy() *SecurityPolicy {
+	return engine.DefaultSecurityPolicy()
+}
+
 // LinkRetention controls how inline Markdown links are kept in extracted output.
 type LinkRetention = engine.LinkRetention
 

@@ -351,6 +351,11 @@ type Result struct {
 	PruneFallbackUsed bool `json:"pruneFallbackUsed,omitempty"`
 
 	ExtractionMethod string `json:"extractionMethod,omitempty"`
+
+	// SecurityBlock carries the reason a fetch was refused by the SecurityPolicy
+	// (SSRF / private-IP / blocked-scheme / blocked-domain / size-cap). Empty
+	// when no policy is active or the fetch passed every check.
+	SecurityBlock string `json:"securityBlock,omitempty"`
 }
 
 type RetryEvent struct {
@@ -421,4 +426,10 @@ type Options struct {
 	// internal/engine/mock so HTTP-touching tests stay hermetic. Production
 	// callers should leave this nil; opts.Proxy is independently honoured.
 	Transport http.RoundTripper
+
+	// Security, when non-nil, enforces an SSRF / private-IP / redirect /
+	// decompression policy across the whole fetch path. Nil (the zero value)
+	// keeps the historical unguarded behaviour. Build a safe default with
+	// DefaultSecurityPolicy. Safe to share across concurrent calls.
+	Security *SecurityPolicy
 }

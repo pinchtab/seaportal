@@ -146,6 +146,8 @@ func runStress(args []string) {
 	}
 	fmt.Println("wrote", jsonPath)
 	fmt.Println("wrote", mdPath)
+	fmt.Printf("stress: %.0f urls/s, %.0f%% success, p50=%dms (n=%d, %s). See %s\n",
+		report.URLsPerSec, report.SuccessRate*100, report.LatencyMs.P50, report.N, report.Preset, mdPath)
 
 	if *baseline != "" {
 		base, err := loadBaseline(*baseline)

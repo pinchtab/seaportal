@@ -19,14 +19,15 @@ COMMANDS=(
   "build:🚀:Build binary"
   "run:🏃:Build & run with test URL"
   "check:🧪:All checks (format, vet, lint, test)"
-  "test:🔬:Run tests"
+  "test:🔬:Run tests (fast: -short, cached, no race)"
+  "test full:🔬:Full tests (race + coverage; pre-push/CI)"
   "test race:🏁:Run tests with race detector"
   "coverage:📊:Run tests with coverage"
   "lint:🔍:Run golangci-lint"
   "fmt:✨:Format code"
   "vet:🩺:Run go vet"
   "fuzz:🎲:Run fuzz tests (30s)"
-  "bench:⚡:Run seabench (./dev bench help for subcommands)"
+  "bench:⚡:Run seabench (./dev bench all for a full summary; help for subcommands)"
   "opt:🎯:Optimization baseline (./dev opt baseline)"
   "doctor:🏥:Check dev environment"
   "e2e:🐳:E2E tests (Docker)"
@@ -74,19 +75,41 @@ run_command() {
       exec bash scripts/check.sh
       ;;
     "test")
-      echo "  ${ACCENT}${BOLD}🔬 Running tests${NC}"
-      echo ""
       shift_args="${2:-}"
-      if [ "$shift_args" = "race" ]; then
-        go test $(go list ./... | grep -v '/competitors/') -count=1 -race -v
-      else
-        exec bash scripts/test.sh
-      fi
+      case "$shift_args" in
+        race)
+          echo "  ${ACCENT}${BOLD}🏁 Tests with race detector${NC}"
+          echo ""
+          go test $(go list ./... | grep -v '/competitors/') -count=1 -race -v
+          ;;
+        full)
+          # Strict lane — race detector + coverage. Run before pushing / in CI.
+          echo "  ${ACCENT}${BOLD}🔬 Full tests — race + coverage${NC}"
+          echo ""
+          exec bash scripts/test.sh
+          ;;
+        *)
+          # Fast inner-loop lane: no race (~5x faster), -short skips the heavy
+          # suites, and the build/test cache is left on (no -count=1) so
+          # unchanged packages are skipped on repeat runs.
+          echo "  ${ACCENT}${BOLD}🔬 Running tests — fast lane${NC}  ${MUTED}(-short, cached, no race)${NC}"
+          echo "  ${MUTED}Before pushing run: ./dev test full   (race + coverage)${NC}"
+          echo ""
+          go test -short $(go list ./... | grep -v '/competitors/')
+          ;;
+      esac
       ;;
     "test race")
       echo "  ${ACCENT}${BOLD}🏁 Tests with race detector${NC}"
       echo ""
       go test ./... -count=1 -race -v
+      ;;
+    "test full")
+      # Menu picker passes the whole label as one arg; CLI "./dev test full"
+      # is handled by the shift_args branch in the "test" case.
+      echo "  ${ACCENT}${BOLD}🔬 Full tests — race + coverage${NC}"
+      echo ""
+      exec bash scripts/test.sh
       ;;
     "coverage")
       echo "  ${ACCENT}${BOLD}📊 Coverage${NC}"
@@ -140,7 +163,35 @@ run_command() {
       echo "  ${ACCENT}${BOLD}⚡ Seabench${NC}"
       echo ""
       go build -o ./seabench ./cmd/seabench/
-      ./seabench "${@:2}"
+      if [ "${2:-}" = "all" ]; then
+        # Run every offline (deterministic, no-network) lane and collect each
+        # lane's one-line summary into a final recap. The live 'sweep' lane is
+        # excluded — it hits the network and isn't reproducible.
+        echo "  ${MUTED}Offline lanes: eval, classify, tokens, cachebench, stress. (Live 'sweep' excluded.)${NC}"
+        echo ""
+        bench_summary=""
+        bench_failed=0
+        for lane in "eval" "classify" "tokens" "cachebench" "stress --preset quick"; do
+          name="${lane%% *}"
+          echo "  ${ACCENT}▶ ${name}${NC}"
+          out=$(./seabench $lane 2>&1); status=$?
+          line=$(echo "$out" | grep -E "^(eval|classify|tokens|cachebench|stress):" | head -1)
+          if [ -z "$line" ]; then
+            line="${name}: no summary (exit ${status})"
+            echo "$out" | tail -3
+            bench_failed=1
+          fi
+          echo "    ${SUCCESS}✓${NC} ${line}"
+          bench_summary="${bench_summary}  ${line}\n"
+        done
+        echo ""
+        echo "  ${ACCENT}${BOLD}━━━ Bench summary ━━━${NC}"
+        printf "%b" "$bench_summary"
+        echo ""
+        [ "$bench_failed" -eq 0 ] && echo "  ${SUCCESS}✓ all lanes reported${NC}" || echo "  ${ERROR}✗ a lane produced no summary${NC}"
+      else
+        ./seabench "${@:2}"
+      fi
       ;;
     "opt")
       echo "  ${ACCENT}${BOLD}🎯 Optimization baseline${NC}"

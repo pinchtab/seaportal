@@ -62,6 +62,9 @@ func TestDetectBlocked(t *testing.T) {
 }
 
 func TestRetryOn429(t *testing.T) {
+	if testing.Short() {
+		t.Skip("sleeps two real 1s Retry-After waits; runs in the full lane (./dev test full)")
+	}
 	attempts := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		attempts++

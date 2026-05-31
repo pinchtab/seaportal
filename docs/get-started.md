@@ -44,6 +44,15 @@ seaportal mcp                                       # run as an MCP server over 
 
 See the [CLI reference](reference/cli.md) for all flags and the [MCP reference](reference/mcp.md) for the server tools.
 
+### What to expect
+
+SeaPortal is a **fast first-pass triage that fails over**, not a universal fetcher.
+On reachable static/SSR pages, extraction is typically p50 ~1s / p95 ~2s; across the
+raw open web the tail is far longer (p90 >10s) and only ~40% of the Tranco top-1000
+hosts return HTML at all (~53% once dead CDN/DNS infra domains are excluded). Set
+`--timeout` and route on the browser-recommendation signal rather than assuming every
+URL extracts — see [Reliability](../README.md#reliability--what-to-expect).
+
 ## As a Library
 
 The public package is the module root, `github.com/pinchtab/seaportal`:

@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	utls "github.com/refraction-networking/utls"
@@ -69,8 +70,15 @@ func getUTLSClientWithProxy(proxyURL *url.URL) *http.Client {
 // chromeTransport implements http.RoundTripper with Chrome TLS fingerprint.
 // Handles both HTTP/1.1 and HTTP/2 depending on server ALPN negotiation.
 // Optional proxyURL routes requests through an HTTP/HTTPS/SOCKS5 proxy.
+//
+// security, when set with BlockPrivateIPs, installs a dial Control hook that
+// re-validates the post-DNS resolved IP just before connect — the
+// DNS-rebinding guard. It is applied only on the direct (non-proxy) dial: a
+// proxied request dials the proxy, not the target, so the target's host/scheme
+// is instead vetted by the pre-fetch and per-redirect ValidateURL gates.
 type chromeTransport struct {
 	proxyURL *url.URL
+	security *SecurityPolicy
 }
 
 // RoundTrip implements http.RoundTripper
@@ -80,6 +88,18 @@ func (t *chromeTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	if req.URL.Scheme != "https" {
 		if t.proxyURL != nil {
 			tr := &http.Transport{Proxy: http.ProxyURL(t.proxyURL)}
+			return tr.RoundTrip(req)
+		}
+		// Plain-HTTP direct path: apply the SSRF dial guard when configured.
+		// A fresh transport (no pooling) is the cost of carrying per-call policy.
+		if ctrl := t.security.dialControl(); ctrl != nil {
+			tr := &http.Transport{
+				DialContext: (&net.Dialer{
+					Timeout:   30 * time.Second,
+					KeepAlive: 30 * time.Second,
+					Control:   ctrl,
+				}).DialContext,
+			}
 			return tr.RoundTrip(req)
 		}
 		return http.DefaultTransport.RoundTrip(req)
@@ -94,7 +114,7 @@ func (t *chromeTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	if t.proxyURL != nil {
 		tlsConn, err = dialTLSChromeViaProxy(req.Context(), t.proxyURL, req.URL.Hostname(), req.URL.Host)
 	} else {
-		tlsConn, err = dialTLSChrome(req.Context(), req.URL.Hostname(), req.URL.Host)
+		tlsConn, err = dialTLSChrome(req.Context(), req.URL.Hostname(), req.URL.Host, t.security.dialControl())
 	}
 	if err != nil {
 		return nil, err
@@ -128,11 +148,14 @@ func (t *chromeTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	return resp, nil
 }
 
-// dialTLSChrome establishes a TLS connection impersonating Chrome 120.
-func dialTLSChrome(ctx context.Context, serverName, host string) (*utls.UConn, error) {
+// dialTLSChrome establishes a TLS connection impersonating Chrome 120. The
+// optional control hook (from SecurityPolicy.dialControl) validates the
+// post-DNS resolved IP before connect, closing the DNS-rebinding window.
+func dialTLSChrome(ctx context.Context, serverName, host string, control func(network, address string, c syscall.RawConn) error) (*utls.UConn, error) {
 	dialer := &net.Dialer{
 		Timeout:   30 * time.Second,
 		KeepAlive: 30 * time.Second,
+		Control:   control,
 	}
 
 	// Ensure host has port

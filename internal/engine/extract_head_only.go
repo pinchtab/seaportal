@@ -18,6 +18,7 @@ package engine
 // Distinct from Options.HeadPreflight which is a true HTTP HEAD (zero body).
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -36,6 +37,17 @@ func fetchHeadOnly(targetURL string, opts Options) (result Result) {
 	start := time.Now()
 	result = Result{URL: targetURL, HeadOnly: true}
 
+	// Pre-fetch security gate (mirrors FromURLWithOptions). The 16 KB cap makes
+	// the body-size policy irrelevant here, but SSRF / scheme / domain / redirect
+	// rules still apply to a head-only triage fetch.
+	if opts.Security != nil {
+		if err := opts.Security.ValidateURL(context.Background(), targetURL); err != nil {
+			result.Error = err.Error()
+			result.SecurityBlock = err.Error()
+			return result
+		}
+	}
+
 	domain := extractDomain(targetURL)
 
 	timeout := 30 * time.Second
@@ -47,6 +59,11 @@ func fetchHeadOnly(targetURL string, opts Options) (result Result) {
 
 	tracker := &redirectTracker{}
 
+	checkRedirect := tracker.checkRedirect
+	if opts.Security != nil {
+		checkRedirect = opts.Security.redirectChecker(tracker)
+	}
+
 	sharedC, clientErr := getClientForOptions(opts)
 	if clientErr != nil {
 		result.Error = "invalid proxy URL: " + clientErr.Error()
@@ -55,7 +72,7 @@ func fetchHeadOnly(targetURL string, opts Options) (result Result) {
 
 	var client *http.Client
 	if opts.NoPooling || (opts.DomainTimeout != nil && domain != "" && opts.DomainTimeout[domain] > 0) {
-		client = &http.Client{Timeout: timeout, CheckRedirect: tracker.checkRedirect}
+		client = &http.Client{Timeout: timeout, CheckRedirect: checkRedirect}
 		if opts.Proxy != "" {
 			client.Transport = sharedC.Transport
 		}
@@ -63,8 +80,11 @@ func fetchHeadOnly(targetURL string, opts Options) (result Result) {
 		client = &http.Client{
 			Timeout:       sharedC.Timeout,
 			Transport:     sharedC.Transport,
-			CheckRedirect: tracker.checkRedirect,
+			CheckRedirect: checkRedirect,
 		}
+	}
+	if opts.Security != nil && opts.Proxy == "" {
+		client.Transport = &chromeTransport{security: opts.Security}
 	}
 	if opts.Transport != nil {
 		client.Transport = opts.Transport

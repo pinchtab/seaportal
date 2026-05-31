@@ -170,6 +170,20 @@ func runExtract(rawArgs []string) {
 	filterByQuery := flag.Bool("filter-by-query", false, "Replace Content with concatenated top-N sections (default top-3 when --top-n is unset)")
 	splitOut := flag.String("split-out", "", "Directory to write split output files into")
 	splitBytes := flag.Int("split-bytes", 0, "Approximate bytes per split file (default: --max-tokens × 4 or 32768)")
+
+	// Security policy (safe-by-default: private-IP block on). Library callers
+	// opt in via Options.Security; the CLI applies DefaultSecurityPolicy and
+	// lets these flags tune it.
+	blockPrivateIPs := flag.Bool("block-private-ips", true, "SSRF guard: reject targets resolving to private/internal IPs")
+	allowInternal := flag.Bool("allow-internal", false, "Escape hatch: allow private/internal IP targets (turns off --block-private-ips)")
+	flag.BoolVar(allowInternal, "allow-private-ips", false, "Alias for --allow-internal")
+	maxRedirects := flag.Int("max-redirects", 10, "Max redirect hops (0 = none, -1 = unlimited)")
+	allowDomains := flag.String("allow-domains", "", "Comma-separated host allowlist (suffix match); empty = allow any")
+	denyDomains := flag.String("deny-domains", "", "Comma-separated host blocklist (suffix match)")
+	trustedResolveCIDRs := flag.String("trusted-resolve-cidrs", "", "Comma-separated CIDRs/IPs allowed to resolve to non-public addresses")
+	maxResponseBytes := flag.Int64("max-response-bytes", 50<<20, "Max raw response body bytes (0 = unlimited)")
+	maxDecompressedBytes := flag.Int64("max-decompressed-bytes", 200<<20, "Max decompressed body bytes (0 = unlimited)")
+
 	showVersion := flag.Bool("version", false, "Show version")
 	flag.BoolVar(showVersion, "v", false, "Show version")
 
@@ -182,6 +196,10 @@ func runExtract(rawArgs []string) {
 		fmt.Fprintln(os.Stderr, "Options:")
 		flag.PrintDefaults()
 	}
+	// cli.Parse uses the FlagSet's own Usage, not the package-level flag.Usage,
+	// so wire them together — otherwise `--help` falls back to Go's terse
+	// "Usage of seaportal:" default instead of the custom help above.
+	cli.Usage = flag.Usage
 
 	_ = cli.Parse(rawArgs)
 
@@ -200,6 +218,18 @@ func runExtract(rawArgs []string) {
 		os.Exit(2)
 	}
 
+	secPolicy := &seaportal.SecurityPolicy{
+		BlockPrivateIPs:      *blockPrivateIPs && !*allowInternal,
+		AllowedSchemes:       []string{"http", "https"},
+		MaxRedirects:         *maxRedirects,
+		RevalidateRedirects:  true,
+		MaxResponseBytes:     *maxResponseBytes,
+		MaxDecompressedBytes: *maxDecompressedBytes,
+		AllowedDomains:       splitCSV(*allowDomains),
+		DeniedDomains:        splitCSV(*denyDomains),
+		TrustedResolveCIDRs:  splitCSV(*trustedResolveCIDRs),
+	}
+
 	args := flag.Args()
 	stdinMode := len(args) == 0 || (len(args) == 1 && args[0] == "-")
 
@@ -207,6 +237,13 @@ func runExtract(rawArgs []string) {
 	var stdinHTML string
 	if stdinMode {
 		if *baseURL == "" {
+			// A bare `seaportal` (no URL, no --base-url) is a misinvocation,
+			// not a stdin pipe — show usage. An explicit `-` still opts into
+			// stdin mode and requires --base-url.
+			if len(args) == 0 {
+				flag.Usage()
+				os.Exit(2)
+			}
 			fmt.Fprintln(os.Stderr, "error: --base-url is required when reading HTML from stdin")
 			os.Exit(2)
 		}
@@ -246,6 +283,12 @@ func runExtract(rawArgs []string) {
 		if stdinMode {
 			htmlContent = stdinHTML
 		} else {
+			// The snapshot path fetches via fetchHTML (a separate simple client),
+			// so enforce the security policy's pre-fetch gate here too.
+			if err := secPolicy.ValidateURL(context.Background(), targetURL); err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				os.Exit(1)
+			}
 			h, err := fetchHTML(targetURL)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error fetching URL: %v\n", err)
@@ -295,7 +338,7 @@ func runExtract(rawArgs []string) {
 		os.Exit(2)
 	}
 
-	opts := seaportal.Options{Dedupe: dedupe, NoNearDedupe: *noNearDedupe, FastMode: *fast, ProbeSearch: *probeSearch, MaxRetries: *retries, MaxRetryWait: *maxRetryWait, TotalRetryTimeout: *retryTimeout, WithLinks: *withLinks, WithImages: *withImages, WithTables: *withTables, WithComments: *withComments, Citations: *citations, LinkRetention: mode, Chunk: chunkCfg, SelectCSS: *selectCSS, StripCSS: *stripCSS, MaxTokens: *maxTokens, HeadOnly: *headOnly, RespectRobots: *respectRobots, UserAgent: *ua, NoPruneFallback: *noPruneFallback, RateLimit: *rateLimit, Proxy: *proxy, CacheDir: *cacheDir, CacheTTL: *cacheTTL, CacheStaleTolerance: *cacheStaleTolerance, NoCache: *noCache, NoPDF: *noPDF, SchemaPath: *schemaPath, Query: *query, TopN: *topN, FilterByQuery: *filterByQuery, SplitOut: *splitOut, SplitBytes: *splitBytes}
+	opts := seaportal.Options{Dedupe: dedupe, NoNearDedupe: *noNearDedupe, FastMode: *fast, ProbeSearch: *probeSearch, MaxRetries: *retries, MaxRetryWait: *maxRetryWait, TotalRetryTimeout: *retryTimeout, WithLinks: *withLinks, WithImages: *withImages, WithTables: *withTables, WithComments: *withComments, Citations: *citations, LinkRetention: mode, Chunk: chunkCfg, SelectCSS: *selectCSS, StripCSS: *stripCSS, MaxTokens: *maxTokens, HeadOnly: *headOnly, RespectRobots: *respectRobots, UserAgent: *ua, NoPruneFallback: *noPruneFallback, RateLimit: *rateLimit, Proxy: *proxy, CacheDir: *cacheDir, CacheTTL: *cacheTTL, CacheStaleTolerance: *cacheStaleTolerance, NoCache: *noCache, NoPDF: *noPDF, SchemaPath: *schemaPath, Query: *query, TopN: *topN, FilterByQuery: *filterByQuery, SplitOut: *splitOut, SplitBytes: *splitBytes, Security: secPolicy}
 	var result seaportal.Result
 	if stdinMode {
 		result = seaportal.FromHTMLWithOptions(stdinHTML, targetURL, opts)
@@ -436,6 +479,21 @@ func runExtract(rawArgs []string) {
 	}
 	fmt.Println("\n--- Content ---")
 	fmt.Println(output.String())
+}
+
+// splitCSV splits a comma-separated flag value into trimmed, non-empty items.
+func splitCSV(s string) []string {
+	if strings.TrimSpace(s) == "" {
+		return nil
+	}
+	parts := strings.Split(s, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if p = strings.TrimSpace(p); p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
 }
 
 func fetchHTML(url string) (string, error) {

@@ -79,6 +79,26 @@ The default verb extracts a URL. It writes the rendered Markdown and JSON to `re
 | `--split-out DIR` | "" | Write split output files into DIR (not supported with `--xml`) |
 | `--split-bytes N` | 0 | Approx bytes per file (default `--max-tokens × 4` or 32768) |
 
+### Security
+
+The CLI is **safe by default**: it applies `DefaultSecurityPolicy()` (SSRF /
+private-IP block on, `http`/`https` only, redirect + body caps). Loosen it only
+for trusted targets — e.g. `--allow-internal` to reach `localhost` / a private
+host. See [SECURITY.md](../../SECURITY.md) for the threat model and coverage
+caveats (`--proxy` skips the dial-time rebinding check; `--snapshot` pre-validates
+the host but skips redirect re-validation and the body caps).
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--block-private-ips` | true | Reject targets resolving to private/internal IPs (SSRF guard) |
+| `--allow-internal` (alias `--allow-private-ips`) | false | Escape hatch: allow private/internal IP targets |
+| `--max-redirects N` | 10 | Max redirect hops (`0` = none, `-1` = unlimited); each hop is re-validated |
+| `--allow-domains LIST` | "" | Comma-separated host allowlist (suffix match); empty = allow any |
+| `--deny-domains LIST` | "" | Comma-separated host blocklist (suffix match; deny wins) |
+| `--trusted-resolve-cidrs LIST` | "" | CIDRs/IPs allowed to resolve to non-public addresses |
+| `--max-response-bytes N` | 52428800 | Max raw response body bytes (0 = unlimited) |
+| `--max-decompressed-bytes N` | 209715200 | Max decompressed body bytes — defuses decompression bombs (0 = unlimited) |
+
 ### Snapshot flags
 
 | Flag | Default | Description |

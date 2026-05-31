@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"compress/flate"
 	"compress/gzip"
+	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -26,6 +28,11 @@ var (
 	mdConverterOnce sync.Once
 	mdConverter     *converter.Converter
 )
+
+// retryBackoffBase is the unit of exponential retry backoff (hop N waits
+// 2^N × base, capped by maxRetryWait). Production is 1s; tests shrink it to a
+// few milliseconds so retry-path coverage runs without real-time sleeps.
+var retryBackoffBase = time.Second
 
 // getMarkdownConverter lazy-initialises the html-to-markdown converter so
 // short-lived invocations (--version, --help, subcommands that never extract
@@ -138,6 +145,18 @@ func FromURLWithOptions(targetURL string, opts Options) (result Result) {
 		}
 	}
 
+	// Pre-fetch security gate: validate scheme + domain + resolved IP before any
+	// socket is opened. Placed after the data: short-circuit (data: never hits
+	// the network) so the policy only governs real network fetches. The dial
+	// Control hook re-checks the resolved IP at connect to close DNS rebinding.
+	if opts.Security != nil {
+		if err := opts.Security.ValidateURL(context.Background(), targetURL); err != nil {
+			result.Error = err.Error()
+			result.SecurityBlock = err.Error()
+			return result
+		}
+	}
+
 	// preWarnings collects warnings raised during fetch/decode (before
 	// fromHTMLInternal replaces `result`). They are merged into
 	// result.Warnings via mergePreWarnings before each return path.
@@ -154,6 +173,13 @@ func FromURLWithOptions(targetURL string, opts Options) (result Result) {
 
 	tracker := &redirectTracker{}
 
+	// CheckRedirect: a SecurityPolicy enforces its own MaxRedirects + per-hop
+	// revalidation; otherwise the default 10-hop tracker applies.
+	checkRedirect := tracker.checkRedirect
+	if opts.Security != nil {
+		checkRedirect = opts.Security.redirectChecker(tracker)
+	}
+
 	sharedC, clientErr := getClientForOptions(opts)
 	if clientErr != nil {
 		result.Error = "invalid proxy URL: " + clientErr.Error()
@@ -162,7 +188,7 @@ func FromURLWithOptions(targetURL string, opts Options) (result Result) {
 
 	var client *http.Client
 	if opts.NoPooling || (opts.DomainTimeout != nil && domain != "" && opts.DomainTimeout[domain] > 0) {
-		client = &http.Client{Timeout: timeout, CheckRedirect: tracker.checkRedirect}
+		client = &http.Client{Timeout: timeout, CheckRedirect: checkRedirect}
 		// Honour proxy even in the no-pooling / per-domain-timeout branch.
 		if opts.Proxy != "" {
 			client.Transport = sharedC.Transport
@@ -171,8 +197,15 @@ func FromURLWithOptions(targetURL string, opts Options) (result Result) {
 		client = &http.Client{
 			Timeout:       sharedC.Timeout,
 			Transport:     sharedC.Transport,
-			CheckRedirect: tracker.checkRedirect,
+			CheckRedirect: checkRedirect,
 		}
+	}
+	// Security dial guard: on the direct (non-proxy) path, swap the cached
+	// singleton transport for a fresh one carrying the policy so its dial
+	// Control hook can re-validate the resolved IP. The proxy path keeps its
+	// proxy-aware transport (target IP is vetted by ValidateURL instead).
+	if opts.Security != nil && opts.Proxy == "" {
+		client.Transport = &chromeTransport{security: opts.Security}
 	}
 	// Test injection: an opts-supplied RoundTripper trumps the utls/proxy
 	// transport. Lets mock.Replay/mock.Record serve canned bytes without
@@ -378,7 +411,7 @@ func FromURLWithOptions(targetURL string, opts Options) (result Result) {
 		resp, err = client.Do(req)
 		if err != nil {
 			if attempt < maxRetries && isRetryableError(err) {
-				backoff := time.Duration(1<<uint(attempt)) * time.Second
+				backoff := time.Duration(1<<uint(attempt)) * retryBackoffBase
 				if backoff > maxRetryWait {
 					backoff = maxRetryWait
 				}
@@ -405,7 +438,7 @@ func FromURLWithOptions(targetURL string, opts Options) (result Result) {
 		}
 
 		if (resp.StatusCode == http.StatusBadGateway || resp.StatusCode == http.StatusGatewayTimeout || (resp.StatusCode == http.StatusServiceUnavailable && resp.Header.Get("Retry-After") == "")) && attempt < maxRetries {
-			backoff := time.Duration(1<<uint(attempt)) * time.Second
+			backoff := time.Duration(1<<uint(attempt)) * retryBackoffBase
 			if backoff > maxRetryWait {
 				backoff = maxRetryWait
 			}
@@ -486,10 +519,17 @@ func FromURLWithOptions(targetURL string, opts Options) (result Result) {
 	}
 
 	downloadStart := time.Now()
-	bodyBytes, err := io.ReadAll(resp.Body)
+	var maxBody int64
+	if opts.Security != nil {
+		maxBody = opts.Security.MaxResponseBytes
+	}
+	bodyBytes, err := limitedReadAll(resp.Body, maxBody, ErrResponseTooLarge)
 	downloadMs := time.Since(downloadStart).Milliseconds()
 	if err != nil {
 		result.Error = err.Error()
+		if errors.Is(err, ErrResponseTooLarge) {
+			result.SecurityBlock = err.Error()
+		}
 		return result
 	}
 
@@ -508,7 +548,19 @@ func FromURLWithOptions(targetURL string, opts Options) (result Result) {
 	// Fallback path: HTTP/2 transport may have already decompressed despite the header.
 	contentEncoding := strings.ToLower(resp.Header.Get("Content-Encoding"))
 	if contentEncoding != "" {
-		decompressed, decompErr := decompressBody(bodyBytes, contentEncoding)
+		var maxDecomp int64
+		if opts.Security != nil {
+			maxDecomp = opts.Security.MaxDecompressedBytes
+		}
+		decompressed, decompErr := decompressBodyLimited(bodyBytes, contentEncoding, maxDecomp)
+		if errors.Is(decompErr, ErrDecompressTooLarge) {
+			// A decompression bomb must fail hard — never fall through to the
+			// "looks like HTML/JSON" heuristic below, which would keep the
+			// oversized/compressed bytes.
+			result.Error = decompErr.Error()
+			result.SecurityBlock = decompErr.Error()
+			return result
+		}
 		if decompErr != nil {
 			if len(bodyBytes) > 0 {
 				trimmed := bytes.TrimSpace(bodyBytes)
@@ -668,14 +720,26 @@ func FromURLWithOptions(targetURL string, opts Options) (result Result) {
 		}
 		defer func() { _ = resp.Body.Close() }()
 
-		bodyBytes, err = io.ReadAll(resp.Body)
+		bodyBytes, err = limitedReadAll(resp.Body, maxBody, ErrResponseTooLarge)
 		if err != nil {
 			result.Error = err.Error()
+			if errors.Is(err, ErrResponseTooLarge) {
+				result.SecurityBlock = err.Error()
+			}
 			return result
 		}
 		contentEncoding = strings.ToLower(resp.Header.Get("Content-Encoding"))
 		if contentEncoding != "" {
-			decompressed, decompErr := decompressBody(bodyBytes, contentEncoding)
+			var maxDecomp int64
+			if opts.Security != nil {
+				maxDecomp = opts.Security.MaxDecompressedBytes
+			}
+			decompressed, decompErr := decompressBodyLimited(bodyBytes, contentEncoding, maxDecomp)
+			if errors.Is(decompErr, ErrDecompressTooLarge) {
+				result.Error = decompErr.Error()
+				result.SecurityBlock = decompErr.Error()
+				return result
+			}
 			if decompErr == nil {
 				bodyBytes = decompressed
 			}
@@ -1436,6 +1500,14 @@ func processArticle(article readability.Article, targetURL string, start time.Ti
 }
 
 func decompressBody(data []byte, encoding string) ([]byte, error) {
+	return decompressBodyLimited(data, encoding, 0)
+}
+
+// decompressBodyLimited decodes a Content-Encoding body, capping the
+// decompressed output at max bytes (0 = unbounded) to defuse decompression
+// bombs — a few KB of gzip can expand to gigabytes. Over-cap returns
+// ErrDecompressTooLarge instead of buffering the whole expansion.
+func decompressBodyLimited(data []byte, encoding string, max int64) ([]byte, error) {
 	switch encoding {
 	case "gzip":
 		reader, err := gzip.NewReader(bytes.NewReader(data))
@@ -1443,16 +1515,16 @@ func decompressBody(data []byte, encoding string) ([]byte, error) {
 			return nil, err
 		}
 		defer func() { _ = reader.Close() }()
-		return io.ReadAll(reader)
+		return limitedReadAll(reader, max, ErrDecompressTooLarge)
 
 	case "deflate":
 		reader := flate.NewReader(bytes.NewReader(data))
 		defer func() { _ = reader.Close() }()
-		return io.ReadAll(reader)
+		return limitedReadAll(reader, max, ErrDecompressTooLarge)
 
 	case "br":
 		reader := brotli.NewReader(bytes.NewReader(data))
-		return io.ReadAll(reader)
+		return limitedReadAll(reader, max, ErrDecompressTooLarge)
 
 	case "zstd":
 		reader, err := zstd.NewReader(bytes.NewReader(data))
@@ -1460,7 +1532,7 @@ func decompressBody(data []byte, encoding string) ([]byte, error) {
 			return nil, err
 		}
 		defer reader.Close()
-		return io.ReadAll(reader)
+		return limitedReadAll(reader, max, ErrDecompressTooLarge)
 
 	case "identity", "":
 		return data, nil

@@ -103,8 +103,8 @@ func runTokens(args []string) {
 	}
 	fmt.Println("wrote", jsonPath)
 	fmt.Println("wrote", mdPath)
-	fmt.Printf("tokens: %d fixtures × %d modes. See %s\n",
-		report.TotalFixtures, len(tokenModes), mdPath)
+	fmt.Printf("tokens: all-mode mean ratio=%.3f (%d fixtures × %d modes). See %s\n",
+		report.PerMode["all"].MeanRatio, report.TotalFixtures, len(tokenModes), mdPath)
 }
 
 // tokensCorpus loads the corpus and runs the 4-mode token-ratio benchmark.

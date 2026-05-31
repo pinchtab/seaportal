@@ -18,7 +18,9 @@ func TestCLI_XMLOutput(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	cmd := exec.Command(bin, "--xml", srv.URL)
+	// --allow-internal: the httptest server listens on loopback, which the
+	// safe-by-default --block-private-ips would otherwise reject.
+	cmd := exec.Command(bin, "--allow-internal", "--xml", srv.URL)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr

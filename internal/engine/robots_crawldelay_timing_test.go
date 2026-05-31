@@ -17,6 +17,9 @@ import (
 // server publishing `Crawl-delay: 1` and asserts the gap is within
 // [0.9s, 1.4s] — the parsed delay with generous CI jitter tolerance.
 func TestRobotsCrawlDelay_GapBetweenRequests(t *testing.T) {
+	if testing.Short() {
+		t.Skip("asserts a real ~1s crawl-delay gap; runs in the full lane (./dev test full)")
+	}
 	leakcheck.CheckLeak(t)
 	const html = "<!doctype html><html><head><title>ok</title></head><body>" +
 		"<p>Body content with enough words to register as real content. " +

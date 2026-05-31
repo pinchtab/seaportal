@@ -58,7 +58,10 @@ func registerMCPTools(srv *mcp.Server) {
 			if url == "" {
 				return "", fmt.Errorf("missing required argument: url")
 			}
-			opts := seaportal.Options{Dedupe: true}
+			// The MCP server fetches arbitrary URLs from tool args — the most
+			// exposed entrypoint — so apply the secure-by-default policy
+			// (private-IP block on, http/https only, redirect + body caps).
+			opts := seaportal.Options{Dedupe: true, Security: seaportal.DefaultSecurityPolicy()}
 			if v, ok := args["dedupe"].(bool); ok {
 				opts.Dedupe = v
 			}
@@ -105,6 +108,11 @@ func registerMCPTools(srv *mcp.Server) {
 			url, _ := args["url"].(string)
 			if url == "" {
 				return "", fmt.Errorf("missing required argument: url")
+			}
+			// fetchHTML is a separate simple client; gate it with the same
+			// secure-default SSRF/scheme policy as fetch_url.
+			if err := seaportal.DefaultSecurityPolicy().ValidateURL(context.Background(), url); err != nil {
+				return "", err
 			}
 			html, err := fetchHTML(url)
 			if err != nil {

@@ -132,6 +132,10 @@ func runCacheBench(args []string) {
 	}
 	fmt.Println("wrote", jsonPath)
 	fmt.Println("wrote", mdPath)
+	ttl := report.PerMode["ttl-24h"]
+	swr := report.PerMode["swr-10m"]
+	fmt.Printf("cachebench: ttl-24h hit=%.0f%% p50=%dms, swr-10m hit=%.0f%%. See %s\n",
+		ttl.HitRate*100, ttl.P50Ms, swr.HitRate*100, mdPath)
 }
 
 // executeCacheBench builds the fixture server, drives N requests through each

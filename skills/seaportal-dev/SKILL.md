@@ -49,6 +49,8 @@ cmd/
                     # cachebench, diff, selftest, sweep (live)
 internal/
   engine/           # Core extraction pipeline + cache + classifier
+                    # security.go = SecurityPolicy (SSRF/private-IP/redirect/
+                    # decompression guard); threaded via Options.Security
     mock/           # Record/replay HTTP mock for hermetic tests
     leakcheck/      # Goroutine-leak guard for tests
   mcp/              # MCP (Model Context Protocol) server (over stdio)
@@ -152,6 +154,12 @@ discussion:
 - **HTTP-only.** No JS execution, no browser fallback. Escalate to pinchtab.
 - **No LLM calls.** SeaPortal is *input* to LLMs, not a wrapper around them.
 - **Sub-2s extraction** is the target for typical (non-pathological) inputs.
+- **Security default is asymmetric — preserve it.** The CLI and MCP server apply
+  `DefaultSecurityPolicy()` (safe by default: SSRF/private-IP block, http/https,
+  redirect + body caps). The library leaves `Options.Security` **nil = unguarded**
+  for backward compat — callers handling untrusted URLs must opt in. When adding a
+  new fetch entrypoint, decide its posture explicitly and document it; see
+  `SECURITY.md`.
 
 ## Common tasks
 

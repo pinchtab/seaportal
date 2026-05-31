@@ -124,6 +124,24 @@ Past-TTL entries that carry `ETag` or `Last-Modified` are automatically re-valid
 
 `--proxy=URL` routes the fetch through a proxy. `http://` and `https://` proxy URLs are supported with Basic auth taken from the URL userinfo (`user:pass@host:port`). HTTPS targets use a CONNECT tunnel; the Chrome TLS fingerprint is preserved end-to-end with the origin. `socks5://` URLs work for HTTP target URLs only — HTTPS-over-SOCKS5 is a V1 limitation. Invalid proxy URLs fail fast with `result.Error = "invalid proxy URL: ..."`.
 
+## Security defaults (local / internal URLs)
+
+The CLI is **safe by default** (`DefaultSecurityPolicy`): it blocks targets that
+resolve to private/internal IPs (SSRF guard), allows only `http`/`https`, caps
+redirects at 10 with per-hop re-validation, and bounds the raw (50 MiB) and
+decompressed (200 MiB) body.
+
+- **Reading `localhost`, `127.0.0.1`, a `192.168.*`/`10.*` host, or any intranet
+  URL fails by default** with `Error: target resolves to a private/internal IP`.
+  Add **`--allow-internal`** to permit it (you are vouching the target is trusted).
+- Other knobs: `--max-redirects N`, `--allow-domains` / `--deny-domains`,
+  `--trusted-resolve-cidrs`, `--max-response-bytes`, `--max-decompressed-bytes`.
+- The MCP server applies the same safe default to `fetch_url` / `fetch_snapshot`.
+- Caveats: with `--proxy` the dial-time rebinding check is skipped (the target is
+  still vetted before fetch and on each redirect, just not at connect time);
+  `--snapshot` uses a lighter client that pre-validates scheme/host/IP but does
+  not apply redirect re-validation or the body caps.
+
 ## Per-host rate limiting
 
 `--rate-limit=DURATION` enforces a minimum interval between requests to the same host. Useful primarily for library callers sharing a `HostRateLimiter` across calls via `Options.RateLimiter`; a single CLI invocation only fires one request, so the throttle has no cross-call effect by itself. Combines with `--respect-robots` crawl-delay (both apply; effective wait is their sum).

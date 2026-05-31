@@ -75,6 +75,45 @@ Selected fields (see `seaportal.go` / `internal/engine` for the full struct):
 | `TopN` | int | 0 | Keep only top-N sections |
 | `FilterByQuery` | bool | false | Replace `Content` with top-N sections |
 | `SplitOut` / `SplitBytes` | string / int | "" / 0 | Split output across files |
+| `Security` | `*SecurityPolicy` | nil | SSRF / private-IP / redirect / decompression guard (see below) |
+
+## Security policy
+
+`Options.Security` threads an SSRF / private-IP / redirect / decompression guard
+through the whole fetch path. **A `nil` policy (the zero value) disables every
+check** — the historical unguarded behaviour — so a library caller handling
+**untrusted URLs must set one.** The CLI and the MCP server apply
+`DefaultSecurityPolicy()` automatically.
+
+```go
+result := seaportal.FromURLWithOptions(untrustedURL, seaportal.Options{
+    Security: seaportal.DefaultSecurityPolicy(), // block private IPs, http/https, caps
+})
+if result.SecurityBlock != "" {
+    // refused by policy (SSRF / scheme / domain / size cap)
+}
+```
+
+```go
+type SecurityPolicy struct {
+    BlockPrivateIPs      bool     // reject RFC1918/loopback/link-local/ULA/CGNAT/metadata IPs
+    TrustedResolveCIDRs  []string // CIDRs/IPs allowed to resolve non-public (escape hatch)
+    AllowedDomains       []string // host allowlist (suffix match); empty = any
+    DeniedDomains        []string // host blocklist (suffix match; deny wins)
+    AllowedSchemes       []string // default {"http","https"}; rejects file:/ftp:/gopher:/ws:
+    MaxRedirects         int      // >0 cap, 0 none, -1 unlimited
+    RevalidateRedirects  bool     // re-validate scheme+host+IP on every redirect hop
+    MaxResponseBytes     int64    // cap raw body (0 = unbounded)
+    MaxDecompressedBytes int64    // cap decompressor output — defuses zip bombs (0 = unbounded)
+}
+```
+
+`DefaultSecurityPolicy()` returns `BlockPrivateIPs: true`, `http`/`https` only,
+`MaxRedirects: 10` with `RevalidateRedirects: true`, and 50 MiB / 200 MiB body
+caps. Enforcement runs pre-fetch, at the dial Control hook (closing the
+DNS-rebinding window), on every redirect hop, and at the read/decompress
+boundary. A refusal sets both `Result.Error` and `Result.SecurityBlock`. See
+[SECURITY.md](../../SECURITY.md).
 
 ## `Result`
 
@@ -96,16 +135,27 @@ type Result struct {
     IsSPA        bool        `json:"isSpa"`
     IsBlocked    bool        `json:"isBlocked"`
     SPASignals   []string    `json:"spaSignals,omitempty"`
-    Quality      float64     `json:"quality"`
+    Quality      float64     `json:"quality"`      // advisory soft signal — do NOT route on it (see note below)
     Profile      PageProfile `json:"profile"`      // classification + browser-routing decision
     PageClass    PageClass   `json:"pageClass"`
     Validation   Validation  `json:"validation"`
     Fingerprint  string      `json:"fingerprint"`
-    Error        string      `json:"error,omitempty"`
-    StatusCode   int         `json:"statusCode,omitempty"`
+    Error         string     `json:"error,omitempty"`
+    SecurityBlock string     `json:"securityBlock,omitempty"` // reason a SecurityPolicy refused the fetch
+    StatusCode    int        `json:"statusCode,omitempty"`
     // ... plus cache, timing, redirect, and response-header forensics fields
 }
 ```
+
+> **`quality` is a soft signal, not a gate.** The float is deliberately noisy:
+> excellent server-rendered pages routinely score near zero (Wikipedia and GitHub
+> score 0; `theguardian.com` extracts ~36k clean chars yet scores 0) while still
+> being fully extractable. Route on `profile.decision` / `profile.browserRecommended`
+> (and `profile.class` + `profile.outcome`) — never on the raw `quality` float. See
+> [browser-discriminator.md](browser-discriminator.md) for why `quality` is not a
+> routing input, and [classifier-validation.md](classifier-validation.md) for the
+> held-out evidence that the routing decision generalizes (31/31) while the raw
+> 6-way class does not (0.71).
 
 ## Classification
 
@@ -149,6 +199,9 @@ fmt.Println(node.ToCompact()) // readable text tree
 
 ## Content processing
 
+> Secondary surfaces — opt-in helpers around the core extract primitive, not part of
+> the default path. See [Core vs. advanced surfaces](../../README.md#core-vs-advanced-surfaces).
+
 ```go
 seaportal.Dedupe(content)                            // DedupeResult
 seaportal.DedupeWithOptions(content, opts)
@@ -160,6 +213,9 @@ seaportal.SplitResultToFiles(result, cfg)             // ([]SplitFile, error)
 ```
 
 ## Sitemaps & feeds
+
+> Secondary surfaces — convenience parsers, not part of the core extract path. See
+> [Core vs. advanced surfaces](../../README.md#core-vs-advanced-surfaces).
 
 ```go
 entries, err := seaportal.FlattenSitemap(ctx, url, seaportal.FlattenSitemapOptions{

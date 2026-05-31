@@ -2,11 +2,13 @@
 
 ## Automated ✅ (CI / pre-push gate enforces these)
 
-Run automatically via `./dev all` (and CI). Fix and re-push on failure.
+Run `./dev all` while iterating (fast lane: `-short`, cached, no race) and
+`./dev test full` (race + coverage) before pushing. CI enforces the full lane.
+Fix and re-push on failure.
 - [ ] Go formatting passes (gofmt)
 - [ ] Static analysis passes (go vet, golangci-lint)
 - [ ] Build succeeds (`go build ./...`)
-- [ ] Unit tests pass (`go test ./...`)
+- [ ] Unit tests pass — fast: `./dev test`; full (race + coverage, pre-push): `./dev test full`
 - [ ] E2E tests pass (`./dev e2e`)
 - [ ] Branch naming follows convention
 
@@ -64,7 +66,7 @@ Run automatically via `./dev all` (and CI). Fix and re-push on failure.
 ## Quick Checklist (Copy/Paste for PRs)
 ```markdown
 ## Definition of Done
-- [ ] `./dev all` passes (check + test + e2e)
+- [ ] `./dev all` passes; `./dev test full` (race + coverage) green before push
 - [ ] Bug fix has a `// regression: <slug>` test that fails pre-fix
 - [ ] Error handling explicit (wrapped with %w)
 - [ ] No site-specific code beyond cross-cutting CDN/parser patterns
