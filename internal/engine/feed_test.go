@@ -325,7 +325,7 @@ func TestCLI_FeedSubcommand(t *testing.T) {
 	defer func() { _ = os.Remove(bin) }()
 
 	// TSV mode
-	cmd := exec.Command(bin, "feed", srv.URL+"/feed.xml")
+	cmd := exec.Command(bin, "feed", "--allow-internal", srv.URL+"/feed.xml")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("CLI failed: %v\n%s", err, out)
@@ -341,7 +341,7 @@ func TestCLI_FeedSubcommand(t *testing.T) {
 	}
 
 	// JSON mode
-	cmd = exec.Command(bin, "feed", "--json", srv.URL+"/feed.xml")
+	cmd = exec.Command(bin, "feed", "--allow-internal", "--json", srv.URL+"/feed.xml")
 	out, err = cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("CLI --json failed: %v\n%s", err, out)

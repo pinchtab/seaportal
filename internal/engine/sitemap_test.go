@@ -276,7 +276,7 @@ func TestCLI_SitemapSubcommand(t *testing.T) {
 	}
 	defer func() { _ = os.Remove(bin) }()
 
-	cmd := exec.Command(bin, "sitemap", srv.URL+"/sitemap.xml")
+	cmd := exec.Command(bin, "sitemap", "--allow-internal", srv.URL+"/sitemap.xml")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("CLI failed: %v\n%s", err, out)

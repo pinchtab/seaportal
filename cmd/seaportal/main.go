@@ -6,7 +6,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -35,6 +34,7 @@ func runSitemap(args []string) {
 	jsonOut := fs.Bool("json", false, "Emit JSON array instead of newline-separated URLs")
 	maxURLs := fs.Int("max-urls", 50000, "Stop after this many URLs")
 	maxDepth := fs.Int("max-depth", 5, "Max sitemap-index recursion depth")
+	allowInternal := fs.Bool("allow-internal", false, "Allow private/internal IP targets")
 	fs.Usage = func() {
 		fmt.Fprintln(os.Stderr, "Usage: seaportal sitemap <url> [--json] [--max-urls N] [--max-depth N]")
 		fs.PrintDefaults()
@@ -46,10 +46,15 @@ func runSitemap(args []string) {
 	}
 	sitemapURL := fs.Arg(0)
 	ctx := context.Background()
+	sec := seaportal.DefaultSecurityPolicy()
+	if *allowInternal {
+		sec.BlockPrivateIPs = false
+	}
 	entries, err := seaportal.FlattenSitemap(ctx, sitemapURL, seaportal.FlattenSitemapOptions{
 		MaxDepth: *maxDepth,
 		MaxURLs:  *maxURLs,
 		Timeout:  30 * time.Second,
+		Security: sec,
 	})
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "sitemap error:", err)
@@ -72,6 +77,7 @@ func runFeed(args []string) {
 	fs := flag.NewFlagSet("feed", flag.ExitOnError)
 	jsonOut := fs.Bool("json", false, "Emit JSON array instead of TSV lines")
 	maxItems := fs.Int("max-items", 200, "Stop after this many items")
+	allowInternal := fs.Bool("allow-internal", false, "Allow private/internal IP targets")
 	fs.Usage = func() {
 		fmt.Fprintln(os.Stderr, "Usage: seaportal feed <url> [--json] [--max-items N]")
 		fs.PrintDefaults()
@@ -83,9 +89,14 @@ func runFeed(args []string) {
 	}
 	feedURL := fs.Arg(0)
 	ctx := context.Background()
+	sec := seaportal.DefaultSecurityPolicy()
+	if *allowInternal {
+		sec.BlockPrivateIPs = false
+	}
 	entries, err := seaportal.ParseFeed(ctx, feedURL, seaportal.ParseFeedOptions{
 		MaxItems: *maxItems,
 		Timeout:  30 * time.Second,
+		Security: sec,
 	})
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "feed error:", err)
@@ -283,13 +294,7 @@ func runExtract(rawArgs []string) {
 		if stdinMode {
 			htmlContent = stdinHTML
 		} else {
-			// The snapshot path fetches via fetchHTML (a separate simple client),
-			// so enforce the security policy's pre-fetch gate here too.
-			if err := secPolicy.ValidateURL(context.Background(), targetURL); err != nil {
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-				os.Exit(1)
-			}
-			h, err := fetchHTML(targetURL)
+			h, err := fetchHTML(targetURL, secPolicy)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error fetching URL: %v\n", err)
 				os.Exit(1)
@@ -496,21 +501,12 @@ func splitCSV(s string) []string {
 	return out
 }
 
-func fetchHTML(url string) (string, error) {
-	client := &http.Client{Timeout: 30 * time.Second}
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return "", err
-	}
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	body, err := io.ReadAll(resp.Body)
+func fetchHTML(url string, sec *seaportal.SecurityPolicy) (string, error) {
+	body, _, _, err := seaportal.FetchBytes(context.Background(), url, seaportal.FetchBytesOptions{
+		Timeout:  30 * time.Second,
+		Security: sec,
+		Accept:   "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+	})
 	if err != nil {
 		return "", err
 	}

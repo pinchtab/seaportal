@@ -5,6 +5,7 @@
 package seaportal
 
 import (
+	"context"
 	"net/http"
 	"time"
 
@@ -235,6 +236,14 @@ func BuildSnapshot(htmlStr string) (*SnapshotNode, error) {
 // BuildSnapshotWithOptions creates an accessibility tree with custom options.
 func BuildSnapshotWithOptions(htmlStr string, opts SnapshotOptions) (*SnapshotNode, error) {
 	return engine.BuildSnapshotWithOptions(htmlStr, opts)
+}
+
+// FetchBytesOptions controls a raw network fetch with optional security checks.
+type FetchBytesOptions = engine.FetchBytesOptions
+
+// FetchBytes returns response bytes, headers, and status for rawURL.
+func FetchBytes(ctx context.Context, rawURL string, opts FetchBytesOptions) ([]byte, http.Header, int, error) {
+	return engine.FetchBytes(ctx, rawURL, opts)
 }
 
 // ValidateExtraction assesses extraction quality.

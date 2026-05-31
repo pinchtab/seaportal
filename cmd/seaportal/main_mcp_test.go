@@ -48,7 +48,7 @@ func TestCLI_MCPSubcommand(t *testing.T) {
 	requests := []string{
 		`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}`,
 		`{"jsonrpc":"2.0","id":2,"method":"tools/list"}`,
-		fmt.Sprintf(`{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"parse_sitemap","arguments":{"url":%q}}}`, srv.URL+"/sitemap.xml"),
+		fmt.Sprintf(`{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"parse_sitemap","arguments":{"url":%q,"allow_internal":true}}}`, srv.URL+"/sitemap.xml"),
 	}
 	go func() {
 		defer func() { _ = stdin.Close() }() // triggers clean EOF shutdown on server side

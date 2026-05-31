@@ -6,7 +6,6 @@ import (
 	"encoding/xml"
 	"fmt"
 	"html"
-	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -25,9 +24,10 @@ type FeedItem struct {
 
 // ParseFeedOptions controls ParseFeed behaviour.
 type ParseFeedOptions struct {
-	MaxItems int           // default 200
-	Timeout  time.Duration // per-fetch timeout (used when Client is nil)
-	Client   *http.Client  // optional; falls back to engine getClient()
+	MaxItems int             // default 200
+	Timeout  time.Duration   // per-fetch timeout (used when Client is nil)
+	Client   *http.Client    // optional; falls back to engine getClient()
+	Security *SecurityPolicy // optional fetch guard (SSRF, redirects, size caps)
 }
 
 // ParseFeed fetches feedURL and parses it as RSS 2.0, Atom 1.0, or JSON Feed
@@ -37,17 +37,7 @@ func ParseFeed(ctx context.Context, feedURL string, opts ParseFeedOptions) ([]Fe
 	if opts.MaxItems <= 0 {
 		opts.MaxItems = 200
 	}
-	if opts.Client == nil {
-		if opts.Timeout > 0 {
-			c := *getClient()
-			c.Timeout = opts.Timeout
-			opts.Client = &c
-		} else {
-			opts.Client = getClient()
-		}
-	}
-
-	body, err := fetchFeed(ctx, feedURL, opts.Client)
+	body, err := fetchFeed(ctx, feedURL, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -62,26 +52,18 @@ func ParseFeed(ctx context.Context, feedURL string, opts ParseFeedOptions) ([]Fe
 	return items, nil
 }
 
-func fetchFeed(ctx context.Context, feedURL string, client *http.Client) ([]byte, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, feedURL, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Accept", "application/atom+xml,application/rss+xml,application/feed+json,application/json,application/xml,text/xml,*/*;q=0.8")
-
-	resp, err := client.Do(req)
+func fetchFeed(ctx context.Context, feedURL string, opts ParseFeedOptions) ([]byte, error) {
+	body, _, status, err := FetchBytes(ctx, feedURL, FetchBytesOptions{
+		Client:   opts.Client,
+		Timeout:  opts.Timeout,
+		Security: opts.Security,
+		Accept:   "application/atom+xml,application/rss+xml,application/feed+json,application/json,application/xml,text/xml,*/*;q=0.8",
+	})
 	if err != nil {
 		return nil, fmt.Errorf("fetch feed %s: %w", feedURL, err)
 	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("fetch feed %s: status %d", feedURL, resp.StatusCode)
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("read feed %s: %w", feedURL, err)
+	if status < 200 || status >= 300 {
+		return nil, fmt.Errorf("fetch feed %s: status %d", feedURL, status)
 	}
 	return body, nil
 }

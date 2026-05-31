@@ -98,9 +98,10 @@ func registerMCPTools(srv *mcp.Server) {
 		map[string]interface{}{
 			"type": "object",
 			"properties": map[string]interface{}{
-				"url":        map[string]interface{}{"type": "string"},
-				"filter":     map[string]interface{}{"type": "string", "description": "'interactive' to keep only links/buttons/inputs; empty for full tree"},
-				"max_tokens": map[string]interface{}{"type": "integer"},
+				"url":            map[string]interface{}{"type": "string"},
+				"filter":         map[string]interface{}{"type": "string", "description": "'interactive' to keep only links/buttons/inputs; empty for full tree"},
+				"max_tokens":     map[string]interface{}{"type": "integer"},
+				"allow_internal": map[string]interface{}{"type": "boolean", "description": "Allow private/internal IP targets"},
 			},
 			"required": []string{"url"},
 		},
@@ -109,12 +110,11 @@ func registerMCPTools(srv *mcp.Server) {
 			if url == "" {
 				return "", fmt.Errorf("missing required argument: url")
 			}
-			// fetchHTML is a separate simple client; gate it with the same
-			// secure-default SSRF/scheme policy as fetch_url.
-			if err := seaportal.DefaultSecurityPolicy().ValidateURL(context.Background(), url); err != nil {
-				return "", err
+			sec := seaportal.DefaultSecurityPolicy()
+			if v, ok := args["allow_internal"].(bool); ok && v {
+				sec.BlockPrivateIPs = false
 			}
-			html, err := fetchHTML(url)
+			html, err := fetchHTML(url, sec)
 			if err != nil {
 				return "", fmt.Errorf("fetch %s: %w", url, err)
 			}
@@ -143,9 +143,10 @@ func registerMCPTools(srv *mcp.Server) {
 		map[string]interface{}{
 			"type": "object",
 			"properties": map[string]interface{}{
-				"url":       map[string]interface{}{"type": "string"},
-				"max_depth": map[string]interface{}{"type": "integer", "description": "Max sitemap-index recursion depth (default 5)"},
-				"max_urls":  map[string]interface{}{"type": "integer", "description": "Stop after this many URLs (default 50000)"},
+				"url":            map[string]interface{}{"type": "string"},
+				"max_depth":      map[string]interface{}{"type": "integer", "description": "Max sitemap-index recursion depth (default 5)"},
+				"max_urls":       map[string]interface{}{"type": "integer", "description": "Stop after this many URLs (default 50000)"},
+				"allow_internal": map[string]interface{}{"type": "boolean", "description": "Allow private/internal IP targets"},
 			},
 			"required": []string{"url"},
 		},
@@ -154,10 +155,15 @@ func registerMCPTools(srv *mcp.Server) {
 			if url == "" {
 				return "", fmt.Errorf("missing required argument: url")
 			}
+			sec := seaportal.DefaultSecurityPolicy()
+			if v, ok := args["allow_internal"].(bool); ok && v {
+				sec.BlockPrivateIPs = false
+			}
 			opts := seaportal.FlattenSitemapOptions{
 				MaxDepth: 5,
 				MaxURLs:  50000,
 				Timeout:  30 * time.Second,
+				Security: sec,
 			}
 			if v, ok := args["max_depth"].(float64); ok {
 				opts.MaxDepth = int(v)
@@ -183,8 +189,9 @@ func registerMCPTools(srv *mcp.Server) {
 		map[string]interface{}{
 			"type": "object",
 			"properties": map[string]interface{}{
-				"url":       map[string]interface{}{"type": "string"},
-				"max_items": map[string]interface{}{"type": "integer", "description": "Stop after this many items (default 200)"},
+				"url":            map[string]interface{}{"type": "string"},
+				"max_items":      map[string]interface{}{"type": "integer", "description": "Stop after this many items (default 200)"},
+				"allow_internal": map[string]interface{}{"type": "boolean", "description": "Allow private/internal IP targets"},
 			},
 			"required": []string{"url"},
 		},
@@ -193,9 +200,14 @@ func registerMCPTools(srv *mcp.Server) {
 			if url == "" {
 				return "", fmt.Errorf("missing required argument: url")
 			}
+			sec := seaportal.DefaultSecurityPolicy()
+			if v, ok := args["allow_internal"].(bool); ok && v {
+				sec.BlockPrivateIPs = false
+			}
 			opts := seaportal.ParseFeedOptions{
 				MaxItems: 200,
 				Timeout:  30 * time.Second,
+				Security: sec,
 			}
 			if v, ok := args["max_items"].(float64); ok {
 				opts.MaxItems = int(v)

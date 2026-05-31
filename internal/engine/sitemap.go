@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"bytes"
 	"compress/gzip"
 	"context"
 	"encoding/xml"
@@ -21,10 +22,11 @@ type SitemapEntry struct {
 
 // FlattenSitemapOptions controls FlattenSitemap behaviour.
 type FlattenSitemapOptions struct {
-	MaxDepth int           // default 5
-	MaxURLs  int           // default 50_000
-	Timeout  time.Duration // per-fetch timeout (used when Client is nil)
-	Client   *http.Client  // optional; falls back to engine getClient()
+	MaxDepth int             // default 5
+	MaxURLs  int             // default 50_000
+	Timeout  time.Duration   // per-fetch timeout (used when Client is nil)
+	Client   *http.Client    // optional; falls back to engine getClient()
+	Security *SecurityPolicy // optional fetch guard (SSRF, redirects, size caps)
 }
 
 type sitemapURLNode struct {
@@ -59,16 +61,6 @@ func FlattenSitemap(ctx context.Context, sitemapURL string, opts FlattenSitemapO
 	if opts.MaxURLs <= 0 {
 		opts.MaxURLs = 50_000
 	}
-	if opts.Client == nil {
-		if opts.Timeout > 0 {
-			c := *getClient()
-			c.Timeout = opts.Timeout
-			opts.Client = &c
-		} else {
-			opts.Client = getClient()
-		}
-	}
-
 	visited := map[string]bool{}
 	seen := map[string]bool{}
 	var entries []SitemapEntry
@@ -92,7 +84,7 @@ func flattenSitemap(ctx context.Context, sitemapURL string, depth int, opts Flat
 	}
 	visited[sitemapURL] = true
 
-	body, err := fetchSitemap(ctx, sitemapURL, opts.Client)
+	body, err := fetchSitemap(ctx, sitemapURL, opts)
 	if err != nil {
 		return err
 	}
@@ -150,38 +142,29 @@ func flattenSitemap(ctx context.Context, sitemapURL string, depth int, opts Flat
 	return nil
 }
 
-func fetchSitemap(ctx context.Context, sitemapURL string, client *http.Client) ([]byte, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, sitemapURL, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Accept", "application/xml,text/xml,*/*;q=0.8")
-	req.Header.Set("Accept-Encoding", "gzip")
-
-	resp, err := client.Do(req)
+func fetchSitemap(ctx context.Context, sitemapURL string, opts FlattenSitemapOptions) ([]byte, error) {
+	body, _, status, err := FetchBytes(ctx, sitemapURL, FetchBytesOptions{
+		Client:   opts.Client,
+		Timeout:  opts.Timeout,
+		Security: opts.Security,
+		Accept:   "application/xml,text/xml,*/*;q=0.8",
+	})
 	if err != nil {
 		return nil, fmt.Errorf("fetch sitemap %s: %w", sitemapURL, err)
 	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("fetch sitemap %s: status %d", sitemapURL, resp.StatusCode)
+	if status < 200 || status >= 300 {
+		return nil, fmt.Errorf("fetch sitemap %s: status %d", sitemapURL, status)
 	}
-
-	var reader io.Reader = resp.Body
-	isGzip := strings.EqualFold(resp.Header.Get("Content-Encoding"), "gzip") || strings.HasSuffix(strings.ToLower(sitemapURL), ".gz")
-	if isGzip {
-		gz, err := gzip.NewReader(resp.Body)
+	if strings.HasSuffix(strings.ToLower(sitemapURL), ".gz") {
+		gz, err := gzip.NewReader(bytes.NewReader(body))
 		if err != nil {
 			return nil, fmt.Errorf("gunzip sitemap %s: %w", sitemapURL, err)
 		}
 		defer func() { _ = gz.Close() }()
-		reader = gz
-	}
-
-	body, err := io.ReadAll(reader)
-	if err != nil {
-		return nil, fmt.Errorf("read sitemap %s: %w", sitemapURL, err)
+		body, err = io.ReadAll(gz)
+		if err != nil {
+			return nil, fmt.Errorf("read sitemap %s: %w", sitemapURL, err)
+		}
 	}
 	return body, nil
 }
