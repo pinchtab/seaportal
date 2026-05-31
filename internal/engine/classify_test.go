@@ -630,9 +630,9 @@ func TestDetectAuthWallByContent(t *testing.T) {
 // threshold tweaks have headroom to fluctuate without flapping CI, while
 // still catching any genuine regression.
 func TestClassifier_AccuracyOnCorpus(t *testing.T) {
-	if testing.Short() {
-		t.Skip("full-corpus classifier accuracy is slow; runs in the full lane (./dev test full)")
-	}
+	// Runs FromHTML over the whole eval corpus, which includes the multi-MB
+	// wikipedia-latin / github-awesome fixtures; under -race that is ~190s.
+	skipHeavyFixture(t)
 	corpusPath := filepath.Join("..", "..", "tests", "eval", "corpus.yaml")
 	entries, err := LoadCorpus(corpusPath)
 	if err != nil {

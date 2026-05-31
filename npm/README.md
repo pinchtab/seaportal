@@ -1,6 +1,9 @@
 # SeaPortal
 
-Extract clean Markdown from URLs with SPA detection.
+HTTP-first web content extraction for AI agents. Turn static and server-rendered
+pages into clean Markdown or a JSON accessibility snapshot, parse sitemaps and
+feeds, and run it as a CLI, a Go library, or an MCP server — secure by default,
+with an explicit signal when a page actually needs a browser.
 
 ## Install
 
@@ -49,11 +52,13 @@ Content extracted as clean Markdown...
 
 ## Features
 
-- **Fast** — Pure HTTP, no browser required (<2s typical)
-- **SPA Detection** — Identifies JavaScript-rendered pages
-- **Bot Detection Bypass** — TLS fingerprinting, realistic headers
-- **Clean Output** — Readability extraction + Markdown conversion
-- **Deduplication** — Removes repeated content blocks
+- **Fast** — Pure HTTP, no browser required (<2s typical on static / SSR pages)
+- **Clean Markdown** — Readability extraction + block and simhash dedupe
+- **Accessibility snapshots** — JSON semantic tree with role, ref, and selector per node
+- **Browser-needed signal** — Flags SPA / blocked pages so you can route them elsewhere
+- **Sitemaps & feeds** — Flatten sitemap.xml and parse RSS, Atom, and JSON Feed
+- **MCP server** — `seaportal mcp` exposes `fetch_url`, `fetch_snapshot`, `parse_sitemap`, and `parse_feed` over stdio
+- **Safe by default** — SSRF / private-IP blocking, http(s)-only, redirect and body caps on the CLI and MCP server
 
 ## Environment Variables
 

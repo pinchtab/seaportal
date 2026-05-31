@@ -73,6 +73,17 @@ else
 fi
 ok "All tests passed"
 
+# ── Heavy fixtures (no race) ─────────────────────────────────────────
+# The multi-MB fixtures and full classifier corpus are skipped under -race
+# above (skipHeavyFixture); run them here without -race so the pre-push lane
+# still enforces their contracts at a fraction of the wall time.
+section "Heavy extraction fixtures (no race)"
+if ! go test -count=1 ./internal/engine/ -run 'TestExtract_WikipediaLatinPhrases|TestBM25Quality_WikipediaLatinPhrases|TestClassifier_AccuracyOnCorpus|TestPreprocessBaseline_ExtractionMatrix'; then
+  fail "Heavy fixture tests failed"
+  exit 1
+fi
+ok "Heavy fixture tests passed"
+
 # ── Coverage ─────────────────────────────────────────────────────────
 
 section "Coverage"

@@ -45,4 +45,4 @@ Follow conventional commits:
 
 ## Adding Test Fixtures
 
-See [fixtures documentation](../fixtures.md) for how to add HTML test fixtures.
+See [fixtures documentation](../reference/fixtures.md) for how to add HTML test fixtures.

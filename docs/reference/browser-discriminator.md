@@ -1,4 +1,4 @@
-# Browser Discriminator Contract
+# Discriminator
 
 SeaPortal is the first-pass fetcher for agents that want to avoid launching a
 browser unless rendering can materially improve the result. This contract defines

@@ -51,6 +51,13 @@ jobs:
         # under testdata/fixtures.
         run: go test -tags=smoke -count=1 ./internal/engine/ -run TestFixture_NoRegression
 
+      - name: Heavy extraction fixtures
+        # The multi-MB real-world fixtures (wikipedia-latin, github-awesome) and
+        # the full classifier corpus run ~20x slower under -race, so they skip
+        # the race lane above (see skipHeavyFixture in testmain_test.go) and run
+        # here without -race — same contracts, a fraction of the wall time.
+        run: go test -count=1 ./internal/engine/ -run 'TestExtract_WikipediaLatinPhrases|TestBM25Quality_WikipediaLatinPhrases|TestClassifier_AccuracyOnCorpus|TestPreprocessBaseline_ExtractionMatrix'
+
       - name: Coverage summary
         run: |
           coverage=$(go tool cover -func=coverage.out | tail -1)

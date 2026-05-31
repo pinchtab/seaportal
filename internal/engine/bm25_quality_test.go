@@ -68,6 +68,7 @@ func TestBM25Quality_MDNHTTPMethods_DeleteQueryRanksDeleteSection(t *testing.T) 
 // a query for it to surface a section that actually contains the phrase in
 // the top-3 results.
 func TestBM25Quality_WikipediaLatinPhrases_CarpeDiemRanksCSection(t *testing.T) {
+	skipHeavyFixture(t)
 	html, err := os.ReadFile("../../testdata/static/wikipedia-latin-phrases.html")
 	if err != nil {
 		t.Fatalf("read fixture: %v", err)

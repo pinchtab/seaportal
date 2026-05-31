@@ -5,10 +5,6 @@ from a tag push.
 
 ## Prerequisites
 
-### Secrets (configure once in GitHub Settings → Secrets and variables → Actions)
-
-- `HOMEBREW_TAP_GITHUB_TOKEN` — only if/when a Homebrew tap is added.
-
 CodeQL, branch-naming, and the e2e workflow run without extra secrets.
 
 ### Local setup

@@ -47,15 +47,38 @@ jobs:
           curl -sfL https://goreleaser.com/static/run | VERSION="v2.14.3" bash -s -- release --clean --snapshot
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+
+  npm-dry-run:
+    name: npm Publish Dry Run
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.validate.outputs.sha }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+      - name: Sync version and dry-run publish
+        working-directory: npm
+        run: |
+          CURRENT=$(node -pe "require('./package.json').version")
+          DESIRED="${{ inputs.version }}"
+          if [ "$CURRENT" != "$DESIRED" ]; then
+            npm version "$DESIRED" --no-git-tag-version
+          fi
+          npm publish --dry-run --ignore-scripts
 
   approval:
     name: Manual Approval
-    needs: [validate, go-checks, dry-run]
+    needs: [validate, go-checks, dry-run, npm-dry-run]
     if: >-
       always() && !cancelled()
       && needs.validate.result == 'success'
       && needs.go-checks.result == 'success'
       && needs.dry-run.result == 'success'
+      && needs.npm-dry-run.result == 'success'
     runs-on: ubuntu-latest
     environment:
       name: release-approval
