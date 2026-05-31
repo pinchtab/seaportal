@@ -199,14 +199,14 @@ func TestPreprocessBaseline_ExtractionMatrix(t *testing.T) {
 	for _, row := range preprocessBaseline {
 		row := row
 		t.Run(row.fixture, func(t *testing.T) {
-			// The Wikipedia Latin phrases fixture is a 1.4 MB HTML page; under
-			// `-race -coverprofile` it can run for several minutes, blowing
-			// past the default 10m test timeout. The same regression contract
-			// is already enforced by TestExtract_WikipediaLatinPhrases in
-			// extract_wikipedia_test.go (length > 20k + content markers), so
-			// we skip the duplicate here under -short or race.
-			if (testing.Short() || isRaceEnabled) && strings.Contains(row.fixture, "wikipedia-latin") {
-				t.Skipf("skipping heavy fixture under short/race; covered by TestExtract_WikipediaLatinPhrases")
+			// The heavy real-world fixtures (1.3 MB wikipedia-latin,
+			// github-awesome) run ~20x slower under `-race -coverprofile` and
+			// dominate the race lane. They are exercised in the dedicated
+			// non-race "Heavy extraction fixtures" lane (see scripts/test.sh and
+			// .github/workflows/reusable-go.yml), so skip them here under
+			// -short or race.
+			if (testing.Short() || isRaceEnabled) && isHeavyFixture(row.fixture) {
+				t.Skipf("skipping heavy fixture under short/race; covered by the non-race lane")
 			}
 			// Search testdata/ + known class subfolders for the bare name.
 			// Lets the baseline matrix keep bare fixture names after the

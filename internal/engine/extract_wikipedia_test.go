@@ -8,6 +8,7 @@ import (
 )
 
 func TestExtract_WikipediaLatinPhrases(t *testing.T) {
+	skipHeavyFixture(t)
 	path := filepath.Join("..", "..", "testdata", "static", "wikipedia-latin-phrases.html")
 	data, err := os.ReadFile(path)
 	if err != nil {
