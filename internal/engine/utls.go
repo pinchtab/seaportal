@@ -1,4 +1,3 @@
-// Package portal provides content extraction with SPA detection
 package engine
 
 import (
@@ -81,7 +80,6 @@ type chromeTransport struct {
 	security *SecurityPolicy
 }
 
-// RoundTrip implements http.RoundTripper
 func (t *chromeTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	// For HTTP (not HTTPS) — proxy via vanilla transport when configured,
 	// else fall through to the default transport.
@@ -120,15 +118,12 @@ func (t *chromeTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 		return nil, err
 	}
 
-	// Check ALPN negotiated protocol
 	alpn := tlsConn.ConnectionState().NegotiatedProtocol
 
 	var resp *http.Response
 	if alpn == "h2" {
-		// HTTP/2
 		resp, err = doHTTP2Request(tlsConn, req)
 	} else {
-		// HTTP/1.1
 		resp, err = doHTTP1Request(tlsConn, req)
 	}
 
@@ -158,7 +153,6 @@ func dialTLSChrome(ctx context.Context, serverName, host string, control func(ne
 		Control:   control,
 	}
 
-	// Ensure host has port
 	if _, _, err := net.SplitHostPort(host); err != nil {
 		host = net.JoinHostPort(host, "443")
 	}
@@ -213,7 +207,6 @@ func dialTLSChromeViaProxy(ctx context.Context, proxyURL *url.URL, serverName, h
 		return nil, fmt.Errorf("dial proxy %s: %w", proxyAddr, err)
 	}
 
-	// Build CONNECT request.
 	var sb strings.Builder
 	fmt.Fprintf(&sb, "CONNECT %s HTTP/1.1\r\n", host)
 	fmt.Fprintf(&sb, "Host: %s\r\n", host)

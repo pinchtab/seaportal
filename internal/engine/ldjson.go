@@ -13,22 +13,22 @@ var reLDJSON = regexp.MustCompile(`(?is)<script\s+type\s*=\s*["']application/ld\
 
 // LDJSONBlock represents a single LD+JSON structured data block.
 type LDJSONBlock struct {
-	Type        string `json:"type,omitempty"`           // @type field
-	Headline    string `json:"headline,omitempty"`       // Article headline
-	Description string `json:"description,omitempty"`    // Article description/abstract
-	Author      string `json:"author,omitempty"`         // Author name(s)
-	DatePub     string `json:"datePublished,omitempty"`  // Publication date
-	Publisher   string `json:"publisher,omitempty"`      // Publisher name
-	URL         string `json:"url,omitempty"`            // Canonical URL
-	Keywords    string `json:"keywords,omitempty"`       // Keywords/tags
-	Language    string `json:"inLanguage,omitempty"`     // BCP-47 language tag
-	Section     string `json:"articleSection,omitempty"` // Article section/category
-	Body        string `json:"articleBody,omitempty"`    // Article body (may be HTML or plain text)
+	Type        string `json:"type,omitempty"`
+	Headline    string `json:"headline,omitempty"`
+	Description string `json:"description,omitempty"`
+	Author      string `json:"author,omitempty"`
+	DatePub     string `json:"datePublished,omitempty"`
+	Publisher   string `json:"publisher,omitempty"`
+	URL         string `json:"url,omitempty"`
+	Keywords    string `json:"keywords,omitempty"`
+	Language    string `json:"inLanguage,omitempty"` // BCP-47 language tag
+	Section     string `json:"articleSection,omitempty"`
+	Body        string `json:"articleBody,omitempty"` // may be HTML or plain text
 }
 
 // ExtractLDJSON extracts and parses all LD+JSON blocks from HTML.
 func ExtractLDJSON(html string) []LDJSONBlock {
-	matches := reLDJSON.FindAllStringSubmatch(html, 10) // max 10 blocks
+	matches := reLDJSON.FindAllStringSubmatch(html, 10)
 	if len(matches) == 0 {
 		return nil
 	}
@@ -93,10 +93,9 @@ func LDJSONToMarkdown(blocks []LDJSONBlock) string {
 func parseLDJSONBlock(raw string) LDJSONBlock {
 	var block LDJSONBlock
 
-	// Try parsing as object first.
 	var obj map[string]interface{}
 	if err := json.Unmarshal([]byte(raw), &obj); err != nil {
-		// Try as array (some sites wrap in array). Use []interface{} so mixed
+		// Some sites wrap the block in an array. Use []interface{} so mixed
 		// element types (object | string | nested array) parse cleanly.
 		var arr []interface{}
 		if err2 := json.Unmarshal([]byte(raw), &arr); err2 != nil || len(arr) == 0 {
@@ -155,7 +154,7 @@ func extractFromObj(obj map[string]interface{}) LDJSONBlock {
 	// articleSection: string or array of strings (take first).
 	block.Section = extractFirstString(obj["articleSection"])
 
-	// articleBody: prose content; may be HTML or plain text. Trim whitespace.
+	// articleBody: prose content; may be HTML or plain text.
 	block.Body = strings.TrimSpace(jsonStr(obj, "articleBody"))
 
 	// Publisher can be object with name.
@@ -165,7 +164,6 @@ func extractFromObj(obj map[string]interface{}) LDJSONBlock {
 		block.Publisher = jsonStr(obj, "publisher")
 	}
 
-	// Fallback: name field if no headline.
 	if block.Headline == "" {
 		block.Headline = jsonStr(obj, "name")
 	}

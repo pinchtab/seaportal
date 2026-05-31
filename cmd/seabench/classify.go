@@ -144,6 +144,8 @@ func classifyCorpus(corpusPath string) (ClassifyReport, error) {
 
 	// matrix[expected][predicted] = count. Predicted "EMPTY" is the
 	// sentinel for "profile pipeline did not populate Class".
+	// matrix[expected][predicted] = count. Predicted "EMPTY" is the
+	// sentinel for "profile pipeline did not populate Class".
 	matrix := make(map[string]map[string]int)
 	for _, c := range classOrder {
 		matrix[c] = make(map[string]int)
@@ -469,7 +471,6 @@ func renderClassifyMarkdown(r ClassifyReport) string {
 
 	fmt.Fprintln(&b, "## Confusion matrix (rows = expected, cols = predicted)")
 	fmt.Fprintln(&b)
-	// Header
 	fmt.Fprint(&b, "| expected \\ predicted |")
 	for _, c := range axes {
 		fmt.Fprintf(&b, " %s |", c)

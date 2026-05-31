@@ -1,4 +1,3 @@
-// Package portal provides content extraction with SPA detection
 package engine
 
 import (
@@ -68,12 +67,11 @@ func parseRetryAfter(header string) (time.Duration, bool) {
 		return 0, false
 	}
 
-	// Try parsing as seconds first (most common)
+	// Try seconds first (most common), then fall back to HTTP-date.
 	if seconds, err := time.ParseDuration(header + "s"); err == nil {
 		return seconds, true
 	}
 
-	// Try parsing as HTTP-date (RFC1123)
 	if t, err := time.Parse(time.RFC1123, header); err == nil {
 		wait := time.Until(t)
 		if wait < 0 {
@@ -91,7 +89,6 @@ func addJitter(d time.Duration) time.Duration {
 	if d <= 0 {
 		return d
 	}
-	// ±25% jitter: multiply by 0.75 to 1.25
 	jitterFactor := 0.75 + rand.Float64()*0.5
 	result := time.Duration(float64(d) * jitterFactor)
 	if result < time.Millisecond {

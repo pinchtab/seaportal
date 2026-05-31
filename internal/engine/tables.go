@@ -259,7 +259,6 @@ func collectOwnCells(table *xhtml.Node) []*xhtml.Node {
 func buildTableRef(table *xhtml.Node) TableRef {
 	ref := TableRef{Rows: [][]string{}}
 
-	// Caption: first <caption> descendant.
 	if cap := findFirstByAtom(table, atom.Caption); cap != nil {
 		ref.Caption = cellText(cap)
 	}

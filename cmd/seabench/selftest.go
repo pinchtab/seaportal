@@ -283,19 +283,14 @@ func collapseSteps(steps []SelftestStep, expected map[string]string) []SelftestT
 	return tasks
 }
 
-// taskIDForStep returns the task identifier for a step. record.sh uses
-// dotted ids like "1.3" or "1.10"; the leading segment groups task vs
-// step, but `group-selftest.md` headers are written as "1.3" rather
-// than just "1", so we return the full prefix up to the LAST dot. This
-// also gracefully handles ids that already are task ids (no dot).
+// taskIDForStep returns the task identifier for a step. In selftest the
+// whole step id IS the task id: `group-selftest.md` headers are written
+// as "1.N" and record.sh emits the same ids, with no sub-steps below
+// them — so we return the id verbatim (trimmed).
 func taskIDForStep(step string) string {
 	if step == "" {
 		return ""
 	}
-	// In `group-selftest.md` every header is "1.N". record.sh step ids
-	// follow the same pattern. The whole id IS the task id — there are
-	// no sub-steps below it in selftest. Strip leading/trailing space
-	// and collapse to canonical form.
 	return strings.TrimSpace(step)
 }
 

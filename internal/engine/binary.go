@@ -1,4 +1,3 @@
-// Package portal provides content extraction with SPA detection
 package engine
 
 import "strings"

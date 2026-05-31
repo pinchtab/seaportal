@@ -83,7 +83,6 @@ func applySelectorOps(htmlStr, selectCSS, stripCSS string) (string, []string) {
 			return htmlStr, warnings
 		}
 
-		// Wrap matched subtrees in a single <div>.
 		wrapper := &html.Node{Type: html.ElementNode, Data: "div", DataAtom: atom.Div}
 		for _, n := range collected {
 			if n.Parent != nil {

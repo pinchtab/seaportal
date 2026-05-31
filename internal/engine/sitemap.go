@@ -27,7 +27,6 @@ type FlattenSitemapOptions struct {
 	Client   *http.Client  // optional; falls back to engine getClient()
 }
 
-// xml shapes
 type sitemapURLNode struct {
 	Loc        string `xml:"loc"`
 	LastMod    string `xml:"lastmod"`
@@ -98,7 +97,6 @@ func flattenSitemap(ctx context.Context, sitemapURL string, depth int, opts Flat
 		return err
 	}
 
-	// Detect root element name.
 	rootName, err := detectXMLRoot(body)
 	if err != nil {
 		return fmt.Errorf("parse sitemap %s: %w", sitemapURL, err)

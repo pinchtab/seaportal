@@ -345,7 +345,6 @@ func findTimestamp(n *xhtml.Node) string {
 // preferring an explicit .comment-body / .comment-text / [itemprop=text] child
 // when present. Falls back to the container's own visible text.
 func findCommentText(n *xhtml.Node) string {
-	// Preferred explicit body.
 	var preferred *xhtml.Node
 	var visit func(c *xhtml.Node)
 	visit = func(c *xhtml.Node) {

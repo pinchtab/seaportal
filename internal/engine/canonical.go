@@ -102,7 +102,6 @@ func CanonicalizeURL(rawURL string) (string, error) {
 	u.Fragment = ""
 	u.RawFragment = ""
 
-	// Strip default ports.
 	host := u.Hostname()
 	port := u.Port()
 	if port != "" {
@@ -112,7 +111,6 @@ func CanonicalizeURL(rawURL string) (string, error) {
 		}
 	}
 
-	// Filter + sort query.
 	if u.RawQuery != "" {
 		q := u.Query()
 		keep := make([]string, 0, len(q))
@@ -177,7 +175,6 @@ func ResolveCanonicalLink(htmlStr string, baseURL string) string {
 		return ""
 	}
 
-	// If absolute, validate scheme. If relative, resolve against base.
 	if ref.IsAbs() {
 		scheme := strings.ToLower(ref.Scheme)
 		if scheme != "http" && scheme != "https" {

@@ -1,4 +1,3 @@
-// Package portal provides content extraction with SPA detection
 package engine
 
 import (
@@ -17,7 +16,7 @@ import (
 type CrawlDelayCache struct {
 	mu      sync.RWMutex
 	delays  map[string]robotsEntry
-	fetched map[string]time.Time // When we last fetched robots.txt for each domain
+	fetched map[string]time.Time
 }
 
 type robotsEntry struct {
@@ -179,7 +178,7 @@ func parseRobotsTxt(content string) (delays map[string]time.Duration, rules map[
 	rules = map[string][]robotsRule{}
 
 	lines := strings.Split(content, "\n")
-	// Group consecutive User-agent: lines so they all share the directives that follow.
+	// Consecutive User-agent: lines share the directives that follow.
 	var currentAgents []string
 	expectingAgents := true
 

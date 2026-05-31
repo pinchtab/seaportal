@@ -1,4 +1,3 @@
-// Package portal provides content extraction with SPA detection
 package engine
 
 import (
@@ -22,13 +21,13 @@ const (
 
 // DedupeResult holds deduplication metrics and output
 type DedupeResult struct {
-	Content              string   `json:"content,omitempty"`              // Deduplicated content
-	OriginalBlocks       int      `json:"originalBlocks,omitempty"`       // Number of blocks before deduplication
-	UniqueBlocks         int      `json:"uniqueBlocks,omitempty"`         // Number of unique blocks retained
-	DuplicatesFound      int      `json:"duplicatesFound,omitempty"`      // Number of duplicate blocks removed (exact)
-	DuplicateSignals     []string `json:"duplicateSignals,omitempty"`     // Types of duplicates detected (nav, heading, etc.)
-	NearDuplicatesFound  int      `json:"nearDuplicatesFound,omitempty"`  // Number of near-duplicate blocks removed (simhash)
-	NearDuplicateSignals []string `json:"nearDuplicateSignals,omitempty"` // Types of near-duplicates detected
+	Content              string   `json:"content,omitempty"`
+	OriginalBlocks       int      `json:"originalBlocks,omitempty"`
+	UniqueBlocks         int      `json:"uniqueBlocks,omitempty"`
+	DuplicatesFound      int      `json:"duplicatesFound,omitempty"` // exact-hash matches
+	DuplicateSignals     []string `json:"duplicateSignals,omitempty"`
+	NearDuplicatesFound  int      `json:"nearDuplicatesFound,omitempty"` // simhash matches
+	NearDuplicateSignals []string `json:"nearDuplicateSignals,omitempty"`
 }
 
 // DedupeOptions configures deduplication behavior
@@ -72,7 +71,6 @@ func DedupeWithOptions(content string, opts DedupeOptions) DedupeResult {
 		return result
 	}
 
-	// Split into blocks (double newline separated, or heading-delimited)
 	blocks := splitIntoBlocks(content)
 	result.OriginalBlocks = len(blocks)
 
@@ -105,7 +103,6 @@ func DedupeWithOptions(content string, opts DedupeOptions) DedupeResult {
 			continue
 		}
 
-		// Normalize for comparison
 		normalized := normalizeBlock(trimmed, opts)
 		hash := hashBlock(normalized)
 
@@ -163,12 +160,10 @@ func DedupeWithOptions(content string, opts DedupeOptions) DedupeResult {
 }
 
 func splitIntoBlocks(content string) []string {
-	// Split on double newlines (paragraph boundaries)
 	rawBlocks := strings.Split(content, "\n\n")
 
 	var blocks []string
 	for _, block := range rawBlocks {
-		// Further split blocks that contain headings to isolate them
 		parts := splitOnHeadings(block)
 		blocks = append(blocks, parts...)
 	}
@@ -199,7 +194,6 @@ func splitOnHeadings(block string) []string {
 		}
 	}
 
-	// Don't forget trailing content
 	if len(current) > 0 {
 		result = append(result, strings.Join(current, "\n"))
 	}
@@ -220,8 +214,7 @@ func normalizeBlock(block string, opts DedupeOptions) string {
 		s = strings.TrimSpace(s)
 	}
 
-	// Remove markdown formatting for comparison
-	// This helps catch duplicates that differ only in formatting
+	// Strip markdown formatting so duplicates that differ only in formatting collapse.
 	s = stripMarkdownFormatting(s)
 
 	return s
@@ -330,7 +323,6 @@ func NearDuplicateScore(a, b string) int {
 		return 100
 	}
 
-	// Simple word overlap score
 	wordsA := extractDedupeWords(normA)
 	wordsB := extractDedupeWords(normB)
 

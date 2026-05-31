@@ -134,7 +134,6 @@ func DetectLanguage(markdown string) string {
 	cleaned = langInlineCodeRE.ReplaceAllString(cleaned, " ")
 	cleaned = langMDLinkRE.ReplaceAllString(cleaned, "$1")
 
-	// Tokenise: split on non-letter runes; lowercase; keep tokens of len 2-15.
 	tokens := strings.FieldsFunc(cleaned, func(r rune) bool {
 		return !unicode.IsLetter(r)
 	})

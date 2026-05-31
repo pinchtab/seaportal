@@ -49,7 +49,6 @@ func normalizeCharset(s string) string {
 // detectCharset walks the priority chain: BOM → Content-Type header → <meta charset> →
 // <meta http-equiv>. Returns "" when no signal was found (caller should treat as UTF-8).
 func detectCharset(body []byte, contentType string) string {
-	// 1. BOM
 	if bytes.HasPrefix(body, bomUTF8) {
 		return "utf-8"
 	}
@@ -60,7 +59,6 @@ func detectCharset(body []byte, contentType string) string {
 		return "utf-16le"
 	}
 
-	// 2. Content-Type header
 	if contentType != "" {
 		if m := contentTypeCharsetRE.FindStringSubmatch(contentType); len(m) > 1 {
 			if cs := normalizeCharset(m[1]); cs != "" {
@@ -96,7 +94,6 @@ func decodeBytes(body []byte, charset string) ([]byte, error) {
 	case "":
 		return body, nil
 	case "utf-8", "utf8":
-		// Strip BOM if present, otherwise pass through.
 		return bytes.TrimPrefix(body, bomUTF8), nil
 	case "utf-16be":
 		body = bytes.TrimPrefix(body, bomUTF16BE)
@@ -199,13 +196,9 @@ func sniffAndDecode(body []byte, contentType string) ([]byte, string, bool) {
 	}
 	decoded, err := decodeBytes(body, cs)
 	if err != nil {
-		// Failure mode: pass through unchanged, don't surface a charset.
 		return body, "", false
 	}
 
-	// Post-decode validation: if the body's <meta> tag disagrees with the
-	// header charset and the header-driven decode looks like mojibake, try
-	// the meta charset and keep the cleaner result.
 	if metaCS := metaOnly(body); metaCS != "" && metaCS != cs {
 		headerRatio := mojibakeRatio(decoded)
 		if headerRatio > mojibakeThreshold {
@@ -224,7 +217,6 @@ func sniffAndDecode(body []byte, contentType string) ([]byte, string, bool) {
 // HTML/plain-text-shaped and worth running through the charset sniff.
 func isCharsetSniffableContentType(contentType string) bool {
 	ct := strings.ToLower(contentType)
-	// Strip parameters.
 	if idx := strings.Index(ct, ";"); idx >= 0 {
 		ct = ct[:idx]
 	}

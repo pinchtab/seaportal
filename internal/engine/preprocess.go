@@ -81,7 +81,7 @@ func stripCommonChrome(htmlStr string) string {
 }
 
 func stripChromeNodes(n *html.Node) {
-	// Walk via an explicit list so we can mutate during iteration.
+	// Snapshot children into a list so we can mutate during iteration.
 	var children []*html.Node
 	for c := n.FirstChild; c != nil; c = c.NextSibling {
 		children = append(children, c)
@@ -192,7 +192,6 @@ func scopeMainContent(htmlStr string) string {
 		return htmlStr
 	}
 
-	// Build a synthetic <article> that wraps the anchor's children.
 	article := &html.Node{Type: html.ElementNode, Data: "article", DataAtom: atom.Article}
 	for c := anchor.FirstChild; c != nil; {
 		next := c.NextSibling
@@ -201,7 +200,6 @@ func scopeMainContent(htmlStr string) string {
 		c = next
 	}
 
-	// Clear the body and re-attach only the wrapped anchor content.
 	for c := body.FirstChild; c != nil; {
 		next := c.NextSibling
 		body.RemoveChild(c)

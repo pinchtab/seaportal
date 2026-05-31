@@ -99,7 +99,6 @@ func PruneToContent(htmlStr string) string {
 		return htmlStr
 	}
 
-	// Wrap the winner's children in a fresh <article> and replace body content.
 	article := &html.Node{Type: html.ElementNode, Data: "article", DataAtom: atom.Article}
 	for c := best.FirstChild; c != nil; {
 		next := c.NextSibling

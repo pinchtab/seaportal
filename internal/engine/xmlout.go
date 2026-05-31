@@ -114,7 +114,6 @@ func ResultToTEIXML(r Result) ([]byte, error) {
 			LangUsage: teiLangUsage{Language: teiLanguage{Ident: r.Language}},
 		}
 	}
-	// Empty body → emit one empty <p/>.
 	if len(doc.Text.Body.Nodes) == 0 {
 		doc.Text.Body.Nodes = []teiNode{{XMLName: xml.Name{Local: "p"}}}
 	}
@@ -211,7 +210,6 @@ func markdownToTEI(md string) []teiNode {
 		line := strings.TrimRight(raw, "\r")
 		trimmed := strings.TrimSpace(line)
 
-		// Blank line ends the current run.
 		if trimmed == "" {
 			flushAll()
 			continue
@@ -233,7 +231,6 @@ func markdownToTEI(md string) []teiNode {
 			continue
 		}
 
-		// Heading.
 		if m := headingRE.FindStringSubmatch(trimmed); m != nil {
 			flushAll()
 			level := len(m[1])
@@ -245,7 +242,6 @@ func markdownToTEI(md string) []teiNode {
 			continue
 		}
 
-		// Unordered list item.
 		if strings.HasPrefix(trimmed, "- ") || strings.HasPrefix(trimmed, "* ") {
 			flushProse()
 			flushOL()
@@ -253,7 +249,6 @@ func markdownToTEI(md string) []teiNode {
 			continue
 		}
 
-		// Ordered list item.
 		if m := orderedItemRE.FindStringSubmatch(trimmed); m != nil {
 			flushProse()
 			flushUL()
@@ -261,7 +256,7 @@ func markdownToTEI(md string) []teiNode {
 			continue
 		}
 
-		// Plain prose. Break any pending list run.
+		// Plain prose breaks any pending list run.
 		flushUL()
 		flushOL()
 		prose = append(prose, trimmed)

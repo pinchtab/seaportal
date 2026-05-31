@@ -121,7 +121,6 @@ func DetectJSChallenge(html string, contentType string, length int) bool {
 // DetectBlocked: triggers on challenge pages (Cloudflare, captcha, etc.)
 // Strategy: check title/head indicators first (reliable), then body text if short
 func DetectBlocked(html string) bool {
-	// First: check reliable head-level patterns (always check these)
 	headPatterns := []*regexp.Regexp{
 		regexp.MustCompile(`(?i)<title>\s*just\s+a\s+moment`),               // Cloudflare challenge
 		regexp.MustCompile(`(?i)<title>[^<]*cloudflare`),                    // Cloudflare in title

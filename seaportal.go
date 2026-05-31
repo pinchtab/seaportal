@@ -11,8 +11,6 @@ import (
 	"github.com/pinchtab/seaportal/internal/engine"
 )
 
-// ── Types ───────────────────────────────────────────────────────────
-
 // Result holds the extraction output for a URL.
 type Result = engine.Result
 
@@ -149,8 +147,6 @@ type IndexPageResult = engine.IndexPageResult
 // CardItem represents a card/item on an index page.
 type CardItem = engine.CardItem
 
-// ── Extraction ──────────────────────────────────────────────────────
-
 // FromURL extracts content from a URL with default options.
 func FromURL(targetURL string) Result {
 	return engine.FromURL(targetURL)
@@ -191,8 +187,6 @@ func ExtractFromHTML(html string, targetURL string) (string, error) {
 	return engine.ExtractFromHTML(html, targetURL)
 }
 
-// ── Classification ──────────────────────────────────────────────────
-
 // ClassifyPage determines the page type from extraction results.
 func ClassifyPage(result Result) PageProfile {
 	return engine.ClassifyPage(result)
@@ -212,8 +206,6 @@ func DetectBlocked(html string) bool {
 func QuickNeedsBrowser(html string) (needsBrowser bool, reason string) {
 	return engine.QuickNeedsBrowser(html)
 }
-
-// ── Content Processing ──────────────────────────────────────────────
 
 // Dedupe removes duplicate content blocks.
 func Dedupe(content string) DedupeResult {
@@ -235,8 +227,6 @@ func PreprocessHTML(html string) string {
 	return engine.PreprocessHTML(html)
 }
 
-// ── Snapshots ───────────────────────────────────────────────────────
-
 // BuildSnapshot creates an accessibility tree from HTML.
 func BuildSnapshot(htmlStr string) (*SnapshotNode, error) {
 	return engine.BuildSnapshot(htmlStr)
@@ -247,14 +237,10 @@ func BuildSnapshotWithOptions(htmlStr string, opts SnapshotOptions) (*SnapshotNo
 	return engine.BuildSnapshotWithOptions(htmlStr, opts)
 }
 
-// ── Validation ──────────────────────────────────────────────────────
-
 // ValidateExtraction assesses extraction quality.
 func ValidateExtraction(r *Result) Validation {
 	return engine.ValidateExtraction(r)
 }
-
-// ── Sitemap ─────────────────────────────────────────────────────────
 
 // SitemapEntry is a single URL entry flattened from a sitemap.
 type SitemapEntry = engine.SitemapEntry
@@ -266,8 +252,6 @@ type FlattenSitemapOptions = engine.FlattenSitemapOptions
 // `<sitemapindex>` references into a single slice of SitemapEntry.
 var FlattenSitemap = engine.FlattenSitemap
 
-// ── Feed (RSS / Atom / JSON Feed) ───────────────────────────────────
-
 // FeedItem is a normalised feed entry across RSS 2.0, Atom 1.0, and
 // JSON Feed 1.x sources.
 type FeedItem = engine.FeedItem
@@ -278,8 +262,6 @@ type ParseFeedOptions = engine.ParseFeedOptions
 // ParseFeed fetches a feed URL and parses it as RSS 2.0, Atom 1.0, or
 // JSON Feed 1.x, returning a unified slice of FeedItem.
 var ParseFeed = engine.ParseFeed
-
-// ── Fingerprinting ──────────────────────────────────────────────────
 
 // SemanticFingerprint generates a content fingerprint for change detection.
 func SemanticFingerprint(content string) string {

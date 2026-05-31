@@ -214,7 +214,6 @@ func chunkByHeading(md string) []rawChunk {
 	}
 
 	var out []rawChunk
-	// Preamble.
 	if locs[0][0] > 0 {
 		pre := md[:locs[0][0]]
 		if strings.TrimSpace(pre) != "" {
@@ -229,7 +228,6 @@ func chunkByHeading(md string) []rawChunk {
 			end = locs[i+1][0]
 		}
 		section := md[start:end]
-		// The heading line itself: from start to first newline.
 		headingEnd := strings.Index(section, "\n")
 		var headingLine string
 		if headingEnd >= 0 {
@@ -315,7 +313,6 @@ func softSplitChunk(c rawChunk, threshold int) []rawChunk {
 		return []rawChunk{c}
 	}
 	if boundaryCount > softSplitMaxSubChunks {
-		// Runaway: fall back to the parent. Documented above.
 		return []rawChunk{c}
 	}
 
@@ -365,9 +362,7 @@ func softSplitChunk(c rawChunk, threshold int) []rawChunk {
 		}
 
 		if isSoftSplitBoundary(l) {
-			// Flush previous accumulation as its own sub-chunk.
 			flush()
-			// New sub-chunk: heading = parent · boundaryKey.
 			key := boundaryKey(l)
 			if parentHeading != "" && key != "" {
 				curHeading = parentHeading + " · " + key
@@ -500,7 +495,6 @@ func chunkBySentence(md string, sizeTokens int) []rawChunk {
 		return cur
 	}
 
-	// Sentence-level segmentation.
 	splits := sentenceSplitRE.FindAllStringIndex(md, -1)
 	type seg struct {
 		start, end int
@@ -568,7 +562,6 @@ func chunkByWindow(md string, sizeChars, overlapChars int) []rawChunk {
 		step = sizeChars
 	}
 
-	// Heading anchors (reuse heading-by-position lookup).
 	type anchor struct {
 		pos  int
 		line string
@@ -608,7 +601,6 @@ func chunkByWindow(md string, sizeChars, overlapChars int) []rawChunk {
 		if end >= n {
 			end = n
 		} else {
-			// Snap end back to the nearest space within wordSlack.
 			snap := end
 			for i := 0; i < wordSlack && snap > start; i++ {
 				if snap-1 < n && (md[snap-1] == ' ' || md[snap-1] == '\n') {

@@ -1,8 +1,7 @@
 // Package engine — eval corpus loader.
 //
 // CorpusEntry mirrors the schema in tests/eval/corpus.yaml. LoadCorpus parses
-// the YAML file and returns the list of entries; no extraction is performed
-// here. The accompanying scorer/runner is a separate backlog item.
+// the YAML file and returns the list of entries; no extraction is performed here.
 package engine
 
 import (

@@ -127,8 +127,6 @@ func parseFeedBytes(body []byte) ([]FeedItem, error) {
 	}
 }
 
-// ── RSS 2.0 ────────────────────────────────────────────────────────────
-
 type rssShape struct {
 	XMLName xml.Name `xml:"rss"`
 	Channel struct {
@@ -161,8 +159,6 @@ func parseRSS(body []byte) ([]FeedItem, error) {
 	}
 	return items, nil
 }
-
-// ── Atom 1.0 ───────────────────────────────────────────────────────────
 
 type atomShape struct {
 	XMLName xml.Name `xml:"feed"`
@@ -224,8 +220,6 @@ func parseAtom(body []byte) ([]FeedItem, error) {
 	}
 	return items, nil
 }
-
-// ── JSON Feed 1.x ──────────────────────────────────────────────────────
 
 type jsonFeedShape struct {
 	Version string `json:"version"`

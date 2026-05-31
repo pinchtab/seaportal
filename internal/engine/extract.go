@@ -768,7 +768,6 @@ func FromURLWithOptions(targetURL string, opts Options) (result Result) {
 			}
 			if mode != LinkRetentionAll {
 				content = applyLinkRetention(content, mode)
-				// result.Length is computed below from len(content) — no extra refresh needed.
 			}
 		}
 

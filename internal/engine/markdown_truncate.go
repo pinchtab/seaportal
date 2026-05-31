@@ -26,14 +26,11 @@ func TruncateMarkdownAtParagraph(md string, maxTokens int) (string, bool) {
 	if len(md) <= budget {
 		return md, false
 	}
-	// Latest "\n\n" boundary at or before budget.
 	cut := strings.LastIndex(md[:budget], "\n\n")
 	if cut < 0 {
-		// Fall back to "\n".
 		cut = strings.LastIndex(md[:budget], "\n")
 	}
 	if cut < 0 {
-		// Hard cut.
 		cut = budget
 	}
 	return md[:cut] + "\n\n*[truncated]*\n", true

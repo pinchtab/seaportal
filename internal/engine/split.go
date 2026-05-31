@@ -103,7 +103,6 @@ func SplitResultToFiles(r Result, cfg SplitConfig) ([]SplitFile, error) {
 		base = slugFromURL(r.URL)
 	}
 
-	// Build unit list (chunk texts).
 	var units []string
 	if len(r.Chunks) > 0 {
 		units = make([]string, 0, len(r.Chunks))
@@ -125,7 +124,6 @@ func SplitResultToFiles(r Result, cfg SplitConfig) ([]SplitFile, error) {
 		return nil, nil
 	}
 
-	// Pack units into shards.
 	var shards []string
 	var cur strings.Builder
 	flush := func() {

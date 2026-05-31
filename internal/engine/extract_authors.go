@@ -47,8 +47,3 @@ func ExtractMetaAuthors(rawHTML string) []string {
 	}
 	return out
 }
-
-// applyMetaAuthors was removed; the unified applyMetadata pass in metadata.go
-// now owns the **Authors:** prepend logic. ExtractMetaAuthors is retained
-// (it's still covered by extract_arxiv_test.go and is a focused author-only
-// helper that may be useful to external callers).

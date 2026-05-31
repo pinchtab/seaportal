@@ -5,11 +5,10 @@ import (
 	"strings"
 )
 
-// sanitize.go — Pre-readability HTML sanitization.
-// Strips hidden elements, invisible content, and junk tags before extraction.
-// Ported from OpenClaw's web-fetch-visibility.ts.
+// Pre-readability HTML sanitization: strips hidden elements, invisible content,
+// and junk tags before extraction. Ported from OpenClaw's web-fetch-visibility.ts.
 
-// Tags that should always be removed (never contain useful readable content).
+// removeTags never contain useful readable content, so they are always dropped.
 var removeTags = map[string]bool{
 	"meta":     true,
 	"template": true,
@@ -203,11 +202,8 @@ var classAttrPatterns = buildClassAttrPatterns()
 // before passing it to the readability extractor. This significantly improves extraction
 // quality on complex pages like StackOverflow and NYTimes.
 func SanitizeHTML(html string) string {
-	// 1. Strip HTML comments.
 	html = reHTMLComments.ReplaceAllString(html, "")
 
-	// 2. Remove always-hidden tags (svg, canvas, style, meta, template, etc.).
-	//
 	// performance: the previous implementation ran one regex per tag,
 	// each `(?is)<TAG\b[^>]*(?:/>|>[\s\S]*?</TAG\s*>)`. On a 1.3 MB
 	// Wikipedia fixture (which contains none of these tags) the NFA
@@ -215,13 +211,8 @@ func SanitizeHTML(html string) string {
 	// of total CPU in pprof. Replaced with a single-pass tokenizer.
 	html = removeAlwaysHiddenTagsSinglePass(html)
 
-	// 3. Remove input[type=hidden].
 	html = reInputHidden.ReplaceAllString(html, "")
 
-	// 4-7. Remove elements whose opening tag matches ANY of the hidden
-	// predicates (aria-hidden, hidden bool attr, hidden classes, hidden
-	// inline styles) in a single pass over the document.
-	//
 	// performance: the previous implementation invoked removeAttrElements
 	// once per predicate. Each call ran a regex over the full remaining
 	// document inside a per-tag loop — on a 1.3 MB Wikipedia fixture the
@@ -232,7 +223,6 @@ func SanitizeHTML(html string) string {
 	// O(N_predicates · M_tags · D_doc) to O(D_doc).
 	html = removeHiddenElementsSinglePass(html)
 
-	// 8. Strip invisible Unicode characters.
 	html = reInvisibleUnicode.ReplaceAllString(html, "")
 
 	return html
@@ -261,7 +251,6 @@ func removeAlwaysHiddenTagsSinglePass(html string) string {
 		}
 		c := html[tagStartAbs+1]
 		if (c < 'a' || c > 'z') && (c < 'A' || c > 'Z') {
-			// Not a candidate opening tag — copy `<` and continue.
 			out.WriteString(html[pos : tagStartAbs+1])
 			pos = tagStartAbs + 1
 			continue
@@ -292,7 +281,6 @@ func removeAlwaysHiddenTagsSinglePass(html string) string {
 			pos = tagEnd
 			continue
 		}
-		// Always-hidden tag — drop opening (and subtree if applicable).
 		out.WriteString(html[pos:tagStartAbs])
 		if selfClosing || isVoidElement(tagName) {
 			pos = tagEnd
@@ -350,13 +338,11 @@ func removeHiddenElementsSinglePass(html string) string {
 		}
 		c := html[tagStartAbs+1]
 		if (c < 'a' || c > 'z') && (c < 'A' || c > 'Z') {
-			// Not an opening tag we care about; copy `<` and continue.
 			out.WriteString(html[pos : tagStartAbs+1])
 			pos = tagStartAbs + 1
 			continue
 		}
 
-		// Scan tag name.
 		nameStart := tagStartAbs + 1
 		nameEnd := nameStart
 		for nameEnd < n {
@@ -373,7 +359,6 @@ func removeHiddenElementsSinglePass(html string) string {
 			continue
 		}
 
-		// Find tag end (handles quoted attributes).
 		tagEnd, selfClosing := scanTagEnd(html, tagStartAbs)
 		if tagEnd < 0 {
 			out.WriteString(html[pos:])
@@ -383,7 +368,6 @@ func removeHiddenElementsSinglePass(html string) string {
 		attrs := ""
 		if nameEnd < tagEnd-1 {
 			attrs = html[nameEnd : tagEnd-1]
-			// Trim trailing '/' for self-closing.
 			if selfClosing && len(attrs) > 0 && attrs[len(attrs)-1] == '/' {
 				attrs = attrs[:len(attrs)-1]
 			}
@@ -409,7 +393,6 @@ func removeHiddenElementsSinglePass(html string) string {
 			continue
 		}
 
-		// Element is hidden — drop it (and its subtree if not self-closing/void).
 		tagName := strings.ToLower(html[nameStart:nameEnd])
 		out.WriteString(html[pos:tagStartAbs])
 

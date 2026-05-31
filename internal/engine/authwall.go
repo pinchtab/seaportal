@@ -41,14 +41,10 @@ var authWallLinkPaths = []string{"/signup", "/sign-up", "/signin", "/sign-in", "
 // detectAuthWallByContent decides whether a successfully-extracted page is
 // actually a logged-out auth wall, based purely on content + URL signals
 // (no host list, no per-property allow/deny rules). Trigger requires QUORUM:
-// at least 2 independent signals must fire.
+// at least 2 independent signals must fire. Reason returned: "auth-wall-content".
 //
-// Reason returned: "auth-wall-content".
-//
-// Backward-compat note: existing JSONL reports + capability suite step 6.7
-// previously asserted reason "auth-wall-marketing". The capability suite has
-// been updated to accept EITHER string during the transition; downstream
-// consumers should migrate to "auth-wall-content".
+// Backward-compat: downstream consumers may still see the older reason
+// "auth-wall-marketing"; both strings denote the same outcome.
 //
 // Signals:
 //  1. Structural login form (hasLoginFormMarkers). Counts as 2 signals when
@@ -86,13 +82,9 @@ func detectAuthWallByContent(result Result) (bool, string) {
 		}
 	}
 
-	// Signal 1 — structural login form. The "email-field + password" pair
-	// almost never appears in real article content (docs/wikis/READMEs talk
-	// ABOUT passwords but don't render a credential prompt). When this pair
-	// surfaces in the extracted body it is a strong signal on its own; we
-	// reinforce it to 2 signals when paired with any other auth-wall hint:
-	//   - no article structure (ParagraphCount<3 AND Length<1500), or
-	//   - at least 2 distinct CTAs from the vocabulary (login-page prose).
+	// The email-field + password pair almost never appears in real article
+	// content (docs/wikis talk ABOUT passwords but don't render a credential
+	// prompt), so it reinforces to 2 signals when paired with another hint.
 	if hasLoginFormMarkers(content) {
 		signals++
 		if (result.ParagraphCount < 3 && result.Length < 1500) || distinctCTAs >= 2 {
@@ -136,9 +128,7 @@ func detectAuthWallByContent(result Result) (bool, string) {
 		}
 	}
 
-	// Signal 5 — auth-link dominance. Count markdown link targets that point
-	// to login/signup/register endpoints. Two or more such links suggest the
-	// page chrome is built around onboarding rather than article content.
+	// Signal 5 — auth-link dominance.
 	authLinkHits := 0
 	for _, p := range authWallLinkPaths {
 		authLinkHits += strings.Count(content, p+")")     // `](…/signup)` ending

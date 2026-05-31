@@ -93,8 +93,6 @@ func (s *Server) ServeStdio(ctx context.Context) error {
 	return s.serve(ctx, os.Stdin, os.Stdout)
 }
 
-// ── JSON-RPC envelopes ─────────────────────────────────────────────────────
-
 type rpcRequest struct {
 	JSONRPC string          `json:"jsonrpc"`
 	ID      json.RawMessage `json:"id,omitempty"`
