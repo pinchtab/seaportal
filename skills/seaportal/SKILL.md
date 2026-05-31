@@ -68,8 +68,8 @@ seaportal --version
 
 The default verb (no subcommand) is URL extraction — `seaportal <url>` behaves exactly as documented above.
 
-- `seaportal sitemap <url>` — fetch a sitemap.xml, recurse into nested `<sitemapindex>` references, decompress `.gz`, and print one URL per line. Flags: `--json` (emit JSON array of `{loc,lastmod,changefreq,priority}` entries), `--max-urls N` (default 50000), `--max-depth N` (default 5). Example: `seaportal sitemap https://example.com/sitemap.xml --json`.
-- `seaportal feed <url>` — fetch and parse RSS 2.0, Atom 1.0, or JSON Feed 1.x into a unified `{title, link, published, summary, author, guid}` shape (format sniffed from the root element / first byte). Default output is one TSV line per item (`published\ttitle\tlink`). Flags: `--json` (emit JSON array), `--max-items N` (default 200). Example: `seaportal feed https://example.com/feed.xml --json`.
+- `seaportal sitemap <url>` — fetch a sitemap.xml, recurse into nested `<sitemapindex>` references, decompress `.gz`, and print one URL per line. Flags: `--json` (emit JSON array of `{loc,lastmod,changefreq,priority}` entries), `--max-urls N` (default 50000), `--max-depth N` (default 5), `--allow-internal` (permit trusted private/internal hosts). Example: `seaportal sitemap https://example.com/sitemap.xml --json`.
+- `seaportal feed <url>` — fetch and parse RSS 2.0, Atom 1.0, or JSON Feed 1.x into a unified `{title, link, published, summary, author, guid}` shape (format sniffed from the root element / first byte). Default output is one TSV line per item (`published\ttitle\tlink`). Flags: `--json` (emit JSON array), `--max-items N` (default 200), `--allow-internal` (permit trusted private/internal hosts). Example: `seaportal feed https://example.com/feed.xml --json`.
 - `seaportal mcp` — run as an MCP (Model Context Protocol) server over JSON-RPC 2.0 line-delimited stdio. Exposes four tools — `fetch_url`, `fetch_snapshot`, `parse_sitemap`, `parse_feed` — each routing to the library entry point of the same shape. No flags; configuration flows through MCP tool arguments. See **MCP integration** below.
 - `seaportal help` — usage summary including subcommands.
 
@@ -88,7 +88,7 @@ Register seaportal as an MCP server in your editor (Claude Desktop / Claude Code
 }
 ```
 
-Tools exposed: `fetch_url` (`{url, dedupe?, fast?, with_links?, with_images?, with_tables?, with_comments?, max_tokens?}`), `fetch_snapshot` (`{url, filter?, max_tokens?}`), `parse_sitemap` (`{url, max_depth?, max_urls?}`), `parse_feed` (`{url, max_items?}`). Each returns its library result as a single JSON text content block.
+Tools exposed: `fetch_url` (`{url, dedupe?, fast?, with_links?, with_images?, with_tables?, with_comments?, max_tokens?}`), `fetch_snapshot` (`{url, filter?, max_tokens?, allow_internal?}`), `parse_sitemap` (`{url, max_depth?, max_urls?, allow_internal?}`), `parse_feed` (`{url, max_items?, allow_internal?}`). Each returns its library result as a single JSON text content block.
 
 ## User-Agent presets
 
@@ -136,11 +136,10 @@ decompressed (200 MiB) body.
   Add **`--allow-internal`** to permit it (you are vouching the target is trusted).
 - Other knobs: `--max-redirects N`, `--allow-domains` / `--deny-domains`,
   `--trusted-resolve-cidrs`, `--max-response-bytes`, `--max-decompressed-bytes`.
-- The MCP server applies the same safe default to `fetch_url` / `fetch_snapshot`.
+- The MCP server applies the same safe default to `fetch_url`, `fetch_snapshot`,
+  `parse_sitemap`, and `parse_feed`.
 - Caveats: with `--proxy` the dial-time rebinding check is skipped (the target is
-  still vetted before fetch and on each redirect, just not at connect time);
-  `--snapshot` uses a lighter client that pre-validates scheme/host/IP but does
-  not apply redirect re-validation or the body caps.
+  still vetted before fetch and on each redirect, just not at connect time).
 
 ## Per-host rate limiting
 

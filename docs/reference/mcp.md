@@ -49,6 +49,7 @@ Build the accessibility-tree snapshot for a URL (HTTP fetch, then snapshot extra
 | `url` | string | **required** |
 | `filter` | string | `interactive` to keep only links/buttons/inputs; empty for full tree |
 | `max_tokens` | integer | Approximate token cap |
+| `allow_internal` | boolean | Allow private/internal IP targets |
 
 ### `parse_sitemap`
 
@@ -59,6 +60,7 @@ Fetch and flatten a sitemap.xml (nested `<sitemapindex>` supported, `.gz` auto-d
 | `url` | string | **required** |
 | `max_depth` | integer | Max sitemap-index recursion depth (default 5) |
 | `max_urls` | integer | Stop after this many URLs (default 50000) |
+| `allow_internal` | boolean | Allow private/internal IP targets |
 
 ### `parse_feed`
 
@@ -68,6 +70,7 @@ Fetch and parse an RSS 2.0 / Atom 1.0 / JSON Feed 1.x URL into a unified `{title
 |----------|------|-------------|
 | `url` | string | **required** |
 | `max_items` | integer | Stop after this many items (default 200) |
+| `allow_internal` | boolean | Allow private/internal IP targets |
 
 ## Errors
 

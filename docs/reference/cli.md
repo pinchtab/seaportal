@@ -85,8 +85,7 @@ The CLI is **safe by default**: it applies `DefaultSecurityPolicy()` (SSRF /
 private-IP block on, `http`/`https` only, redirect + body caps). Loosen it only
 for trusted targets — e.g. `--allow-internal` to reach `localhost` / a private
 host. See [SECURITY.md](../../SECURITY.md) for the threat model and coverage
-caveats (`--proxy` skips the dial-time rebinding check; `--snapshot` pre-validates
-the host but skips redirect re-validation and the body caps).
+caveats (`--proxy` skips the dial-time rebinding check).
 
 | Flag | Default | Description |
 |------|---------|-------------|
