@@ -1,4 +1,4 @@
-# FIXTURES.md — SeaPortal Test Fixtures
+# Fixtures
 
 ## Overview
 

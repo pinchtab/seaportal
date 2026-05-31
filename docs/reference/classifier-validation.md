@@ -1,4 +1,4 @@
-# Classifier validation — held-out generalization
+# Classifier
 
 `./dev bench classify` reports **40/40** on `tests/eval/corpus.yaml`. That number
 is in-corpus: the classifier rules were tuned against those same 40 fixtures, so

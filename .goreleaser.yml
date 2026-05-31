@@ -20,6 +20,28 @@ archives:
 checksum:
   name_template: checksums.txt
 
+brews:
+  - name: seaportal
+    repository:
+      owner: pinchtab
+      name: homebrew-tap
+      branch: "brew-{{ .ProjectName }}-{{ .Version }}"
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+      pull_request:
+        enabled: true
+        base:
+          owner: pinchtab
+          name: homebrew-tap
+          branch: main
+    directory: Formula
+    homepage: "https://github.com/pinchtab/seaportal"
+    description: "HTTP-first web content extraction for AI agents: Markdown, accessibility snapshots, sitemap/feed parsing, and an MCP server"
+    license: "MIT"
+    test: |
+      system "#{bin}/seaportal", "--version"
+    install: |
+      bin.install Dir["seaportal*"].first => "seaportal"
+
 changelog:
   sort: asc
   filters:

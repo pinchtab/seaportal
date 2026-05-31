@@ -5,8 +5,7 @@
   ],
   "guides": [
     "guides/contributing.md",
-    "guides/security-checklist.md",
-    "fixtures.md"
+    "guides/security-checklist.md"
   ],
   "architecture": [
     "*"

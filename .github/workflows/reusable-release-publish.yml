@@ -41,3 +41,57 @@ jobs:
           curl -sfL https://goreleaser.com/static/run | VERSION="$GORELEASER_VERSION" bash -s -- release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+
+  npm:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    needs: release
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Extract version
+        id: version
+        run: |
+          TAG="${{ inputs.tag }}"
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Sync package version with release
+        working-directory: npm
+        run: |
+          CURRENT=$(node -pe "require('./package.json').version")
+          DESIRED=${{ steps.version.outputs.version }}
+          if [ "$CURRENT" != "$DESIRED" ]; then
+            npm version "$DESIRED" --no-git-tag-version
+          else
+            echo "Version already correct: $CURRENT"
+          fi
+
+      # postinstall downloads the GitHub release binary; --ignore-scripts keeps
+      # publish from running it in CI (the binary is fetched on the user's install).
+      - name: Publish to npm
+        working-directory: npm
+        run: npm publish --ignore-scripts
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  skill:
+    name: Publish Skill
+    needs:
+      - release
+      - npm
+    uses: ./.github/workflows/reusable-publish-skill.yml
+    with:
+      version: ${{ inputs.tag }}
+      ref: ${{ inputs.ref }}
+    secrets:
+      CLAWHUB_TOKEN: ${{ secrets.CLAWHUB_TOKEN }}

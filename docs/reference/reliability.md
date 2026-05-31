@@ -1,4 +1,4 @@
-# Reliability — what to expect
+# Reliability
 
 SeaPortal is a **fast first-pass triage that fails over**, not a universal fetcher.
 It is fast and reliable on static / server-rendered pages and signals when a page

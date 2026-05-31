@@ -1,7 +1,7 @@
 {
   "name": "seaportal",
   "version": "0.1.0",
-  "description": "Extract clean Markdown from URLs with SPA detection",
+  "description": "HTTP-first web content extraction for AI agents: Markdown, accessibility snapshots, sitemap/feed parsing, and an MCP server",
   "bin": {
     "seaportal": "bin/seaportal"
   },
