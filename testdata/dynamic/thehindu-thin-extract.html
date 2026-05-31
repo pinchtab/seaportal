@@ -151,13 +151,15 @@ function loadCSS(url) {
 		var el = document.getElementsByTagName('link')[0];
 		el.parentNode.insertBefore(link, el);
 } 
-function getUrlParameter( name, url ) {
+function getUrlParameter(name, url) {
 if (!url) url = location.href;
-name = name.replace(/[\[]/g,"\\\[").replace(/[\]]/g,"\\\]");
-var regexS = "[\\?&]"+name+"=([^&#]*)";
-var regex = new RegExp(regexS,"i");
-var results = regex.exec( url );
-return results == null ? null : results[1];
+try {
+	var parsed = new URL(url, location.href);
+	var value = parsed.searchParams.get(name);
+	return value == null ? null : value;
+} catch (e) {
+	return null;
+}
 }
 function createCookie(name,value,days) { if (days) {
 var date = new Date();
