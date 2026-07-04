@@ -68,3 +68,22 @@ var (
 func ScrapeSite(ctx context.Context, opts *ScrapeOptions) (*ScrapeResult, error) {
 	return engine.ScrapeSite(ctx, opts)
 }
+
+// RenderScrapeJSON marshals a ScrapeResult to indented JSON (the default
+// `--output json`).
+func RenderScrapeJSON(res *ScrapeResult) ([]byte, error) {
+	return engine.RenderScrapeJSON(res)
+}
+
+// RenderScrapeMarkdown renders a ScrapeResult as a single Markdown digest
+// (`--output md`).
+func RenderScrapeMarkdown(res *ScrapeResult) string {
+	return engine.RenderScrapeMarkdown(res)
+}
+
+// WriteScrapeDirectory writes a ScrapeResult as a directory of assets
+// (`--output directory`): result.json, pages/<slug>.md, and an index.md
+// manifest. Returns the relative page file paths.
+func WriteScrapeDirectory(res *ScrapeResult, dir string) ([]string, error) {
+	return engine.WriteScrapeDirectory(res, dir)
+}
