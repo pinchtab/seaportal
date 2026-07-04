@@ -4,7 +4,7 @@
 
 source "$(dirname "$0")/common.sh"
 
-SCRAPE_SITE_URL="${SCRAPE_SITE_URL:-http://scrapesite:80}"
+require_host "$SCRAPE_SITE_URL/robots.txt" || return 0
 
 # scrape_json <args...> → runs the scrape subcommand, sets SP_OUT/SP_EXIT.
 # Invoked directly (not via sp_ok) because the scrape path needs no SSRF flag

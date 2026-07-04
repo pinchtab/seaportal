@@ -4,7 +4,7 @@
 
 source "$(dirname "$0")/common.sh"
 
-SCRAPE_SITE_URL="${SCRAPE_SITE_URL:-http://scrapesite:80}"
+require_host "$SCRAPE_SITE_URL/robots.txt" || return 0
 
 # ─────────────────────────────────────────────────────────────────
 start_test "scrape discovery: sitemap found, groups, counts"

@@ -4,7 +4,7 @@
 
 source "$(dirname "$0")/common.sh"
 
-CRAWL_SITE_URL="${CRAWL_SITE_URL:-http://crawlsite:80}"
+require_host "$CRAWL_SITE_URL/index.html" || return 0
 
 # Invoked directly (not via sp_ok): the scrape path needs no SSRF flag and
 # sp_ok's --allow-internal prefix would break subcommand dispatch.

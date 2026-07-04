@@ -14,6 +14,13 @@ NC='\033[0m'
 FIXTURES_URL="${FIXTURES_URL:-http://localhost:8080}"
 RESULTS_DIR="${RESULTS_DIR:-/results}"
 
+# Dedicated host-root fixtures for the scrape e2e scenarios (06…11). Served by
+# their own nginx services in docker-compose.yml (scrapesite/crawlsite) because
+# their robots.txt/sitemap.xml must resolve at a host root. Under --no-docker
+# these hosts don't resolve, so the scrape scenarios skip via require_host.
+SCRAPE_SITE_URL="${SCRAPE_SITE_URL:-http://scrapesite:80}"
+CRAWL_SITE_URL="${CRAWL_SITE_URL:-http://crawlsite:80}"
+
 # The fixtures server runs on the private Docker network (e.g. 172.18.0.2), so
 # every CLI call opts into the SSRF escape hatch — these targets are trusted by
 # construction. Prepended to all invocations; harmless for --version/--help.
@@ -56,6 +63,18 @@ fail_test() {
 sp() {
   SP_OUT=$(seaportal $SP_FLAGS "$@" 2>&1) || SP_EXIT=$?
   SP_EXIT=${SP_EXIT:-0}
+}
+
+# require_host <probe-url> — for scenarios that need a dedicated fixture host.
+# Returns 0 when reachable; otherwise prints a skip note and returns 1 so a
+# sourced scenario can `require_host … || return 0` to skip cleanly (e.g. under
+# run-local.sh --no-docker, where scrapesite/crawlsite aren't up).
+require_host() {
+  if curl -sf -o /dev/null "$1" 2>/dev/null; then
+    return 0
+  fi
+  echo -e "  ${YELLOW}↷ skipped${NC} — ${1} not reachable (scrape e2e needs Docker)"
+  return 1
 }
 
 sp_ok() {
