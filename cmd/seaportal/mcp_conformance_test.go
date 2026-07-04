@@ -37,6 +37,7 @@ var expectedToolOrder = []string{
 	"fetch_snapshot",
 	"parse_sitemap",
 	"parse_feed",
+	"scrape_site",
 }
 
 // ── mini JSON-RPC client ───────────────────────────────────────────────────
@@ -284,19 +285,22 @@ func TestMCPConformance(t *testing.T) {
 			if !ok || len(props) == 0 {
 				t.Errorf("tool %q: inputSchema.properties missing or empty", tl.Name)
 			}
-			// Locked-in observation (2026-05-17): every tool currently sets
-			// required:["url"]. If this ever changes intentionally, update
-			// here and document the rationale.
+			// Every tool declares exactly one required argument: the four
+			// URL tools use "url"; scrape_site uses "base_url".
+			wantReq := "url"
+			if tl.Name == "scrape_site" {
+				wantReq = "base_url"
+			}
 			req, ok := s["required"].([]interface{})
 			if !ok {
 				t.Errorf("tool %q: inputSchema.required missing or wrong type", tl.Name)
 				continue
 			}
-			if len(req) != 1 || req[0] != "url" {
-				t.Errorf("tool %q: required = %v, want [url]", tl.Name, req)
+			if len(req) != 1 || req[0] != wantReq {
+				t.Errorf("tool %q: required = %v, want [%s]", tl.Name, req, wantReq)
 			}
-			if _, hasURL := props["url"]; !hasURL {
-				t.Errorf("tool %q: properties missing \"url\"", tl.Name)
+			if _, has := props[wantReq]; !has {
+				t.Errorf("tool %q: properties missing %q", tl.Name, wantReq)
 			}
 		}
 	})

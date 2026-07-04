@@ -223,4 +223,110 @@ func registerMCPTools(srv *mcp.Server) {
 			return string(b), nil
 		},
 	)
+
+	srv.RegisterTool(
+		"scrape_site",
+		"Scrape a whole site from a base URL: discover (robots/sitemap/crawl), group similar URLs, sample, fetch+extract each page, and return a structured ScrapeResult JSON (site, pageGroups, pages, summary) designed for PinchTab enrichment.",
+		map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"base_url":         map[string]interface{}{"type": "string", "description": "Base URL to scrape"},
+				"max_pages":        map[string]interface{}{"type": "integer", "description": "Max total pages (default 50, capped at 200)"},
+				"max_per_pattern":  map[string]interface{}{"type": "integer", "description": "Max samples per URL pattern (default 8, capped at 50)"},
+				"full":             map[string]interface{}{"type": "boolean", "description": "Disable sampling (fetch all discovered pages, still capped)"},
+				"include_patterns": map[string]interface{}{"type": "string", "description": "Comma-separated glob patterns to include"},
+				"exclude_patterns": map[string]interface{}{"type": "string", "description": "Comma-separated glob patterns to exclude"},
+				"sample_strategy":  map[string]interface{}{"type": "string", "description": "random|priority|balanced (default balanced)"},
+				"with_performance": map[string]interface{}{"type": "boolean", "description": "Include per-page performance data"},
+				"respect_robots":   map[string]interface{}{"type": "boolean", "description": "Respect robots.txt disallow + crawl-delay (default true)"},
+				"timeout_seconds":  map[string]interface{}{"type": "integer", "description": "Overall timeout in seconds (default 60, capped at 180)"},
+				"user_agent":       map[string]interface{}{"type": "string"},
+			},
+			"required": []string{"base_url"},
+		},
+		func(args map[string]interface{}) (string, error) {
+			baseURL, _ := args["base_url"].(string)
+			if baseURL == "" {
+				return "", fmt.Errorf("missing required argument: base_url")
+			}
+
+			strategy := seaportal.SampleBalanced
+			if v, ok := args["sample_strategy"].(string); ok && v != "" {
+				strategy = seaportal.SampleStrategy(v)
+				switch strategy {
+				case seaportal.SampleBalanced, seaportal.SampleRandom, seaportal.SamplePriority:
+				default:
+					return "", fmt.Errorf("unknown sample_strategy %q (want balanced|random|priority)", v)
+				}
+			}
+
+			// Server-side guardrails: cap page budget and timeout so a single
+			// MCP call can't fan out unboundedly.
+			maxPages := argInt(args, "max_pages", 50)
+			if maxPages > maxScrapePages {
+				maxPages = maxScrapePages
+			}
+			maxPerPattern := argInt(args, "max_per_pattern", 8)
+			if maxPerPattern > maxScrapePerPattern {
+				maxPerPattern = maxScrapePerPattern
+			}
+			timeoutSec := argInt(args, "timeout_seconds", 60)
+			if timeoutSec <= 0 || timeoutSec > maxScrapeTimeoutSeconds {
+				timeoutSec = maxScrapeTimeoutSeconds
+			}
+
+			respectRobots := true
+			if v, ok := args["respect_robots"].(bool); ok {
+				respectRobots = v
+			}
+			opts := &seaportal.ScrapeOptions{
+				BaseURL:         baseURL,
+				MaxPages:        maxPages,
+				MaxPerPattern:   maxPerPattern,
+				SampleStrategy:  strategy,
+				IncludePatterns: splitCSV(argString(args, "include_patterns")),
+				ExcludePatterns: splitCSV(argString(args, "exclude_patterns")),
+				RespectRobots:   &respectRobots,
+				Timeout:         time.Duration(timeoutSec) * time.Second,
+				UserAgent:       argString(args, "user_agent"),
+			}
+			if v, ok := args["full"].(bool); ok {
+				opts.Full = v
+			}
+			if v, ok := args["with_performance"].(bool); ok {
+				opts.WithPerformance = v
+			}
+
+			res, err := seaportal.ScrapeSite(context.Background(), opts)
+			if err != nil {
+				return "", fmt.Errorf("scrape site: %w", err)
+			}
+			b, err := json.Marshal(res)
+			if err != nil {
+				return "", fmt.Errorf("marshal result: %w", err)
+			}
+			return string(b), nil
+		},
+	)
+}
+
+// Server-side guardrails for the scrape_site MCP tool.
+const (
+	maxScrapePages          = 200
+	maxScrapePerPattern     = 50
+	maxScrapeTimeoutSeconds = 180
+)
+
+// argInt reads a JSON-RPC numeric argument (float64) as an int, or def when
+// absent/non-positive.
+func argInt(args map[string]interface{}, key string, def int) int {
+	if v, ok := args[key].(float64); ok && int(v) > 0 {
+		return int(v)
+	}
+	return def
+}
+
+func argString(args map[string]interface{}, key string) string {
+	s, _ := args[key].(string)
+	return s
 }
