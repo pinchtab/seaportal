@@ -22,6 +22,18 @@ services:
       timeout: 5s
       retries: 5
 
+  # No-sitemap variant (ALP-018): homepage + relative-linked pages, no
+  # sitemap.xml, so scrape discovery must fall back to a bounded homepage crawl.
+  crawlsite:
+    image: nginx:alpine
+    volumes:
+      - ./fixtures/site-nosm:/usr/share/nginx/html:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:80/index.html"]
+      interval: 2s
+      timeout: 5s
+      retries: 5
+
   runner:
     build:
       context: ./runner
@@ -30,9 +42,12 @@ services:
         condition: service_healthy
       scrapesite:
         condition: service_healthy
+      crawlsite:
+        condition: service_healthy
     environment:
       - FIXTURES_URL=http://fixtures:80
       - SCRAPE_SITE_URL=http://scrapesite:80
+      - CRAWL_SITE_URL=http://crawlsite:80
     volumes:
       - ./scenarios:/scenarios:ro
       - ./results:/results
