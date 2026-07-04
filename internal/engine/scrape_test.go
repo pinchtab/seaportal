@@ -3,6 +3,8 @@ package engine
 import (
 	"context"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 )
 
@@ -58,10 +60,42 @@ func TestScrapeOptionsPreservesExplicitValues(t *testing.T) {
 	}
 }
 
-func TestScrapeSiteNotImplemented(t *testing.T) {
-	_, err := ScrapeSite(context.Background(), &ScrapeOptions{BaseURL: "https://example.com"})
-	if !errors.Is(err, ErrNotImplemented) {
-		t.Fatalf("err = %v, want ErrNotImplemented", err)
+func TestScrapeSiteEndToEnd(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/":
+			w.Write([]byte(`<html><head><title>Home</title></head><body><h1>Home</h1>` +
+				`<a href="/about">About</a><a href="/blog/1">Post 1</a><a href="/blog/2">Post 2</a></body></html>`))
+		case "/sitemap.xml":
+			http.NotFound(w, r) // force crawl fallback
+		default:
+			w.Write([]byte(`<html><head><title>` + r.URL.Path + `</title></head><body><h1>` + r.URL.Path + `</h1><p>Some body content for extraction here.</p></body></html>`))
+		}
+	})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	res, err := ScrapeSite(context.Background(), &ScrapeOptions{BaseURL: srv.URL, MaxPages: 10})
+	if err != nil {
+		t.Fatalf("ScrapeSite: %v", err)
+	}
+	if res.Site.BaseURL != srv.URL {
+		t.Errorf("Site.BaseURL = %s, want %s", res.Site.BaseURL, srv.URL)
+	}
+	if res.Site.SitemapFound {
+		t.Errorf("SitemapFound = true, want false (crawl fallback)")
+	}
+	if len(res.Pages) == 0 {
+		t.Fatal("no pages scraped")
+	}
+	if res.Summary.ContentTypes == nil {
+		t.Error("summary.ContentTypes must be non-nil")
+	}
+	for _, p := range res.Pages {
+		if p.Status != http.StatusOK || p.Error != "" {
+			t.Errorf("page %s: status=%d err=%q", p.URL, p.Status, p.Error)
+		}
 	}
 }
 

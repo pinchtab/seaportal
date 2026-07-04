@@ -26,41 +26,46 @@ type poolConfig struct {
 //   - partial failures captured on the page's Error field (never aborts).
 func fetchAll(ctx context.Context, urls []string, opts ScrapeOptions, cfg poolConfig) []PageObject {
 	o := opts.normalized()
+	respectRobots := o.RespectRobots != nil && *o.RespectRobots
+	limiter := NewHostRateLimiter()
+	robots := NewCrawlDelayCache()
+	extractOpts := Options{UserAgent: o.UserAgent}
+
+	return runFetchPool(ctx, urls, o.Timeout, cfg.Concurrency, func(ctx context.Context, u string) PageObject {
+		if err := ctx.Err(); err != nil {
+			return PageObject{URL: u, Error: err.Error()}
+		}
+		return fetchOne(u, extractOpts, limiter, robots, respectRobots, cfg.MinInterval)
+	})
+}
+
+// runFetchPool maps do over urls with a bounded worker pool, preserving order.
+// It applies timeout to ctx, stops dispatching once ctx is cancelled, and fills
+// any URL not reached with a cancellation error — so callers always get one
+// PageObject per input URL (partial results on cancellation).
+func runFetchPool(ctx context.Context, urls []string, timeout time.Duration, concurrency int, do func(context.Context, string) PageObject) []PageObject {
 	results := make([]PageObject, len(urls))
 	if len(urls) == 0 {
 		return results
 	}
-
-	concurrency := cfg.Concurrency
 	if concurrency <= 0 {
 		concurrency = defaultScrapeConcurrency
 	}
 	if concurrency > len(urls) {
 		concurrency = len(urls)
 	}
-
-	if o.Timeout > 0 {
+	if timeout > 0 {
 		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, o.Timeout)
+		ctx, cancel = context.WithTimeout(ctx, timeout)
 		defer cancel()
 	}
-
-	respectRobots := o.RespectRobots != nil && *o.RespectRobots
-	limiter := NewHostRateLimiter()
-	robots := NewCrawlDelayCache()
-	extractOpts := Options{UserAgent: o.UserAgent}
 
 	jobs := make(chan int)
 	var wg sync.WaitGroup
 	worker := func() {
 		defer wg.Done()
 		for idx := range jobs {
-			u := urls[idx]
-			if err := ctx.Err(); err != nil {
-				results[idx] = PageObject{URL: u, Error: err.Error()}
-				continue
-			}
-			results[idx] = fetchOne(u, extractOpts, limiter, robots, respectRobots, cfg.MinInterval)
+			results[idx] = do(ctx, urls[idx])
 		}
 	}
 	for i := 0; i < concurrency; i++ {
@@ -68,7 +73,6 @@ func fetchAll(ctx context.Context, urls []string, opts ScrapeOptions, cfg poolCo
 		go worker()
 	}
 
-	// Dispatch, stopping early if ctx is cancelled.
 dispatch:
 	for i := range urls {
 		select {
@@ -80,7 +84,6 @@ dispatch:
 	close(jobs)
 	wg.Wait()
 
-	// Any index never dispatched (ctx cancelled mid-dispatch) → partial result.
 	for i := range results {
 		if results[i].URL == "" {
 			results[i] = PageObject{URL: urls[i], Error: context.Canceled.Error()}

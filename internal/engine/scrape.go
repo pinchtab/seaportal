@@ -3,6 +3,7 @@ package engine
 import (
 	"context"
 	"errors"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -161,9 +162,9 @@ type ScrapeResult struct {
 	Summary    ScrapeSummary `json:"summary"`
 }
 
-// ScrapeSite discovers, samples, and extracts a whole site. It validates opts,
-// applies defaults, and currently returns ErrNotImplemented — the real pipeline
-// lands in ALP-002…008.
+// ScrapeSite runs the full scrape pipeline for opts.BaseURL: discover candidate
+// URLs, cluster them into pattern groups, sample within budget, fetch + extract
+// + assemble each page concurrently, and roll up a site summary.
 func ScrapeSite(ctx context.Context, opts *ScrapeOptions) (*ScrapeResult, error) {
 	if opts == nil {
 		return nil, ErrMissingBaseURL
@@ -171,7 +172,99 @@ func ScrapeSite(ctx context.Context, opts *ScrapeOptions) (*ScrapeResult, error)
 	if err := opts.validate(); err != nil {
 		return nil, err
 	}
-	_ = opts.normalized()
-	_ = ctx
-	return nil, ErrNotImplemented
+	o := opts.normalized()
+	base, err := url.Parse(o.BaseURL)
+	if err != nil || base.Host == "" {
+		return nil, ErrMissingBaseURL
+	}
+
+	disc, err := discover(ctx, o)
+	if err != nil {
+		return nil, err
+	}
+	groups := groupByPattern(disc.URLs)
+	sampled := sample(groups, o)
+	pages := fetchAndAssemble(ctx, base, sampled, o)
+
+	sampledSet := make(map[string]bool, len(sampled))
+	for _, u := range sampled {
+		sampledSet[u] = true
+	}
+	pageByURL := make(map[string]PageObject, len(pages))
+	for _, p := range pages {
+		pageByURL[p.URL] = p
+	}
+
+	outGroups := make([]PageGroup, 0, len(groups))
+	for _, g := range groups {
+		grp := PageGroup{Pattern: g.Pattern, TotalInSitemap: g.TotalInSitemap, Pages: []PageObject{}}
+		for _, u := range g.URLs {
+			if sampledSet[u] {
+				grp.Sampled++
+				if p, ok := pageByURL[u]; ok {
+					grp.Pages = append(grp.Pages, p)
+				}
+			}
+		}
+		outGroups = append(outGroups, grp)
+	}
+
+	site := SiteInfo{
+		BaseURL:            o.BaseURL,
+		Title:              siteTitle(pages),
+		DiscoveredAt:       time.Now().UTC(),
+		SitemapFound:       disc.SitemapFound,
+		TotalURLsInSitemap: disc.TotalURLsInSitemap,
+		SampledPages:       len(pages),
+	}
+
+	return &ScrapeResult{
+		Site:       site,
+		PageGroups: outGroups,
+		Pages:      pages,
+		Summary:    summarize(pages, disc.TotalURLsInSitemap, len(groups)),
+	}, nil
+}
+
+// fetchAndAssemble fetches each URL's HTML once and assembles a full PageObject
+// (ALP-006), concurrently with per-host rate limiting and robots crawl-delay.
+// Partial failures are captured on the page's Error field.
+func fetchAndAssemble(ctx context.Context, base *url.URL, urls []string, o ScrapeOptions) []PageObject {
+	respectRobots := o.RespectRobots != nil && *o.RespectRobots
+	withPerf := o.WithPerformance
+	limiter := NewHostRateLimiter()
+	robots := NewCrawlDelayCache()
+
+	return runFetchPool(ctx, urls, o.Timeout, defaultScrapeConcurrency, func(ctx context.Context, u string) PageObject {
+		if err := ctx.Err(); err != nil {
+			return PageObject{URL: u, Error: err.Error()}
+		}
+		host, scheme := hostScheme(u)
+		if respectRobots && host != "" {
+			limiter.Wait(host, robots.GetDelayWithScheme(host, o.UserAgent, scheme))
+		}
+		body, _, status, err := FetchBytes(ctx, u, FetchBytesOptions{Timeout: o.Timeout, UserAgent: o.UserAgent})
+		if err != nil {
+			return PageObject{URL: u, Status: status, Error: err.Error()}
+		}
+		r := FromHTMLWithOptions(string(body), u, Options{UserAgent: o.UserAgent})
+		r.StatusCode = status
+		return assemblePage(base, u, string(body), r, withPerf)
+	})
+}
+
+// siteTitle picks the homepage title when present, else the first non-empty
+// page title.
+func siteTitle(pages []PageObject) string {
+	for _, p := range pages {
+		if pu, err := url.Parse(p.URL); err == nil && (pu.Path == "" || pu.Path == "/") && p.Title != "" {
+			return p.Title
+		}
+	}
+	for _, p := range pages {
+		if p.Title != "" {
+			return p.Title
+		}
+	}
+	return ""
 }

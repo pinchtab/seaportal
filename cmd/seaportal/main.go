@@ -124,6 +124,9 @@ func main() {
 		case "feed":
 			runFeed(os.Args[2:])
 			return
+		case "scrape":
+			runScrape(os.Args[2:])
+			return
 		case "mcp":
 			runMCP(os.Args[2:])
 			return
