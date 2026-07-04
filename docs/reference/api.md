@@ -228,6 +228,48 @@ items, err := seaportal.ParseFeed(ctx, url, seaportal.ParseFeedOptions{
 
 `ParseFeed` handles RSS 2.0, Atom 1.0, and JSON Feed 1.x into a unified `[]FeedItem`.
 
+## Site scraping
+
+`ScrapeSite` runs the whole-site pipeline — discover → group → sample → fetch +
+extract + assemble → summarize — and returns a structured `*ScrapeResult`. The
+output is designed to be handed to [PinchTab](https://pinchtab.com) for deep
+browser enrichment.
+
+```go
+result, err := seaportal.ScrapeSite(ctx, &seaportal.ScrapeOptions{
+    BaseURL:       "https://example.com",
+    MaxPages:      50,
+    MaxPerPattern: 8,
+    // SampleStrategy, IncludePatterns, ExcludePatterns, Full,
+    // WithPerformance, RespectRobots, Timeout, UserAgent …
+})
+```
+
+`ScrapeOptions` fields map 1:1 to the [`scrape` CLI flags](cli.md#seaportal-scrape).
+Zero-valued fields resolve to documented defaults (`MaxPages` 50, `MaxPerPattern`
+8, `SampleStrategy` `balanced`, `Output` `json`, `Timeout` 60s, `RespectRobots`
+true — note `RespectRobots` is a `*bool` so an unset value defaults to on).
+`ScrapeSite` returns `ErrMissingBaseURL` for an empty/invalid base URL.
+
+`ScrapeResult` mirrors the spec output shape:
+
+| Type | Purpose |
+|------|---------|
+| `ScrapeResult` | `Site`, `PageGroups`, `Pages`, `Summary` |
+| `SiteInfo` | `baseURL`, `title`, `discoveredAt`, `sitemapFound`, `totalURLsInSitemap`, `sampledPages` |
+| `PageGroup` | one URL-pattern cluster: `pattern`, `totalInSitemap`, `sampled`, `pages` |
+| `PageObject` | one page: `url`, `title`, `status`, `meta`, `markdown`, `schema`, `contentType`, `internalLinks`, `externalLinks`, `error` |
+| `PagePerformance` | `ttfbMs`, `totalBytes`, `requests` (only when `WithPerformance`) |
+| `ScrapeSummary` | `contentTypes` tally + heuristic `recommendations` |
+
+Render helpers turn a result into the three output formats:
+
+```go
+data, _ := seaportal.RenderScrapeJSON(result)       // []byte
+md := seaportal.RenderScrapeMarkdown(result)         // string
+files, _ := seaportal.WriteScrapeDirectory(result, "out/") // result.json + pages/<slug>.md + index.md
+```
+
 ## Fingerprinting
 
 ```go

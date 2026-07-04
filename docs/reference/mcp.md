@@ -72,6 +72,27 @@ Fetch and parse an RSS 2.0 / Atom 1.0 / JSON Feed 1.x URL into a unified `{title
 | `max_items` | integer | Stop after this many items (default 200) |
 | `allow_internal` | boolean | Allow private/internal IP targets |
 
+### `scrape_site`
+
+Scrape a whole site from a base URL and return a structured `ScrapeResult` JSON
+(`site`, `pageGroups`, `pages`, `summary`) designed to be handed to PinchTab for
+enrichment. Wraps `ScrapeSite`. Server-side guardrails cap `max_pages` (≤200),
+`max_per_pattern` (≤50), and `timeout_seconds` (≤180).
+
+| Argument | Type | Description |
+|----------|------|-------------|
+| `base_url` | string | **required** |
+| `max_pages` | integer | Max total pages (default 50, capped at 200) |
+| `max_per_pattern` | integer | Max samples per URL pattern (default 8, capped at 50) |
+| `full` | boolean | Disable sampling (fetch all discovered pages, still capped) |
+| `include_patterns` | string | Comma-separated globs to include |
+| `exclude_patterns` | string | Comma-separated globs to exclude |
+| `sample_strategy` | string | `random` \| `priority` \| `balanced` (default balanced) |
+| `with_performance` | boolean | Include per-page performance data |
+| `respect_robots` | boolean | Respect robots.txt + crawl-delay (default true) |
+| `timeout_seconds` | integer | Overall timeout (default 60, capped at 180) |
+| `user_agent` | string | Override the User-Agent header |
+
 ## Errors
 
 Tool-level failures return a successful JSON-RPC result with `isError: true` and the error message as text; handler panics are caught and returned the same way.

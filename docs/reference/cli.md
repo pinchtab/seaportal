@@ -4,6 +4,7 @@
 seaportal [options] <url>          # Extract Markdown / JSON / snapshot (default verb)
 seaportal sitemap <url> [flags]    # Flatten a sitemap.xml (recurses sitemap-index)
 seaportal feed <url> [flags]       # Parse RSS / Atom / JSON Feed into unified entries
+seaportal scrape <base-url> [flags] # Scrape a whole site (discover, sample, extract) → structured JSON
 seaportal mcp                      # Run as an MCP server over stdio (see mcp.md)
 seaportal help                     # Show usage
 seaportal --version                # Show version (also -v)
@@ -133,3 +134,71 @@ seaportal feed https://example.com/feed.xml [--json] [--max-items N]
 | `--max-items N` | 200 | Stop after this many items |
 
 Parses RSS 2.0, Atom 1.0, and JSON Feed 1.x into unified entries.
+
+## `seaportal scrape`
+
+Scrape a whole website from a base URL: discover candidate URLs (robots.txt +
+sitemap, or a bounded crawl fallback), cluster them into pattern groups, sample
+within budget, fetch and extract each page concurrently, and emit a structured
+result. The JSON output is designed to be handed to [PinchTab](https://pinchtab.com)
+for deep browser enrichment (screenshots, console/network capture, visual
+regression, a11y checks).
+
+```bash
+seaportal scrape https://example.com --max-pages 50 --sample-strategy balanced
+```
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--max-pages N` | 50 | Maximum total pages to process |
+| `--max-per-pattern N` | 8 | Max samples per URL pattern group |
+| `--full` | false | Disable sampling — fetch all discovered pages |
+| `--include-patterns S` | "" | Comma-separated globs to include (`*` within a segment, `**` across) |
+| `--exclude-patterns S` | "" | Comma-separated globs to exclude |
+| `--sample-strategy S` | balanced | `random` \| `priority` \| `balanced` |
+| `--output S` | json | `json` \| `md` \| `directory` |
+| `--out-dir PATH` | "" | Target directory (required for `--output directory`) |
+| `--with-performance` | false | Include per-page performance data (TTFB, bytes, requests) |
+| `--respect-robots` | true | Honor robots.txt disallow rules + crawl-delay |
+| `--timeout D` | 60s | Overall scrape timeout |
+| `--user-agent S` | "" | Override the User-Agent header |
+
+Sampling strategies: `balanced` spreads the budget across groups so a large
+group can't starve the others; `priority` takes the homepage and one
+representative per top-level section first; `random` samples uniformly within
+each group (seeded per-site for reproducibility). `--output directory` writes
+`result.json`, one `pages/<slug>.md` per page, and an `index.md` manifest.
+
+Sample JSON output (abridged):
+
+```json
+{
+  "site": {
+    "baseURL": "https://example.com",
+    "title": "Example Site",
+    "sitemapFound": true,
+    "totalURLsInSitemap": 12450,
+    "sampledPages": 42
+  },
+  "pageGroups": [
+    { "pattern": "/blog/*", "totalInSitemap": 8200, "sampled": 8, "pages": [] }
+  ],
+  "pages": [
+    {
+      "url": "https://example.com/blog/hello",
+      "title": "Hello",
+      "status": 200,
+      "meta": { "title": "Hello", "ogType": "article" },
+      "markdown": "# Hello\n\n…",
+      "schema": [ { "type": "Article" } ],
+      "contentType": "article",
+      "internalLinks": 45,
+      "externalLinks": 12
+    }
+  ],
+  "summary": {
+    "contentTypes": { "article": 30, "product": 10, "page": 2 },
+    "recommendations": ["sitemap lists 12450 URLs across 6 patterns but only 42 were sampled; sampling recommended"]
+  }
+}
+```

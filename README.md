@@ -26,6 +26,7 @@ seaportal --no-dedupe https://pinchtab.com  # Disable deduplication
 # Subcommands
 seaportal sitemap https://pinchtab.com/sitemap.xml  # Flatten a sitemap
 seaportal feed https://pinchtab.com/feed.xml        # Parse RSS / Atom / JSON Feed
+seaportal scrape https://pinchtab.com               # Scrape a whole site → structured JSON
 seaportal mcp                                       # Run as an MCP server over stdio
 
 # Version
@@ -33,6 +34,10 @@ seaportal --version
 ```
 
 The full flag list and subcommands are in the [CLI reference](docs/reference/cli.md). SeaPortal also runs as an [MCP server](docs/reference/mcp.md) (`seaportal mcp`), and ships `seabench`, a [benchmark/evaluation harness](docs/reference/seabench.md).
+
+### Site scraping
+
+`seaportal scrape <base-url>` (and the `ScrapeSite` library call / `scrape_site` MCP tool) crawls a whole site: it discovers URLs via robots.txt + sitemap (or a bounded crawl fallback), clusters similar paths into pattern groups, samples within a page budget, and extracts each page into a structured `ScrapeResult` (`site`, `pageGroups`, `pages`, `summary`). The JSON is designed as a hand-off to [PinchTab](https://pinchtab.com) for deep browser enrichment — screenshots, console/network capture, visual regression, and accessibility checks — keeping SeaPortal focused on fast HTTP-level discovery and extraction. See the [`scrape` CLI docs](docs/reference/cli.md#seaportal-scrape).
 
 ## Accessibility Snapshot
 
