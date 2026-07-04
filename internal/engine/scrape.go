@@ -141,6 +141,9 @@ type PageObject struct {
 	ContentType   string            `json:"contentType"`
 	InternalLinks int               `json:"internalLinks"`
 	ExternalLinks int               `json:"externalLinks"`
+	// Error is set when this page failed to fetch or extract; a partial
+	// failure is recorded here rather than aborting the whole scrape.
+	Error string `json:"error,omitempty"`
 }
 
 // ScrapeSummary is the roll-up `summary` object in a ScrapeResult.
