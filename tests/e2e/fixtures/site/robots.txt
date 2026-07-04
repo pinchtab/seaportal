@@ -2,4 +2,4 @@ User-agent: *
 Disallow: /private/
 Crawl-delay: 0
 
-Sitemap: http://fixtures/sitemap.xml
+Sitemap: http://scrapesite/sitemap.xml

@@ -9,12 +9,12 @@ foundation for the scrape e2e scenarios (ALP-015…020).
 Static files only — serve the **contents of this directory at a host root** so
 `/robots.txt` and `/sitemap.xml` resolve at the top level (robots.txt is always
 fetched from the host root). The sitemaps use absolute URLs under
-`http://fixtures` to match the `fixtures` service in `tests/e2e/docker-compose.yml`;
-mount this directory as that service's nginx root (or a dedicated `fixtures`
-root) so the sitemap `<loc>` hosts match the base URL you scrape.
+`http://scrapesite`, which is the dedicated nginx service in
+`tests/e2e/docker-compose.yml` that mounts this directory as its root — so the
+sitemap `<loc>` hosts match the base URL the scrape scenario passes.
 
 ```bash
-seaportal scrape http://fixtures/ --max-pages 40
+seaportal scrape http://scrapesite/ --max-pages 40
 ```
 
 ## Layout

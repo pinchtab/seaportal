@@ -9,14 +9,30 @@ services:
       timeout: 5s
       retries: 5
 
+  # Dedicated root for the multi-page scrape fixture (ALP-014): its sitemap and
+  # robots.txt use absolute http://scrapesite/ URLs and must be served at the
+  # host root, so it gets its own nginx serving ./fixtures/site.
+  scrapesite:
+    image: nginx:alpine
+    volumes:
+      - ./fixtures/site:/usr/share/nginx/html:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:80/robots.txt"]
+      interval: 2s
+      timeout: 5s
+      retries: 5
+
   runner:
     build:
       context: ./runner
     depends_on:
       fixtures:
         condition: service_healthy
+      scrapesite:
+        condition: service_healthy
     environment:
       - FIXTURES_URL=http://fixtures:80
+      - SCRAPE_SITE_URL=http://scrapesite:80
     volumes:
       - ./scenarios:/scenarios:ro
       - ./results:/results
