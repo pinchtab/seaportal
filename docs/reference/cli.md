@@ -7,7 +7,7 @@ seaportal feed <url> [flags]       # Parse RSS / Atom / JSON Feed into unified e
 seaportal scrape <base-url> [flags] # Scrape a whole site (discover, sample, extract) → structured JSON
 seaportal mcp                      # Run as an MCP server over stdio (see mcp.md)
 seaportal help                     # Show usage
-seaportal --version                # Show version (also -v)
+seaportal version                  # Show version (also --version / -v)
 ```
 
 The default verb extracts a URL. It writes the rendered Markdown and JSON to `renders/seaportal/<host>_<timestamp>.{md,json}` and prints the content plus a classification summary. Use `--json`, `--xml`, or `--snapshot` to control the format.

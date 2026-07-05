@@ -23,7 +23,9 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  seaportal [options] <url>          Extract Markdown / JSON / snapshot (default verb)")
 	fmt.Fprintln(os.Stderr, "  seaportal sitemap <url> [flags]    Flatten a sitemap.xml (and recurse sitemap-index)")
 	fmt.Fprintln(os.Stderr, "  seaportal feed <url> [flags]       Parse RSS / Atom / JSON Feed into unified entries")
+	fmt.Fprintln(os.Stderr, "  seaportal scrape <url> [flags]     Scrape a whole site into structured output")
 	fmt.Fprintln(os.Stderr, "  seaportal mcp                      Run as an MCP (Model Context Protocol) server over stdio")
+	fmt.Fprintln(os.Stderr, "  seaportal version                  Print the seaportal version")
 	fmt.Fprintln(os.Stderr, "  seaportal help                     Show this help")
 	fmt.Fprintln(os.Stderr, "")
 	fmt.Fprintln(os.Stderr, "Run 'seaportal -h' for the full list of extract options.")
@@ -132,6 +134,9 @@ func main() {
 			return
 		case "help":
 			printUsage()
+			return
+		case "version":
+			fmt.Printf("seaportal %s\n", version)
 			return
 		}
 	}
