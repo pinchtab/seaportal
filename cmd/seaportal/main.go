@@ -139,8 +139,29 @@ func main() {
 			fmt.Printf("seaportal %s\n", version)
 			return
 		}
+		if arg := os.Args[1]; looksLikeBogusVerb(arg) {
+			fmt.Fprintf(os.Stderr, "unknown command: %s\n", arg)
+			fmt.Fprintln(os.Stderr, "run 'seaportal help' for usage")
+			os.Exit(2)
+		}
 	}
 	runExtract(os.Args[1:])
+}
+
+// looksLikeBogusVerb reports whether the first CLI arg is a mistyped
+// subcommand rather than an extract target: a bare token that is not a flag,
+// has no URL scheme, and contains no dot that could make it a host.
+func looksLikeBogusVerb(arg string) bool {
+	if arg == "" || strings.HasPrefix(arg, "-") {
+		return false
+	}
+	if strings.Contains(arg, ".") || strings.Contains(arg, "/") {
+		return false
+	}
+	if strings.Contains(arg, ":") { // scheme, e.g. https:, data:
+		return false
+	}
+	return true
 }
 
 func runExtract(rawArgs []string) {
