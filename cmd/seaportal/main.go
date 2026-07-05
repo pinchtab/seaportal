@@ -16,19 +16,19 @@ import (
 
 var version = "dev"
 
-func printUsage() {
-	fmt.Fprintln(os.Stderr, "SeaPortal - Extract clean Markdown from URLs with SPA detection")
-	fmt.Fprintln(os.Stderr, "")
-	fmt.Fprintln(os.Stderr, "Usage:")
-	fmt.Fprintln(os.Stderr, "  seaportal [options] <url>          Extract Markdown / JSON / snapshot (default verb)")
-	fmt.Fprintln(os.Stderr, "  seaportal sitemap <url> [flags]    Flatten a sitemap.xml (and recurse sitemap-index)")
-	fmt.Fprintln(os.Stderr, "  seaportal feed <url> [flags]       Parse RSS / Atom / JSON Feed into unified entries")
-	fmt.Fprintln(os.Stderr, "  seaportal scrape <url> [flags]     Scrape a whole site into structured output")
-	fmt.Fprintln(os.Stderr, "  seaportal mcp                      Run as an MCP (Model Context Protocol) server over stdio")
-	fmt.Fprintln(os.Stderr, "  seaportal version                  Print the seaportal version")
-	fmt.Fprintln(os.Stderr, "  seaportal help                     Show this help")
-	fmt.Fprintln(os.Stderr, "")
-	fmt.Fprintln(os.Stderr, "Run 'seaportal -h' for the full list of extract options.")
+func printUsage(w io.Writer) {
+	fmt.Fprintln(w, "SeaPortal - Extract clean Markdown from URLs with SPA detection")
+	fmt.Fprintln(w, "")
+	fmt.Fprintln(w, "Usage:")
+	fmt.Fprintln(w, "  seaportal [options] <url>          Extract Markdown / JSON / snapshot (default verb)")
+	fmt.Fprintln(w, "  seaportal sitemap <url> [flags]    Flatten a sitemap.xml (and recurse sitemap-index)")
+	fmt.Fprintln(w, "  seaportal feed <url> [flags]       Parse RSS / Atom / JSON Feed into unified entries")
+	fmt.Fprintln(w, "  seaportal scrape <url> [flags]     Scrape a whole site into structured output")
+	fmt.Fprintln(w, "  seaportal mcp                      Run as an MCP (Model Context Protocol) server over stdio")
+	fmt.Fprintln(w, "  seaportal version                  Print the seaportal version")
+	fmt.Fprintln(w, "  seaportal help                     Show this help")
+	fmt.Fprintln(w, "")
+	fmt.Fprintln(w, "Run 'seaportal -h' for the full list of extract options.")
 }
 
 func runSitemap(args []string) {
@@ -133,7 +133,7 @@ func main() {
 			runMCP(os.Args[2:])
 			return
 		case "help":
-			printUsage()
+			printUsage(os.Stdout)
 			return
 		case "version":
 			fmt.Printf("seaportal %s\n", version)
@@ -227,19 +227,35 @@ func runExtract(rawArgs []string) {
 	showVersion := flag.Bool("version", false, "Show version")
 	flag.BoolVar(showVersion, "v", false, "Show version")
 
-	flag.Usage = func() {
-		fmt.Fprintln(os.Stderr, "SeaPortal - Extract clean Markdown from URLs with SPA detection")
-		fmt.Fprintln(os.Stderr, "")
-		fmt.Fprintln(os.Stderr, "Usage:")
-		fmt.Fprintln(os.Stderr, "  seaportal [options] <url>")
-		fmt.Fprintln(os.Stderr, "")
-		fmt.Fprintln(os.Stderr, "Options:")
+	usage := func(w io.Writer) {
+		fmt.Fprintln(w, "SeaPortal - Extract clean Markdown from URLs with SPA detection")
+		fmt.Fprintln(w, "")
+		fmt.Fprintln(w, "Usage:")
+		fmt.Fprintln(w, "  seaportal [options] <url>")
+		fmt.Fprintln(w, "")
+		fmt.Fprintln(w, "Options:")
+		cli.SetOutput(w)
 		flag.PrintDefaults()
+		cli.SetOutput(os.Stderr)
 	}
+	flag.Usage = func() { usage(os.Stderr) }
 	// cli.Parse uses the FlagSet's own Usage, not the package-level flag.Usage,
 	// so wire them together — otherwise `--help` falls back to Go's terse
 	// "Usage of seaportal:" default instead of the custom help above.
 	cli.Usage = flag.Usage
+
+	// Explicitly-requested help goes to stdout and exits 0, per CLI convention;
+	// usage shown on a parse error stays on stderr. Only flags before the first
+	// positional arg can be help requests (flag stops parsing there anyway).
+	for _, a := range rawArgs {
+		if a == "--" || !strings.HasPrefix(a, "-") {
+			break
+		}
+		if a == "-h" || a == "--h" || a == "-help" || a == "--help" {
+			usage(os.Stdout)
+			return
+		}
+	}
 
 	_ = cli.Parse(rawArgs)
 
