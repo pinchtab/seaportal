@@ -178,6 +178,15 @@ func ScrapeSite(ctx context.Context, opts *ScrapeOptions) (*ScrapeResult, error)
 		return nil, ErrMissingBaseURL
 	}
 
+	// One overall wall-clock deadline shared by discovery, fetch, and retries.
+	// The raw (pre-normalization) Timeout is used so an explicit 0 keeps the
+	// no-overall-deadline escape; normalized o.Timeout still caps each request.
+	if opts.Timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, opts.Timeout)
+		defer cancel()
+	}
+
 	disc, err := discover(ctx, o)
 	if err != nil {
 		return nil, err

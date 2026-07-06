@@ -73,6 +73,9 @@ func discover(ctx context.Context, opts ScrapeOptions) (discoveryResult, error) 
 	// 1+2. Sitemaps discovered from robots.txt and the conventional location,
 	// flattened (indexes included) via the existing FlattenSitemap.
 	for _, sm := range discoverSitemapURLs(ctx, scheme, host, o) {
+		if ctx.Err() != nil {
+			break
+		}
 		entries, ferr := FlattenSitemap(ctx, sm, FlattenSitemapOptions{Timeout: o.Timeout})
 		if ferr != nil || len(entries) == 0 {
 			continue
@@ -148,6 +151,9 @@ func crawlSameHost(ctx context.Context, seed, host string, o ScrapeOptions, maxU
 	var found []string
 
 	for len(queue) > 0 && len(found) < maxURLs {
+		if ctx.Err() != nil {
+			break
+		}
 		cur := queue[0]
 		queue = queue[1:]
 		found = append(found, cur.url)
