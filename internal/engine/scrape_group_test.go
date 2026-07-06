@@ -115,3 +115,105 @@ func TestIsVariableSegment(t *testing.T) {
 		}
 	}
 }
+
+func TestCollapseSiblingLeavesDocsTree(t *testing.T) {
+	urls := []string{
+		"https://x.com/content-management/archetypes",
+		"https://x.com/content-management/comments",
+		"https://x.com/content-management/diagrams",
+		"https://x.com/content-management/emojis",
+		"https://x.com/hugo-pipes/introduction",
+		"https://x.com/about",
+	}
+	groups := groupByPattern(urls)
+
+	g, ok := findGroup(groups, "/*/*")
+	if !ok {
+		t.Fatalf("expected collapsed /*/* group, got %v", patternsOf(groups))
+	}
+	if g.TotalInSitemap != 5 {
+		t.Errorf("collapsed group has %d members, want 5: %v", g.TotalInSitemap, g.URLs)
+	}
+	if _, ok := findGroup(groups, "/about"); !ok {
+		t.Errorf("root-level /about must survive collapsing, got %v", patternsOf(groups))
+	}
+	if len(groups) != 2 {
+		t.Errorf("want 2 groups (/*/* and /about), got %v", patternsOf(groups))
+	}
+}
+
+func TestCollapseSiblingLeavesLiteralParent(t *testing.T) {
+	urls := []string{
+		"https://x.com/docs/install",
+		"https://x.com/docs/config",
+		"https://x.com/docs/deploy",
+		"https://x.com/docs/faq",
+	}
+	groups := groupByPattern(urls)
+	g, ok := findGroup(groups, "/docs/*")
+	if !ok || g.TotalInSitemap != 4 {
+		t.Fatalf("want one /docs/* group with 4 members, got %v", patternsOf(groups))
+	}
+}
+
+func TestCollapseThresholdRespected(t *testing.T) {
+	urls := []string{
+		"https://x.com/docs/install",
+		"https://x.com/docs/config",
+		"https://x.com/legal/terms",
+	}
+	groups := groupByPattern(urls)
+	if _, ok := findGroup(groups, "/docs/*"); ok {
+		t.Errorf("2 siblings are below the threshold, must not collapse: %v", patternsOf(groups))
+	}
+	if len(groups) != 3 {
+		t.Errorf("want 3 untouched singleton groups, got %v", patternsOf(groups))
+	}
+}
+
+func TestCollapseTopLevelPagesExempt(t *testing.T) {
+	urls := []string{
+		"https://x.com/about",
+		"https://x.com/pricing",
+		"https://x.com/contact",
+		"https://x.com/blog",
+	}
+	groups := groupByPattern(urls)
+	if len(groups) != 4 {
+		t.Errorf("top-level pages must never merge, got %v", patternsOf(groups))
+	}
+}
+
+func TestCollapseMergesIntoExistingWildcardGroup(t *testing.T) {
+	urls := []string{
+		"https://x.com/docs/getting-started", // dashed slug → /docs/* in pass one
+		"https://x.com/docs/install",
+		"https://x.com/docs/config",
+		"https://x.com/docs/deploy",
+	}
+	groups := groupByPattern(urls)
+	g, ok := findGroup(groups, "/docs/*")
+	if !ok || g.TotalInSitemap != 4 {
+		t.Fatalf("want singletons merged into existing /docs/* (4 members), got %v", patternsOf(groups))
+	}
+	if len(groups) != 1 {
+		t.Errorf("want a single /docs/* group, got %v", patternsOf(groups))
+	}
+}
+
+func TestCollapseMultiMemberPatternsUntouched(t *testing.T) {
+	urls := []string{
+		"https://x.com/products/1/detail",
+		"https://x.com/products/2/detail",
+		"https://x.com/products/1/specs",
+		"https://x.com/products/2/specs",
+		"https://x.com/products/1/reviews",
+		"https://x.com/products/2/reviews",
+	}
+	groups := groupByPattern(urls)
+	for _, want := range []string{"/products/*/detail", "/products/*/specs", "/products/*/reviews"} {
+		if _, ok := findGroup(groups, want); !ok {
+			t.Errorf("multi-member pattern %s must not be collapsed, got %v", want, patternsOf(groups))
+		}
+	}
+}

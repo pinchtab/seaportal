@@ -122,5 +122,73 @@ func groupByPattern(urls []string) []PatternGroup {
 		})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Pattern < out[j].Pattern })
+	return collapseSiblingLeaves(out)
+}
+
+// minSiblingCollapse is how many singleton sibling leaves a parent needs before
+// they are folded into one "/parent/*" group.
+const minSiblingCollapse = 3
+
+// collapseSiblingLeaves is the second clustering pass: per-segment templating
+// keeps dashless doc slugs (archetypes, comments, emojis) verbatim, so a docs
+// tree of N leaves under one parent becomes N singleton groups and sampling is
+// defeated. When >= minSiblingCollapse singleton patterns share a parent and
+// differ only in a literal final segment, they merge into "/parent/*" (joining
+// an existing wildcard group when present). Root-level pages (/about, /pricing)
+// and multi-member patterns are never collapsed.
+func collapseSiblingLeaves(groups []PatternGroup) []PatternGroup {
+	siblings := map[string][]string{}
+	for _, g := range groups {
+		if g.TotalInSitemap != 1 {
+			continue
+		}
+		idx := strings.LastIndex(g.Pattern, "/")
+		if idx <= 0 {
+			continue
+		}
+		if leaf := g.Pattern[idx+1:]; leaf == "" || leaf == "*" {
+			continue
+		}
+		parent := g.Pattern[:idx]
+		siblings[parent] = append(siblings[parent], g.Pattern)
+	}
+
+	collapse := map[string]string{}
+	for parent, pats := range siblings {
+		if len(pats) < minSiblingCollapse {
+			continue
+		}
+		for _, p := range pats {
+			collapse[p] = parent + "/*"
+		}
+	}
+	if len(collapse) == 0 {
+		return groups
+	}
+
+	merged := map[string]*PatternGroup{}
+	for _, g := range groups {
+		target := g.Pattern
+		if t, ok := collapse[g.Pattern]; ok {
+			target = t
+		}
+		if m := merged[target]; m != nil {
+			m.URLs = append(m.URLs, g.URLs...)
+			m.TotalInSitemap += g.TotalInSitemap
+			continue
+		}
+		merged[target] = &PatternGroup{
+			Pattern:        target,
+			URLs:           append([]string(nil), g.URLs...),
+			TotalInSitemap: g.TotalInSitemap,
+		}
+	}
+
+	out := make([]PatternGroup, 0, len(merged))
+	for _, m := range merged {
+		sort.Strings(m.URLs)
+		out = append(out, *m)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Pattern < out[j].Pattern })
 	return out
 }
