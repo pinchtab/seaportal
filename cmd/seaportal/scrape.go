@@ -23,6 +23,7 @@ func runScrape(args []string) {
 	excludePatterns := fs.String("exclude-patterns", "", "Comma-separated glob patterns to exclude")
 	sampleStrategy := fs.String("sample-strategy", "balanced", "Sampling strategy: random|priority|balanced")
 	output := fs.String("output", "json", "Output format: json|md|directory")
+	jsonOut := fs.Bool("json", false, "Shorthand for --output json (matches the root command)")
 	outDir := fs.String("out-dir", "", "Target directory for --output directory")
 	withPerformance := fs.Bool("with-performance", false, "Include per-page performance data")
 	respectRobots := fs.Bool("respect-robots", true, "Respect robots.txt disallow + crawl-delay")
@@ -45,6 +46,11 @@ func runScrape(args []string) {
 	baseURL := rest[0]
 	if len(rest) > 1 {
 		_ = fs.Parse(rest[1:])
+	}
+
+	if *jsonOut && *output != "json" {
+		fmt.Fprintf(os.Stderr, "scrape error: --json conflicts with --output %s\n", *output)
+		os.Exit(2)
 	}
 
 	strategy := seaportal.SampleStrategy(*sampleStrategy)

@@ -157,6 +157,7 @@ seaportal scrape https://example.com --max-pages 50 --sample-strategy balanced
 | `--exclude-patterns S` | "" | Comma-separated globs to exclude |
 | `--sample-strategy S` | balanced | `random` \| `priority` \| `balanced` |
 | `--output S` | json | `json` \| `md` \| `directory` |
+| `--json` | false | Shorthand for `--output json` (matches the root command) |
 | `--out-dir PATH` | "" | Target directory (required for `--output directory`) |
 | `--with-performance` | false | Include per-page performance data (TTFB, bytes, requests) |
 | `--respect-robots` | true | Honor robots.txt disallow rules + crawl-delay |
