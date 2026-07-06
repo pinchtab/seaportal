@@ -252,12 +252,18 @@ func fetchAndAssemble(ctx context.Context, base *url.URL, urls []string, o Scrap
 		if respectRobots && host != "" {
 			limiter.Wait(host, robots.GetDelayWithScheme(host, o.UserAgent, scheme))
 		}
+		// TTFB here is the whole FetchBytes round-trip (headers + body):
+		// FetchBytes exposes no first-byte hook, and > 0 beats the structural 0
+		// this path used to report.
+		fetchStart := time.Now()
 		body, _, status, err := FetchBytes(ctx, u, FetchBytesOptions{Timeout: o.Timeout, UserAgent: o.UserAgent})
+		fetchMs := time.Since(fetchStart).Milliseconds()
 		if err != nil {
 			return PageObject{URL: u, Status: status, Error: err.Error()}
 		}
 		r := FromHTMLWithOptions(string(body), u, Options{UserAgent: o.UserAgent})
 		r.StatusCode = status
+		r.TTFBMs = fetchMs
 		return assemblePage(base, u, string(body), r, withPerf)
 	})
 }
