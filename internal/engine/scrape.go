@@ -3,6 +3,7 @@ package engine
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/url"
 	"strings"
 	"time"
@@ -151,6 +152,10 @@ type PageObject struct {
 type ScrapeSummary struct {
 	ContentTypes    map[string]int `json:"contentTypes"`
 	Recommendations []string       `json:"recommendations"`
+	// UnsampledPatterns counts discovered URL patterns that contributed no
+	// sampled page (filtered out or over budget) and are therefore omitted
+	// from pageGroups.
+	UnsampledPatterns int `json:"unsampledPatterns,omitempty"`
 }
 
 // ScrapeResult is the structured output of ScrapeSite, matching the scrape
@@ -204,7 +209,11 @@ func ScrapeSite(ctx context.Context, opts *ScrapeOptions) (*ScrapeResult, error)
 		pageByURL[p.URL] = p
 	}
 
+	// Only patterns that contributed a sampled page appear in pageGroups;
+	// filtered-out and budget-skipped patterns are rolled up into
+	// summary.unsampledPatterns instead of shipping as empty shells.
 	outGroups := make([]PageGroup, 0, len(groups))
+	unsampled := 0
 	for _, g := range groups {
 		grp := PageGroup{Pattern: g.Pattern, TotalInSitemap: g.TotalInSitemap, Pages: []PageObject{}}
 		for _, u := range g.URLs {
@@ -214,6 +223,10 @@ func ScrapeSite(ctx context.Context, opts *ScrapeOptions) (*ScrapeResult, error)
 					grp.Pages = append(grp.Pages, p)
 				}
 			}
+		}
+		if grp.Sampled == 0 {
+			unsampled++
+			continue
 		}
 		outGroups = append(outGroups, grp)
 	}
@@ -227,11 +240,18 @@ func ScrapeSite(ctx context.Context, opts *ScrapeOptions) (*ScrapeResult, error)
 		SampledPages:       len(pages),
 	}
 
+	summary := summarize(pages, disc.TotalURLsInSitemap, len(groups))
+	summary.UnsampledPatterns = unsampled
+	if len(pages) == 0 && len(disc.URLs) > 0 {
+		summary.Recommendations = append(summary.Recommendations,
+			fmt.Sprintf("0 of %d discovered URLs were sampled; check --include-patterns/--exclude-patterns and --max-pages", len(disc.URLs)))
+	}
+
 	return &ScrapeResult{
 		Site:       site,
 		PageGroups: outGroups,
 		Pages:      pages,
-		Summary:    summarize(pages, disc.TotalURLsInSitemap, len(groups)),
+		Summary:    summary,
 	}, nil
 }
 
