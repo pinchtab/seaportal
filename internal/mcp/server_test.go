@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+	"time"
 )
 
 // runRequests pipes the given JSON-RPC request lines through a fresh server
@@ -60,8 +61,8 @@ func TestMCPServer_Initialize(t *testing.T) {
 func TestMCPServer_ListTools(t *testing.T) {
 	s := NewServer()
 	schema := map[string]interface{}{"type": "object"}
-	s.RegisterTool("alpha", "alpha tool", schema, func(map[string]interface{}) (string, error) { return "a", nil })
-	s.RegisterTool("beta", "beta tool", schema, func(map[string]interface{}) (string, error) { return "b", nil })
+	s.RegisterTool("alpha", "alpha tool", schema, func(context.Context, map[string]interface{}) (string, error) { return "a", nil })
+	s.RegisterTool("beta", "beta tool", schema, func(context.Context, map[string]interface{}) (string, error) { return "b", nil })
 
 	resp := runRequests(t, s, `{"jsonrpc":"2.0","id":2,"method":"tools/list"}`)
 	if len(resp) != 1 {
@@ -88,7 +89,7 @@ func TestMCPServer_ListTools(t *testing.T) {
 func TestMCPServer_CallTool_Echo(t *testing.T) {
 	s := NewServer()
 	s.RegisterTool("echo", "echoes args back as JSON", map[string]interface{}{"type": "object"},
-		func(args map[string]interface{}) (string, error) {
+		func(ctx context.Context, args map[string]interface{}) (string, error) {
 			b, _ := json.Marshal(args)
 			return string(b), nil
 		},
@@ -166,10 +167,10 @@ func TestMCPServer_StdinEOF(t *testing.T) {
 func TestMCPServer_HandlerPanic(t *testing.T) {
 	s := NewServer()
 	s.RegisterTool("boom", "panics", map[string]interface{}{"type": "object"},
-		func(map[string]interface{}) (string, error) { panic("kaboom") },
+		func(context.Context, map[string]interface{}) (string, error) { panic("kaboom") },
 	)
 	s.RegisterTool("ok", "fine", map[string]interface{}{"type": "object"},
-		func(map[string]interface{}) (string, error) { return "still alive", nil },
+		func(context.Context, map[string]interface{}) (string, error) { return "still alive", nil },
 	)
 
 	resp := runRequests(t, s,
@@ -195,11 +196,39 @@ func TestMCPServer_HandlerPanic(t *testing.T) {
 func TestMCPServer_Notification(t *testing.T) {
 	s := NewServer()
 	s.RegisterTool("echo", "", map[string]interface{}{"type": "object"},
-		func(args map[string]interface{}) (string, error) { return "x", nil },
+		func(context.Context, map[string]interface{}) (string, error) { return "x", nil },
 	)
 	// No id field => notification. No response expected.
 	resp := runRequests(t, s, `{"jsonrpc":"2.0","method":"tools/call","params":{"name":"echo","arguments":{}}}`)
 	if len(resp) != 0 {
 		t.Errorf("expected no response to notification, got %d", len(resp))
+	}
+}
+
+func TestMCPServer_Cancellation(t *testing.T) {
+	s := NewServer()
+	called := false
+	s.RegisterTool("blocking", "blocks until context is cancelled", map[string]interface{}{"type": "object"},
+		func(ctx context.Context, args map[string]interface{}) (string, error) {
+			called = true
+			<-ctx.Done()
+			return "", ctx.Err()
+		},
+	)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	in := strings.NewReader(`{"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"blocking","arguments":{}}}` + "\n")
+	var out bytes.Buffer
+
+	go func() {
+		s.serve(ctx, in, &out)
+	}()
+
+	time.Sleep(10 * time.Millisecond)
+	cancel()
+
+	time.Sleep(10 * time.Millisecond)
+	if !called {
+		t.Errorf("handler was not called")
 	}
 }

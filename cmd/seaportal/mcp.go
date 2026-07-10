@@ -53,7 +53,7 @@ func registerMCPTools(srv *mcp.Server) {
 			},
 			"required": []string{"url"},
 		},
-		func(args map[string]interface{}) (string, error) {
+		func(ctx context.Context, args map[string]interface{}) (string, error) {
 			url, _ := args["url"].(string)
 			if url == "" {
 				return "", fmt.Errorf("missing required argument: url")
@@ -105,7 +105,7 @@ func registerMCPTools(srv *mcp.Server) {
 			},
 			"required": []string{"url"},
 		},
-		func(args map[string]interface{}) (string, error) {
+		func(ctx context.Context, args map[string]interface{}) (string, error) {
 			url, _ := args["url"].(string)
 			if url == "" {
 				return "", fmt.Errorf("missing required argument: url")
@@ -150,7 +150,7 @@ func registerMCPTools(srv *mcp.Server) {
 			},
 			"required": []string{"url"},
 		},
-		func(args map[string]interface{}) (string, error) {
+		func(ctx context.Context, args map[string]interface{}) (string, error) {
 			url, _ := args["url"].(string)
 			if url == "" {
 				return "", fmt.Errorf("missing required argument: url")
@@ -171,7 +171,7 @@ func registerMCPTools(srv *mcp.Server) {
 			if v, ok := args["max_urls"].(float64); ok {
 				opts.MaxURLs = int(v)
 			}
-			entries, err := seaportal.FlattenSitemap(context.Background(), url, opts)
+			entries, err := seaportal.FlattenSitemap(ctx, url, opts)
 			if err != nil {
 				return "", fmt.Errorf("flatten sitemap: %w", err)
 			}
@@ -195,7 +195,7 @@ func registerMCPTools(srv *mcp.Server) {
 			},
 			"required": []string{"url"},
 		},
-		func(args map[string]interface{}) (string, error) {
+		func(ctx context.Context, args map[string]interface{}) (string, error) {
 			url, _ := args["url"].(string)
 			if url == "" {
 				return "", fmt.Errorf("missing required argument: url")
@@ -212,7 +212,7 @@ func registerMCPTools(srv *mcp.Server) {
 			if v, ok := args["max_items"].(float64); ok {
 				opts.MaxItems = int(v)
 			}
-			items, err := seaportal.ParseFeed(context.Background(), url, opts)
+			items, err := seaportal.ParseFeed(ctx, url, opts)
 			if err != nil {
 				return "", fmt.Errorf("parse feed: %w", err)
 			}
@@ -244,7 +244,7 @@ func registerMCPTools(srv *mcp.Server) {
 			},
 			"required": []string{"base_url"},
 		},
-		func(args map[string]interface{}) (string, error) {
+		func(ctx context.Context, args map[string]interface{}) (string, error) {
 			baseURL, _ := args["base_url"].(string)
 			if baseURL == "" {
 				return "", fmt.Errorf("missing required argument: base_url")
@@ -297,7 +297,7 @@ func registerMCPTools(srv *mcp.Server) {
 				opts.WithPerformance = v
 			}
 
-			res, err := seaportal.ScrapeSite(context.Background(), opts)
+			res, err := seaportal.ScrapeSite(ctx, opts)
 			if err != nil {
 				return "", fmt.Errorf("scrape site: %w", err)
 			}

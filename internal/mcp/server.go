@@ -32,7 +32,7 @@ const (
 
 // ToolHandler is invoked when a client calls a registered tool. The returned
 // string is wrapped in `{content: [{type:"text", text: ...}]}` for the client.
-type ToolHandler func(args map[string]interface{}) (string, error)
+type ToolHandler func(ctx context.Context, args map[string]interface{}) (string, error)
 
 type tool struct {
 	Name        string                 `json:"name"`
@@ -115,7 +115,7 @@ type rpcResponse struct {
 var nullID = json.RawMessage("null")
 
 // serve runs the read/respond loop. Exposed (lowercase) for tests via pipes.
-func (s *Server) serve(_ context.Context, in io.Reader, out io.Writer) error {
+func (s *Server) serve(ctx context.Context, in io.Reader, out io.Writer) error {
 	scanner := bufio.NewScanner(in)
 	// 16 MB max line — extracted Markdown / sitemap JSON can be large.
 	scanner.Buffer(make([]byte, 1<<20), 1<<24)
@@ -125,7 +125,7 @@ func (s *Server) serve(_ context.Context, in io.Reader, out io.Writer) error {
 		if len(line) == 0 {
 			continue
 		}
-		resp := s.handleRequest(line)
+		resp := s.handleRequest(ctx, line)
 		if resp == nil {
 			continue
 		}
@@ -159,7 +159,7 @@ func isNotification(id json.RawMessage) bool {
 
 // handleRequest parses one line and returns the response envelope (or nil for
 // notifications). It never panics: handler panics are recovered.
-func (s *Server) handleRequest(line []byte) *rpcResponse {
+func (s *Server) handleRequest(ctx context.Context, line []byte) *rpcResponse {
 	var req rpcRequest
 	if err := json.Unmarshal(line, &req); err != nil {
 		return errorResponse(nullID, codeParseError, "parse error: "+err.Error())
@@ -227,7 +227,7 @@ func (s *Server) handleRequest(line []byte) *rpcResponse {
 		if params.Arguments == nil {
 			params.Arguments = map[string]interface{}{}
 		}
-		text, panicked, err := s.callHandler(t.handler, params.Arguments)
+		text, panicked, err := s.callHandler(ctx, t.handler, params.Arguments)
 		if panicked {
 			return errorResponse(req.ID, codeInternalError, err.Error())
 		}
@@ -257,13 +257,13 @@ func (s *Server) handleRequest(line []byte) *rpcResponse {
 
 // callHandler invokes a tool handler, converting panics into a flagged error
 // so the server stays alive and the caller can map them to JSON-RPC -32603.
-func (s *Server) callHandler(h ToolHandler, args map[string]interface{}) (out string, panicked bool, err error) {
+func (s *Server) callHandler(ctx context.Context, h ToolHandler, args map[string]interface{}) (out string, panicked bool, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			panicked = true
 			err = fmt.Errorf("handler panic: %v", r)
 		}
 	}()
-	out, err = h(args)
+	out, err = h(ctx, args)
 	return out, false, err
 }

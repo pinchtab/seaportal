@@ -5,7 +5,9 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/pinchtab/seaportal"
@@ -89,8 +91,32 @@ func runScrape(args []string) {
 		UserAgent:       *userAgent,
 	}
 
-	res, err := seaportal.ScrapeSite(context.Background(), opts)
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer cancel()
+
+	res, err := seaportal.ScrapeSite(ctx, opts)
 	if err != nil {
+		// On cancellation, render partial results if available.
+		if res != nil {
+			switch out {
+			case seaportal.OutputMarkdown:
+				fmt.Print(seaportal.RenderScrapeMarkdown(res))
+			case seaportal.OutputDirectory:
+				files, werr := seaportal.WriteScrapeDirectory(res, *outDir)
+				if werr == nil {
+					fmt.Printf("wrote %d pages to %s (partial: %v)\n", len(files), *outDir, err)
+				} else {
+					fmt.Fprintln(os.Stderr, "scrape error:", werr)
+				}
+			default: // json
+				data, jerr := seaportal.RenderScrapeJSON(res)
+				if jerr == nil {
+					fmt.Println(string(data))
+				} else {
+					fmt.Fprintln(os.Stderr, "scrape error:", jerr)
+				}
+			}
+		}
 		fmt.Fprintln(os.Stderr, "scrape error:", err)
 		os.Exit(1)
 	}
