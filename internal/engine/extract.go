@@ -118,6 +118,192 @@ func mergePreWarnings(result *Result, pre []string) {
 	result.Warnings = merged
 }
 
+// cacheLookupStage handles cache read, SWR band, and revalidation header setup.
+func cacheLookupStage(cache *DiskCache, opts Options, targetURL string, userAgent string, req *http.Request, result *Result) (*http.Response, bool, *cachedResponse, []byte, string) {
+	var resp *http.Response
+	var cacheHitResp bool
+	var pendingRevalidationMeta *cachedResponse
+	var pendingRevalidationBody []byte
+	var pendingCacheKey string
+
+	if cache != nil && !opts.NoCache {
+		meta, body, fresh, swrStale, beyondTolerance := cache.GetStaleWithTolerance(targetURL, req, opts.CacheStaleTolerance)
+		if fresh {
+			resp = &http.Response{
+				Status:     fmt.Sprintf("%d %s", meta.Status, http.StatusText(meta.Status)),
+				StatusCode: meta.Status,
+				Header:     meta.Headers.Clone(),
+				Body:       io.NopCloser(bytes.NewReader(body)),
+				Request:    req,
+			}
+			result.CacheHit = true
+			cacheHitResp = true
+		} else if swrStale {
+			resp = &http.Response{
+				Status:     fmt.Sprintf("%d %s", meta.Status, http.StatusText(meta.Status)),
+				StatusCode: meta.Status,
+				Header:     meta.Headers.Clone(),
+				Body:       io.NopCloser(bytes.NewReader(body)),
+				Request:    req,
+			}
+			result.CacheStale = true
+			cacheHitResp = true
+			bgKey := cache.cacheKey(targetURL, req)
+			spawnBackgroundRefresh(cache, bgKey, targetURL, meta, userAgent, opts)
+		} else if beyondTolerance {
+			pendingCacheKey = cache.cacheKey(targetURL, req)
+			pendingRevalidationMeta = meta
+			pendingRevalidationBody = body
+			for k, v := range meta.ConditionalHeaders() {
+				req.Header.Set(k, v)
+			}
+		}
+	}
+
+	return resp, cacheHitResp, pendingRevalidationMeta, pendingRevalidationBody, pendingCacheKey
+}
+
+// fetchWithRetryStage executes the fetch with exponential backoff retry logic.
+func fetchWithRetryStage(client *http.Client, req *http.Request, targetURL string, userAgent string, opts Options, cacheHitResp bool, maxRetries int, totalRetryTimeout time.Duration, result *Result) (*http.Response, int, time.Duration) {
+	var resp *http.Response
+	var retryCount int
+	var totalRetryWait time.Duration
+
+	logRetry := func(event RetryEvent) {
+		if opts.RetryLogger != nil {
+			opts.RetryLogger(event)
+		}
+	}
+
+	maxRetryWait := opts.MaxRetryWait
+	if maxRetryWait == 0 {
+		maxRetryWait = 60 * time.Second
+	}
+
+	for attempt := 0; !cacheHitResp && attempt <= maxRetries; attempt++ {
+		var err error
+		resp, err = client.Do(req)
+		if err != nil {
+			if attempt < maxRetries && isRetryableError(err) {
+				backoff := time.Duration(1<<uint(attempt)) * retryBackoffBase
+				if backoff > maxRetryWait {
+					backoff = maxRetryWait
+				}
+				backoff = addJitter(backoff)
+				if totalRetryWait+backoff > totalRetryTimeout {
+					logRetry(RetryEvent{Attempt: attempt + 1, Error: err, WaitTime: backoff, Outcome: "timeout"})
+					result.Error = err.Error()
+					return nil, retryCount, totalRetryWait
+				}
+				logRetry(RetryEvent{Attempt: attempt + 1, Error: err, WaitTime: backoff, Outcome: "retrying"})
+				time.Sleep(backoff)
+				retryCount++
+				totalRetryWait += backoff
+				req = newGETRequest(targetURL, userAgent, opts.RequestID, opts.SendRequestID)
+				continue
+			}
+			logRetry(RetryEvent{Attempt: attempt + 1, Error: err, Outcome: "exhausted"})
+			result.Error = err.Error()
+			return nil, retryCount, totalRetryWait
+		}
+
+		if (resp.StatusCode == http.StatusBadGateway || resp.StatusCode == http.StatusGatewayTimeout || (resp.StatusCode == http.StatusServiceUnavailable && resp.Header.Get("Retry-After") == "")) && attempt < maxRetries {
+			backoff := time.Duration(1<<uint(attempt)) * retryBackoffBase
+			if backoff > maxRetryWait {
+				backoff = maxRetryWait
+			}
+			backoff = addJitter(backoff)
+			if totalRetryWait+backoff > totalRetryTimeout {
+				logRetry(RetryEvent{Attempt: attempt + 1, StatusCode: resp.StatusCode, WaitTime: backoff, Outcome: "timeout"})
+				break
+			}
+			logRetry(RetryEvent{Attempt: attempt + 1, StatusCode: resp.StatusCode, WaitTime: backoff, Outcome: "retrying"})
+			_ = resp.Body.Close()
+			time.Sleep(backoff)
+			retryCount++
+			totalRetryWait += backoff
+			req = newGETRequest(targetURL, userAgent, opts.RequestID, opts.SendRequestID)
+			continue
+		}
+
+		if (resp.StatusCode == http.StatusTooManyRequests || (resp.StatusCode == http.StatusServiceUnavailable && resp.Header.Get("Retry-After") != "")) && attempt < maxRetries {
+			retryAfterHeader := resp.Header.Get("Retry-After")
+			if retryAfterHeader == "" {
+				logRetry(RetryEvent{Attempt: attempt + 1, StatusCode: resp.StatusCode, Outcome: "exhausted"})
+				break
+			}
+			retryAfter, ok := parseRetryAfter(retryAfterHeader)
+			if !ok || retryAfter > maxRetryWait {
+				logRetry(RetryEvent{Attempt: attempt + 1, StatusCode: resp.StatusCode, WaitTime: retryAfter, Outcome: "exhausted"})
+				break
+			}
+			if totalRetryWait+retryAfter > totalRetryTimeout {
+				logRetry(RetryEvent{Attempt: attempt + 1, StatusCode: resp.StatusCode, WaitTime: retryAfter, Outcome: "timeout"})
+				break
+			}
+			logRetry(RetryEvent{Attempt: attempt + 1, StatusCode: resp.StatusCode, WaitTime: retryAfter, Outcome: "retrying"})
+			_ = resp.Body.Close()
+			time.Sleep(retryAfter)
+			retryCount++
+			totalRetryWait += retryAfter
+			req = newGETRequest(targetURL, userAgent, opts.RequestID, opts.SendRequestID)
+			continue
+		}
+
+		if resp.StatusCode == http.StatusOK {
+			logRetry(RetryEvent{Attempt: attempt + 1, StatusCode: resp.StatusCode, Outcome: "success"})
+		}
+		break
+	}
+
+	return resp, retryCount, totalRetryWait
+}
+
+// decompressAndRestoreCharsetStage handles decompression and charset detection.
+func decompressAndRestoreCharsetStage(bodyBytes []byte, resp *http.Response, opts Options, result *Result, preWarnings []string) ([]byte, []string, string) {
+	contentEncoding := strings.ToLower(resp.Header.Get("Content-Encoding"))
+	if contentEncoding != "" {
+		var maxDecomp int64
+		if opts.Security != nil {
+			maxDecomp = opts.Security.MaxDecompressedBytes
+		}
+		decompressed, decompErr := decompressBodyLimited(bodyBytes, contentEncoding, maxDecomp)
+		if errors.Is(decompErr, ErrDecompressTooLarge) {
+			result.Error = decompErr.Error()
+			result.SecurityBlock = decompErr.Error()
+			return nil, preWarnings, ""
+		}
+		if decompErr != nil {
+			if len(bodyBytes) > 0 {
+				trimmed := bytes.TrimSpace(bodyBytes)
+				if len(trimmed) > 0 && (trimmed[0] == '<' || trimmed[0] == '{') {
+				} else {
+					result.Error = fmt.Sprintf("decompression error (%s): %v", contentEncoding, decompErr)
+					return nil, preWarnings, ""
+				}
+			} else {
+				result.Error = fmt.Sprintf("decompression error (%s): %v", contentEncoding, decompErr)
+				return nil, preWarnings, ""
+			}
+		} else {
+			bodyBytes = decompressed
+		}
+	}
+
+	respContentType := resp.Header.Get("Content-Type")
+	if isCharsetSniffableContentType(respContentType) {
+		if decoded, cs, ok := sniffAndDecode(bodyBytes, respContentType); ok {
+			bodyBytes = decoded
+			result.Charset = cs
+		} else if declared := detectCharset(bodyBytes, respContentType); declared != "" {
+			preWarnings = append(preWarnings, fmt.Sprintf("charset decode: declared charset %q not recognised, falling back to raw bytes", declared))
+		}
+	}
+
+	return bodyBytes, preWarnings, respContentType
+}
+
+
 func FromURLWithOptions(targetURL string, opts Options) (result Result) {
 	if opts.HeadOnly {
 		return fetchHeadOnly(targetURL, opts)
@@ -348,147 +534,23 @@ func FromURLWithOptions(targetURL string, opts Options) (result Result) {
 	var retryCount int
 	var totalRetryWait time.Duration
 
-	logRetry := func(event RetryEvent) {
-		if opts.RetryLogger != nil {
-			opts.RetryLogger(event)
-		}
-	}
-
+	// Cache lookup and revalidation header setup.
 	var resp *http.Response
 	var cacheHitResp bool
-	// pendingRevalidation holds the stale cache entry whose body should be
-	// replayed if the conditional GET returns 304. Captured *before* we mutate
-	// req with conditional headers so the key stays stable for TouchByKey.
 	var pendingRevalidationMeta *cachedResponse
 	var pendingRevalidationBody []byte
 	var pendingCacheKey string
-	if cache != nil && !opts.NoCache {
-		meta, body, fresh, swrStale, beyondTolerance := cache.GetStaleWithTolerance(targetURL, req, opts.CacheStaleTolerance)
-		if fresh {
-			// Synthesize an *http.Response so the existing decompress/charset/
-			// extract pipeline consumes the cached entry identically to a live
-			// fetch. The retry loop is skipped entirely on a cache hit.
-			resp = &http.Response{
-				Status:     fmt.Sprintf("%d %s", meta.Status, http.StatusText(meta.Status)),
-				StatusCode: meta.Status,
-				Header:     meta.Headers.Clone(),
-				Body:       io.NopCloser(bytes.NewReader(body)),
-				Request:    req,
-			}
-			result.CacheHit = true
-			cacheHitResp = true
-		} else if swrStale {
-			// SWR band: serve the cached body immediately, fire the
-			// conditional GET (or fresh GET if no validators) in a
-			// background goroutine. The caller's latency is body-replay only.
-			resp = &http.Response{
-				Status:     fmt.Sprintf("%d %s", meta.Status, http.StatusText(meta.Status)),
-				StatusCode: meta.Status,
-				Header:     meta.Headers.Clone(),
-				Body:       io.NopCloser(bytes.NewReader(body)),
-				Request:    req,
-			}
-			result.CacheStale = true
-			cacheHitResp = true
-			bgKey := cache.cacheKey(targetURL, req)
-			spawnBackgroundRefresh(cache, bgKey, targetURL, meta, userAgent, opts)
-		} else if beyondTolerance {
-			// Past TTL+tolerance but the cached entry carries ETag/Last-Modified.
-			// Snapshot the key BEFORE adding conditional headers so TouchByKey
-			// targets the original entry (conditional headers don't participate
-			// in cacheKey today, but capturing first is safer).
-			pendingCacheKey = cache.cacheKey(targetURL, req)
-			pendingRevalidationMeta = meta
-			pendingRevalidationBody = body
-			for k, v := range meta.ConditionalHeaders() {
-				req.Header.Set(k, v)
-			}
-		}
-	}
+	resp, cacheHitResp, pendingRevalidationMeta, pendingRevalidationBody, pendingCacheKey = cacheLookupStage(cache, opts, targetURL, userAgent, req, &result)
 
-	for attempt := 0; !cacheHitResp && attempt <= maxRetries; attempt++ {
-		var err error
-		resp, err = client.Do(req)
-		if err != nil {
-			if attempt < maxRetries && isRetryableError(err) {
-				backoff := time.Duration(1<<uint(attempt)) * retryBackoffBase
-				if backoff > maxRetryWait {
-					backoff = maxRetryWait
-				}
-				backoff = addJitter(backoff)
-				if totalRetryWait+backoff > totalRetryTimeout {
-					logRetry(RetryEvent{Attempt: attempt + 1, Error: err, WaitTime: backoff, Outcome: "timeout"})
-					result.Error = err.Error()
-					result.RetryCount = retryCount
-					result.TotalRetryWait = totalRetryWait
-					return result
-				}
-				logRetry(RetryEvent{Attempt: attempt + 1, Error: err, WaitTime: backoff, Outcome: "retrying"})
-				time.Sleep(backoff)
-				retryCount++
-				totalRetryWait += backoff
-				req = newGETRequest(targetURL, userAgent, opts.RequestID, opts.SendRequestID)
-				continue
-			}
-			logRetry(RetryEvent{Attempt: attempt + 1, Error: err, Outcome: "exhausted"})
-			result.Error = err.Error()
+	// Fetch with retry stage.
+	if !cacheHitResp {
+		resp, retryCount, totalRetryWait = fetchWithRetryStage(client, req, targetURL, userAgent, opts, cacheHitResp, maxRetries, totalRetryTimeout, &result)
+		if result.Error != "" && resp == nil {
 			result.RetryCount = retryCount
 			result.TotalRetryWait = totalRetryWait
 			return result
 		}
-
-		if (resp.StatusCode == http.StatusBadGateway || resp.StatusCode == http.StatusGatewayTimeout || (resp.StatusCode == http.StatusServiceUnavailable && resp.Header.Get("Retry-After") == "")) && attempt < maxRetries {
-			backoff := time.Duration(1<<uint(attempt)) * retryBackoffBase
-			if backoff > maxRetryWait {
-				backoff = maxRetryWait
-			}
-			backoff = addJitter(backoff)
-			if totalRetryWait+backoff > totalRetryTimeout {
-				logRetry(RetryEvent{Attempt: attempt + 1, StatusCode: resp.StatusCode, WaitTime: backoff, Outcome: "timeout"})
-				break
-			}
-			logRetry(RetryEvent{Attempt: attempt + 1, StatusCode: resp.StatusCode, WaitTime: backoff, Outcome: "retrying"})
-			_ = resp.Body.Close()
-			time.Sleep(backoff)
-			retryCount++
-			totalRetryWait += backoff
-			req = newGETRequest(targetURL, userAgent, opts.RequestID, opts.SendRequestID)
-			continue
-		}
-
-		if (resp.StatusCode == http.StatusTooManyRequests || (resp.StatusCode == http.StatusServiceUnavailable && resp.Header.Get("Retry-After") != "")) && attempt < maxRetries {
-			retryAfterHeader := resp.Header.Get("Retry-After")
-			if retryAfterHeader == "" {
-				logRetry(RetryEvent{Attempt: attempt + 1, StatusCode: resp.StatusCode, Outcome: "exhausted"})
-				break
-			}
-			retryAfter, ok := parseRetryAfter(retryAfterHeader)
-			if !ok || retryAfter > maxRetryWait {
-				logRetry(RetryEvent{Attempt: attempt + 1, StatusCode: resp.StatusCode, WaitTime: retryAfter, Outcome: "exhausted"})
-				break
-			}
-			if totalRetryWait+retryAfter > totalRetryTimeout {
-				logRetry(RetryEvent{Attempt: attempt + 1, StatusCode: resp.StatusCode, WaitTime: retryAfter, Outcome: "timeout"})
-				break
-			}
-			logRetry(RetryEvent{Attempt: attempt + 1, StatusCode: resp.StatusCode, WaitTime: retryAfter, Outcome: "retrying"})
-			_ = resp.Body.Close()
-			time.Sleep(retryAfter)
-			retryCount++
-			totalRetryWait += retryAfter
-			req = newGETRequest(targetURL, userAgent, opts.RequestID, opts.SendRequestID)
-			continue
-		}
-
-		if resp.StatusCode == http.StatusOK {
-			logRetry(RetryEvent{Attempt: attempt + 1, StatusCode: resp.StatusCode, Outcome: "success"})
-		}
-		break
 	}
-	// resp is reassigned later (e.g. the markdown-negotiation retry at the
-	// second client.Do); if that re-fetch errors, resp is left nil before this
-	// deferred close runs. Guard against the nil so a transport failure on the
-	// retry path can't panic the whole extraction.
 	defer func() {
 		if resp != nil && resp.Body != nil {
 			_ = resp.Body.Close()
@@ -543,52 +605,14 @@ func FromURLWithOptions(targetURL string, opts Options) (result Result) {
 		}
 	}
 
-	// Go's http.Client only auto-decompresses when it adds Accept-Encoding itself.
-	// We set Accept-Encoding manually, so we must decompress.
-	// Fallback path: HTTP/2 transport may have already decompressed despite the header.
-	contentEncoding := strings.ToLower(resp.Header.Get("Content-Encoding"))
-	if contentEncoding != "" {
-		var maxDecomp int64
-		if opts.Security != nil {
-			maxDecomp = opts.Security.MaxDecompressedBytes
-		}
-		decompressed, decompErr := decompressBodyLimited(bodyBytes, contentEncoding, maxDecomp)
-		if errors.Is(decompErr, ErrDecompressTooLarge) {
-			// A decompression bomb must fail hard — never fall through to the
-			// "looks like HTML/JSON" heuristic below, which would keep the
-			// oversized/compressed bytes.
-			result.Error = decompErr.Error()
-			result.SecurityBlock = decompErr.Error()
-			return result
-		}
-		if decompErr != nil {
-			if len(bodyBytes) > 0 {
-				trimmed := bytes.TrimSpace(bodyBytes)
-				if len(trimmed) > 0 && (trimmed[0] == '<' || trimmed[0] == '{') {
-				} else {
-					result.Error = fmt.Sprintf("decompression error (%s): %v", contentEncoding, decompErr)
-					return result
-				}
-			} else {
-				result.Error = fmt.Sprintf("decompression error (%s): %v", contentEncoding, decompErr)
-				return result
-			}
-		} else {
-			bodyBytes = decompressed
-		}
+
+	// Decompress and charset recovery stage.
+	var respContentType string
+	bodyBytes, preWarnings, respContentType = decompressAndRestoreCharsetStage(bodyBytes, resp, opts, &result, preWarnings)
+	if result.Error != "" {
+		return result
 	}
 
-	respContentType := resp.Header.Get("Content-Type")
-	if isCharsetSniffableContentType(respContentType) {
-		if decoded, cs, ok := sniffAndDecode(bodyBytes, respContentType); ok {
-			bodyBytes = decoded
-			result.Charset = cs
-		} else if declared := detectCharset(bodyBytes, respContentType); declared != "" {
-			// A charset was declared but decode failed — fall through to raw
-			// bytes (extraction usually still works on UTF-8-shaped input).
-			preWarnings = append(preWarnings, fmt.Sprintf("charset decode: declared charset %q not recognised, falling back to raw bytes", declared))
-		}
-	}
 
 	// PDF branch: when the response is application/pdf and the caller hasn't
 	// opted out via --no-pdf, route the bytes through ExtractPDFText and reuse
@@ -728,6 +752,7 @@ func FromURLWithOptions(targetURL string, opts Options) (result Result) {
 			}
 			return result
 		}
+		var contentEncoding string
 		contentEncoding = strings.ToLower(resp.Header.Get("Content-Encoding"))
 		if contentEncoding != "" {
 			var maxDecomp int64
