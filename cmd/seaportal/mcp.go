@@ -83,6 +83,9 @@ func registerMCPTools(srv *mcp.Server) {
 			if v, ok := args["max_tokens"].(float64); ok {
 				opts.MaxTokens = int(v)
 			}
+			// Wire the handler context so a client cancel / server shutdown can
+			// interrupt an in-flight retry backoff (ALP-043).
+			opts.Context = ctx
 			result := seaportal.FromURLWithOptions(url, opts)
 			b, err := json.Marshal(result)
 			if err != nil {

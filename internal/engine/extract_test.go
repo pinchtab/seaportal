@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -480,5 +481,49 @@ func TestFromURL_BinaryContentSkippedFast(t *testing.T) {
 		if result.ResponseContentType != ct {
 			t.Errorf("%s: expected responseContentType preserved, got %q", ct, result.ResponseContentType)
 		}
+	}
+}
+
+func TestSleepCtx(t *testing.T) {
+	// Completes normally when the context stays alive.
+	if err := sleepCtx(context.Background(), time.Millisecond); err != nil {
+		t.Errorf("sleepCtx(alive) = %v, want nil", err)
+	}
+	// Returns the context error promptly when already cancelled.
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	start := time.Now()
+	if err := sleepCtx(ctx, time.Hour); err == nil {
+		t.Error("sleepCtx(cancelled) = nil, want context error")
+	}
+	if time.Since(start) > 100*time.Millisecond {
+		t.Error("sleepCtx did not return promptly on cancellation")
+	}
+}
+
+// ALP-043: a retry backoff wait must be interruptible by the request context —
+// an overall deadline / SIGINT should preempt an in-flight retry sleep instead
+// of blocking for the full backoff. Uses a Retry-After of 1s (a deterministic
+// wait, unaffected by the test's shrunk retryBackoffBase) that a 100ms deadline
+// must cut short.
+func TestFromURL_RetrySleepInterruptedByContext(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Retry-After", "1")
+		w.WriteHeader(http.StatusTooManyRequests)
+	}))
+	defer server.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+
+	start := time.Now()
+	result := FromURLWithOptions(server.URL, Options{Context: ctx, MaxRetries: 3})
+	elapsed := time.Since(start)
+
+	if elapsed > 800*time.Millisecond {
+		t.Errorf("retry sleep not interrupted: elapsed %s (want < 800ms, the Retry-After was 1s)", elapsed)
+	}
+	if result.Error == "" || !strings.Contains(result.Error, "context") {
+		t.Errorf("result.Error = %q, want a context cancellation error", result.Error)
 	}
 }

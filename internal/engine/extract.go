@@ -163,11 +163,33 @@ func cacheLookupStage(cache *DiskCache, opts Options, targetURL string, userAgen
 	return resp, cacheHitResp, pendingRevalidationMeta, pendingRevalidationBody, pendingCacheKey
 }
 
+// sleepCtx waits for d or until ctx is cancelled, returning ctx.Err() if the
+// context fired first. Retry backoff and crawl-delay waits use it so an overall
+// deadline or SIGINT can preempt an in-flight wait (ALP-043).
+func sleepCtx(ctx context.Context, d time.Duration) error {
+	if d <= 0 {
+		return ctx.Err()
+	}
+	t := time.NewTimer(d)
+	defer t.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-t.C:
+		return nil
+	}
+}
+
 // fetchWithRetryStage executes the fetch with exponential backoff retry logic.
 func fetchWithRetryStage(client *http.Client, req *http.Request, targetURL string, userAgent string, opts Options, cacheHitResp bool, maxRetries int, totalRetryTimeout time.Duration, result *Result) (*http.Response, int, time.Duration) {
 	var resp *http.Response
 	var retryCount int
 	var totalRetryWait time.Duration
+
+	// The request's context bounds the whole retry loop: backoff sleeps below
+	// select on it so the deadline / SIGINT can interrupt a wait, and rebuilt
+	// requests inherit it so client.Do stays cancellable across attempts.
+	ctx := req.Context()
 
 	logRetry := func(event RetryEvent) {
 		if opts.RetryLogger != nil {
@@ -196,10 +218,14 @@ func fetchWithRetryStage(client *http.Client, req *http.Request, targetURL strin
 					return nil, retryCount, totalRetryWait
 				}
 				logRetry(RetryEvent{Attempt: attempt + 1, Error: err, WaitTime: backoff, Outcome: "retrying"})
-				time.Sleep(backoff)
+				if werr := sleepCtx(ctx, backoff); werr != nil {
+					logRetry(RetryEvent{Attempt: attempt + 1, Error: werr, WaitTime: backoff, Outcome: "canceled"})
+					result.Error = werr.Error()
+					return nil, retryCount, totalRetryWait
+				}
 				retryCount++
 				totalRetryWait += backoff
-				req = newGETRequest(targetURL, userAgent, opts.RequestID, opts.SendRequestID)
+				req = newGETRequest(targetURL, userAgent, opts.RequestID, opts.SendRequestID).WithContext(ctx)
 				continue
 			}
 			logRetry(RetryEvent{Attempt: attempt + 1, Error: err, Outcome: "exhausted"})
@@ -219,10 +245,14 @@ func fetchWithRetryStage(client *http.Client, req *http.Request, targetURL strin
 			}
 			logRetry(RetryEvent{Attempt: attempt + 1, StatusCode: resp.StatusCode, WaitTime: backoff, Outcome: "retrying"})
 			_ = resp.Body.Close()
-			time.Sleep(backoff)
+			if werr := sleepCtx(ctx, backoff); werr != nil {
+				logRetry(RetryEvent{Attempt: attempt + 1, StatusCode: resp.StatusCode, Error: werr, WaitTime: backoff, Outcome: "canceled"})
+				result.Error = werr.Error()
+				return nil, retryCount, totalRetryWait
+			}
 			retryCount++
 			totalRetryWait += backoff
-			req = newGETRequest(targetURL, userAgent, opts.RequestID, opts.SendRequestID)
+			req = newGETRequest(targetURL, userAgent, opts.RequestID, opts.SendRequestID).WithContext(ctx)
 			continue
 		}
 
@@ -243,10 +273,14 @@ func fetchWithRetryStage(client *http.Client, req *http.Request, targetURL strin
 			}
 			logRetry(RetryEvent{Attempt: attempt + 1, StatusCode: resp.StatusCode, WaitTime: retryAfter, Outcome: "retrying"})
 			_ = resp.Body.Close()
-			time.Sleep(retryAfter)
+			if werr := sleepCtx(ctx, retryAfter); werr != nil {
+				logRetry(RetryEvent{Attempt: attempt + 1, StatusCode: resp.StatusCode, Error: werr, WaitTime: retryAfter, Outcome: "canceled"})
+				result.Error = werr.Error()
+				return nil, retryCount, totalRetryWait
+			}
 			retryCount++
 			totalRetryWait += retryAfter
-			req = newGETRequest(targetURL, userAgent, opts.RequestID, opts.SendRequestID)
+			req = newGETRequest(targetURL, userAgent, opts.RequestID, opts.SendRequestID).WithContext(ctx)
 			continue
 		}
 
@@ -311,6 +345,14 @@ func FromURLWithOptions(targetURL string, opts Options) (result Result) {
 	defer ensureProfile(&result)
 	start := time.Now()
 	result = Result{URL: targetURL}
+
+	// Cancellation context for the whole fetch: bounds the request and makes
+	// crawl-delay / retry backoff waits interruptible (ALP-043). Defaults to
+	// Background so existing callers that don't set opts.Context are unchanged.
+	reqCtx := opts.Context
+	if reqCtx == nil {
+		reqCtx = context.Background()
+	}
 
 	// data: URL short-circuit (RFC 2397). Bypasses the network entirely:
 	// decode inline body and feed it straight into the HTML pipeline. Scope
@@ -504,7 +546,10 @@ func FromURLWithOptions(targetURL string, opts Options) (result Result) {
 			}
 		}
 		if delay := crawlCache.GetDelayWithScheme(host, userAgent, scheme); delay > 0 {
-			time.Sleep(delay)
+			if err := sleepCtx(reqCtx, delay); err != nil {
+				result.Error = err.Error()
+				return result
+			}
 		}
 	}
 
@@ -516,7 +561,7 @@ func FromURLWithOptions(targetURL string, opts Options) (result Result) {
 		limiter.Wait(domain, opts.RateLimit)
 	}
 
-	req := newGETRequest(targetURL, userAgent, opts.RequestID, opts.SendRequestID)
+	req := newGETRequest(targetURL, userAgent, opts.RequestID, opts.SendRequestID).WithContext(reqCtx)
 
 	// On-disk content cache (opt-in via opts.CacheDir). Read-side is bypassed
 	// by opts.NoCache; the write-side still records fresh 200s so --no-cache
@@ -806,7 +851,7 @@ func FromURLWithOptions(targetURL string, opts Options) (result Result) {
 	negotiationFailed := resp.StatusCode == http.StatusNotFound || resp.StatusCode == http.StatusNotAcceptable
 	if negotiationFailed && !strings.Contains(respContentType, "text/markdown") {
 		_ = resp.Body.Close()
-		req = newGETRequest(targetURL, userAgent, opts.RequestID, opts.SendRequestID)
+		req = newGETRequest(targetURL, userAgent, opts.RequestID, opts.SendRequestID).WithContext(reqCtx)
 		req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8")
 		resp, err = client.Do(req)
 		if err != nil {

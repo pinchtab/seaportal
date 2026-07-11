@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"context"
 	"net/http"
 	"time"
 )
@@ -432,4 +433,10 @@ type Options struct {
 	// keeps the historical unguarded behaviour. Build a safe default with
 	// DefaultSecurityPolicy. Safe to share across concurrent calls.
 	Security *SecurityPolicy
+
+	// Context, when non-nil, is the cancellation context for the fetch: it
+	// bounds the HTTP request and makes retry backoff / crawl-delay waits
+	// interruptible, so an overall deadline or SIGINT can preempt an in-flight
+	// retry (ALP-043). Nil defaults to context.Background().
+	Context context.Context
 }
