@@ -1225,11 +1225,19 @@ func fromHTMLInternal(html string, targetURL string, start time.Time, opts Optio
 		}
 	}
 	if schema != nil {
-		extracted, err := ApplySchema(html, *schema)
-		if err != nil {
-			schemaWarnings = append(schemaWarnings, "schema apply failed: "+err.Error())
+		if len(schema.Fields) == 0 {
+			// Loaded (or supplied) but empty — usually the top-level "fields"
+			// wrapper was omitted. Warn instead of silently producing nothing,
+			// matching the warn-on-bad-input convention used for --select and a
+			// missing schema file (ALP-044).
+			schemaWarnings = append(schemaWarnings, "schema loaded but has no fields; expected a top-level 'fields' map")
 		} else {
-			extractedSchema = extracted
+			extracted, err := ApplySchema(html, *schema)
+			if err != nil {
+				schemaWarnings = append(schemaWarnings, "schema apply failed: "+err.Error())
+			} else {
+				extractedSchema = extracted
+			}
 		}
 	}
 

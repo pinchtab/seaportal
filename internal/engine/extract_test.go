@@ -527,3 +527,29 @@ func TestFromURL_RetrySleepInterruptedByContext(t *testing.T) {
 		t.Errorf("result.Error = %q, want a context cancellation error", result.Error)
 	}
 }
+
+// ALP-044: a supplied/loaded schema with no fields (commonly the omitted
+// top-level "fields" wrapper) must warn instead of silently producing nothing.
+func TestFromURL_SchemaEmptyFieldsWarns(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`<html><body><h1>Title</h1><p>Body content here for extraction.</p></body></html>`))
+	}))
+	defer server.Close()
+
+	empty := FromURLWithOptions(server.URL, Options{Schema: &Schema{}})
+	if !containsWarning(empty.Warnings, "no fields") {
+		t.Errorf("empty schema: warnings = %v, want a 'no fields' warning", empty.Warnings)
+	}
+	if len(empty.Schema) != 0 {
+		t.Errorf("empty schema: result.Schema = %v, want empty", empty.Schema)
+	}
+
+	// A valid schema still populates result.Schema with no spurious warning.
+	valid := FromURLWithOptions(server.URL, Options{Schema: &Schema{Fields: map[string]FieldSpec{"title": {Selector: "h1"}}}})
+	if containsWarning(valid.Warnings, "no fields") {
+		t.Errorf("valid schema: unexpected 'no fields' warning: %v", valid.Warnings)
+	}
+	if valid.Schema["title"] != "Title" {
+		t.Errorf("valid schema: result.Schema[title] = %v, want Title", valid.Schema["title"])
+	}
+}
