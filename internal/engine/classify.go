@@ -99,6 +99,14 @@ func classifyPageInternal(result Result) PageProfile {
 		return profile
 	}
 
+	if isJSShellContent(result) {
+		profile.Class = PageSPA
+		profile.Outcome = OutcomeNeedsBrowser
+		profile.Reasons = append(profile.Reasons, "js-shell-content")
+		profile.Trustworthy = false
+		return profile
+	}
+
 	if result.Confidence >= 80 {
 		if hasHydrationMarkers(result) { //nolint:gocritic
 			profile.Class = PageHydrated
@@ -264,6 +272,44 @@ func reasonsContain(reasons []string, want string) bool {
 		if r == want {
 			return true
 		}
+	}
+	return false
+}
+
+// jsShellPhrases are content-side "this page needs JavaScript" tells, matched
+// against the lowered extracted content.
+var jsShellPhrases = []string{
+	"enable javascript",
+	"javascript is enabled",
+	"javascript is required",
+	"javascript required",
+	"requires javascript",
+	"javascript is disabled",
+	"javascript is not enabled",
+	"javascript must be enabled",
+	"turn on javascript",
+}
+
+// isJSShellContent reports whether a successfully-extracted page is really a
+// client-rendered shell: short extracted content dominated by a JS-required
+// warning or a bare loading screen. Complements DetectSPA, which keys on
+// raw-HTML markers (<noscript> warnings, spa-root ids) and misses shells that
+// render the warning as regular DOM (e.g. app.diagrams.net).
+func isJSShellContent(result Result) bool {
+	if result.Length <= 0 || result.Length >= 500 {
+		return false
+	}
+	content := strings.ToLower(result.Content)
+	for _, phrase := range jsShellPhrases {
+		if strings.Contains(content, phrase) {
+			return true
+		}
+	}
+	// A bare loading screen only counts when there is no paragraph prose
+	// around it — short static pages can legitimately mention "loading...".
+	if result.ParagraphCount == 0 &&
+		(strings.Contains(content, "loading...") || strings.Contains(content, "loading…")) {
+		return true
 	}
 	return false
 }

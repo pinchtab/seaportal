@@ -818,3 +818,111 @@ func TestClassifier_DynamicFallback_RequiresSignal(t *testing.T) {
 }
 
 // contains() helper lives in validate_test.go (same package).
+
+// regression: ALP-039 — a client-rendered shell whose "enable JavaScript"
+// warning sits OUTSIDE <noscript> (app.diagrams.net) classified as
+// high-confidence static and skipped the browser hand-off.
+func TestClassifyPage_JSShellContent(t *testing.T) {
+	diagramsShaped := Result{
+		URL:          "https://app.diagrams.net/",
+		Content:      "draw.io is free online diagram software for making flowcharts, process diagrams, org charts, UML, ER and network diagrams.\n\n## Loading...\n\n! Please ensure JavaScript is enabled.",
+		Length:       352,
+		Confidence:   80,
+		HeadingCount: 1,
+		StatusCode:   200,
+	}
+	profile := ClassifyPage(diagramsShaped)
+	if profile.Class != PageSPA {
+		t.Errorf("expected class=spa for JS-shell content, got %s", profile.Class)
+	}
+	if profile.Outcome != OutcomeNeedsBrowser {
+		t.Errorf("expected outcome=needs-browser, got %s", profile.Outcome)
+	}
+	if !profile.BrowserRecommended {
+		t.Error("expected browserRecommended=true for JS-shell content")
+	}
+	if !reasonsContain(profile.Reasons, "js-shell-content") {
+		t.Errorf("expected js-shell-content reason, got %v", profile.Reasons)
+	}
+}
+
+func TestClassifyPage_JSShellCanonicalPhrases(t *testing.T) {
+	for _, content := range []string{
+		"Please enable JavaScript to view this site.",
+		"You need to enable JavaScript to run this app.",
+		"This application requires JavaScript to work properly.",
+		"JavaScript is disabled in your browser.",
+	} {
+		result := Result{URL: "https://x.test/", Content: content, Length: 400, Confidence: 80, StatusCode: 200}
+		profile := ClassifyPage(result)
+		if profile.Outcome != OutcomeNeedsBrowser || !profile.BrowserRecommended {
+			t.Errorf("content %q: expected needs-browser/recommended, got %s/%v",
+				content, profile.Outcome, profile.BrowserRecommended)
+		}
+	}
+}
+
+func TestClassifyPage_BareLoadingShell(t *testing.T) {
+	result := Result{
+		URL:          "https://x.test/",
+		Content:      "# MyApp\n\nLoading...",
+		Length:       350,
+		Confidence:   65,
+		HeadingCount: 1,
+		StatusCode:   200,
+	}
+	profile := ClassifyPage(result)
+	if profile.Outcome != OutcomeNeedsBrowser || !profile.BrowserRecommended {
+		t.Errorf("bare loading shell: expected needs-browser/recommended, got %s/%v",
+			profile.Outcome, profile.BrowserRecommended)
+	}
+}
+
+func TestClassifyPage_JSShellNegatives(t *testing.T) {
+	longArticle := Result{
+		URL:            "https://x.test/help",
+		Content:        "How to enable JavaScript in your browser. " + strings.Repeat("Detailed steps and explanatory prose. ", 80),
+		Length:         3100,
+		Confidence:     85,
+		HeadingCount:   3,
+		ParagraphCount: 5,
+		StatusCode:     200,
+	}
+	profile := ClassifyPage(longArticle)
+	if profile.Outcome != OutcomeExtract {
+		t.Errorf("long article about JavaScript: expected extract, got %s", profile.Outcome)
+	}
+	if profile.BrowserRecommended {
+		t.Error("long article about JavaScript: expected browserRecommended=false")
+	}
+
+	// thehindu-shaped: short, mentions "loading..." but has real paragraph prose.
+	thinWithProse := Result{
+		URL:            "https://x.test/news",
+		Content:        "Top stories loading... Meanwhile the council approved the measure yesterday. Officials said the review continues.",
+		Length:         450,
+		Confidence:     60,
+		ParagraphCount: 2,
+		StatusCode:     200,
+	}
+	profile = ClassifyPage(thinWithProse)
+	if profile.Class == PageSPA || reasonsContain(profile.Reasons, "js-shell-content") {
+		t.Errorf("thin page with prose: expected no js-shell flag, got class=%s reasons=%v",
+			profile.Class, profile.Reasons)
+	}
+
+	// article-og-full-shaped: short static page without any shell phrases.
+	shortStatic := Result{
+		URL:            "https://x.test/article",
+		Content:        "OG Demo. Body content with a real sentence of article prose.",
+		Length:         390,
+		Confidence:     70,
+		ParagraphCount: 1,
+		StatusCode:     200,
+	}
+	profile = ClassifyPage(shortStatic)
+	if profile.Outcome != OutcomeExtract || profile.BrowserRecommended {
+		t.Errorf("short static page: expected extract/false, got %s/%v",
+			profile.Outcome, profile.BrowserRecommended)
+	}
+}
