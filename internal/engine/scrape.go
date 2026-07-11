@@ -54,6 +54,17 @@ const (
 	DefaultScrapeTimeout       = 60 * time.Second
 )
 
+// discoveryTimeoutFraction is the share of the overall scrape --timeout the
+// discovery stage may use before its context is cancelled, reserving the rest
+// for fetching so a link-dense crawl-fallback can't starve the fetch phase
+// (ALP-040).
+const discoveryTimeoutFraction = 0.5
+
+// discoveryBudget returns the discovery stage's slice of the overall timeout.
+func discoveryBudget(total time.Duration) time.Duration {
+	return time.Duration(float64(total) * discoveryTimeoutFraction)
+}
+
 // ScrapeOptions controls ScrapeSite. Every field maps to a `seaportal scrape`
 // flag; zero-valued fields resolve to the documented defaults in normalized().
 //
@@ -197,7 +208,19 @@ func ScrapeSite(ctx context.Context, opts *ScrapeOptions) (*ScrapeResult, error)
 		defer cancel()
 	}
 
-	disc, err := discover(ctx, o)
+	// Sub-budget discovery so a link-dense crawl-fallback can't consume the
+	// whole deadline and starve fetching (ALP-040). discover() returns whatever
+	// it found when its context is cancelled, so the reserved remainder is left
+	// for fetchAndAssemble on the still-live overall ctx (which stays the
+	// wall-clock cap — ALP-029).
+	discCtx := ctx
+	if opts.Timeout > 0 {
+		var discCancel context.CancelFunc
+		discCtx, discCancel = context.WithTimeout(ctx, discoveryBudget(opts.Timeout))
+		defer discCancel()
+	}
+
+	disc, err := discover(discCtx, o)
 	if err != nil {
 		return nil, err
 	}
