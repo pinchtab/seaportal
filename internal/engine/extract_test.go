@@ -554,7 +554,6 @@ func TestFromURL_SchemaEmptyFieldsWarns(t *testing.T) {
 	}
 }
 
-
 // regression: ALP-046 — the shared waitAndRetry tail must enforce
 // totalRetryTimeout: a Retry-After larger than the remaining budget stops the
 // retry loop immediately instead of sleeping.
@@ -587,5 +586,41 @@ func TestRetryTotalBudgetEnforced(t *testing.T) {
 	}
 	if len(outcomes) == 0 || outcomes[len(outcomes)-1] != "timeout" {
 		t.Errorf("retry outcomes = %v, want final \"timeout\" event", outcomes)
+	}
+}
+
+// ALP-047: a per-domain DomainRetry{MaxRetryWait} override must reach the retry
+// stage and clamp the backoff. Without the fix the stage defaulted to 60s and
+// ignored the override, so backoff grew exponentially past the cap.
+func TestFromURL_DomainMaxRetryWaitClampsBackoff(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusServiceUnavailable) // 503, no Retry-After → exponential backoff
+	}))
+	defer server.Close()
+
+	const capWait = 5 * time.Millisecond
+	var waits []time.Duration
+	opts := Options{
+		DomainRetryConfig: map[string]DomainRetry{
+			"127.0.0.1": {MaxRetries: 3, MaxRetryWait: capWait},
+		},
+		RetryLogger: func(e RetryEvent) {
+			if e.Outcome == "retrying" {
+				waits = append(waits, e.WaitTime)
+			}
+		},
+	}
+	_ = FromURLWithOptions(server.URL, opts)
+
+	if len(waits) < 2 {
+		t.Fatalf("expected multiple retry waits, got %d: %v", len(waits), waits)
+	}
+	// Clamped backoff is at most capWait × addJitter's 1.25 ceiling; the
+	// exponential base would otherwise reach ~20ms by the third attempt.
+	limit := capWait*5/4 + time.Millisecond
+	for i, w := range waits {
+		if w > limit {
+			t.Errorf("wait[%d] = %s exceeds domain cap %s (limit %s) — override not applied to the stage", i, w, capWait, limit)
+		}
 	}
 }
