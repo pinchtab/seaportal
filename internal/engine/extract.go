@@ -180,6 +180,17 @@ func sleepCtx(ctx context.Context, d time.Duration) error {
 	}
 }
 
+// retryWaitOutcome reports how the shared retry tail resolved: proceed with
+// another attempt, stop because the totalRetryTimeout budget would be
+// exceeded, or stop because the context was cancelled mid-wait.
+type retryWaitOutcome int
+
+const (
+	retryProceed retryWaitOutcome = iota
+	retryBudgetExceeded
+	retryCanceled
+)
+
 // fetchWithRetryStage executes the fetch with exponential backoff retry logic.
 func fetchWithRetryStage(client *http.Client, req *http.Request, targetURL string, userAgent string, opts Options, cacheHitResp bool, maxRetries int, totalRetryTimeout time.Duration, result *Result) (*http.Response, int, time.Duration) {
 	var resp *http.Response
@@ -202,30 +213,57 @@ func fetchWithRetryStage(client *http.Client, req *http.Request, targetURL strin
 		maxRetryWait = 60 * time.Second
 	}
 
+	expBackoff := func(attempt int) time.Duration {
+		backoff := time.Duration(1<<uint(attempt)) * retryBackoffBase
+		if backoff > maxRetryWait {
+			backoff = maxRetryWait
+		}
+		return addJitter(backoff)
+	}
+
+	// waitAndRetry is the shared tail of every retry branch: budget check,
+	// logging, body close, ctx-aware wait, counter increments, and request
+	// rebuild. event carries the branch's template (Attempt plus StatusCode
+	// or Error); closeBody is nil when the branch has no response to release.
+	// The body is only closed on the retrying path — on budget exhaustion the
+	// response is handed back to the caller unread.
+	waitAndRetry := func(wait time.Duration, event RetryEvent, closeBody *http.Response) retryWaitOutcome {
+		event.WaitTime = wait
+		if totalRetryWait+wait > totalRetryTimeout {
+			event.Outcome = "timeout"
+			logRetry(event)
+			return retryBudgetExceeded
+		}
+		event.Outcome = "retrying"
+		logRetry(event)
+		if closeBody != nil {
+			_ = closeBody.Body.Close()
+		}
+		if werr := sleepCtx(ctx, wait); werr != nil {
+			event.Error = werr
+			event.Outcome = "canceled"
+			logRetry(event)
+			result.Error = werr.Error()
+			return retryCanceled
+		}
+		retryCount++
+		totalRetryWait += wait
+		req = newGETRequest(targetURL, userAgent, opts.RequestID, opts.SendRequestID).WithContext(ctx)
+		return retryProceed
+	}
+
 	for attempt := 0; !cacheHitResp && attempt <= maxRetries; attempt++ {
 		var err error
 		resp, err = client.Do(req)
 		if err != nil {
 			if attempt < maxRetries && isRetryableError(err) {
-				backoff := time.Duration(1<<uint(attempt)) * retryBackoffBase
-				if backoff > maxRetryWait {
-					backoff = maxRetryWait
-				}
-				backoff = addJitter(backoff)
-				if totalRetryWait+backoff > totalRetryTimeout {
-					logRetry(RetryEvent{Attempt: attempt + 1, Error: err, WaitTime: backoff, Outcome: "timeout"})
-					result.Error = err.Error()
+				outcome := waitAndRetry(expBackoff(attempt), RetryEvent{Attempt: attempt + 1, Error: err}, nil)
+				if outcome != retryProceed {
+					if result.Error == "" {
+						result.Error = err.Error()
+					}
 					return nil, retryCount, totalRetryWait
 				}
-				logRetry(RetryEvent{Attempt: attempt + 1, Error: err, WaitTime: backoff, Outcome: "retrying"})
-				if werr := sleepCtx(ctx, backoff); werr != nil {
-					logRetry(RetryEvent{Attempt: attempt + 1, Error: werr, WaitTime: backoff, Outcome: "canceled"})
-					result.Error = werr.Error()
-					return nil, retryCount, totalRetryWait
-				}
-				retryCount++
-				totalRetryWait += backoff
-				req = newGETRequest(targetURL, userAgent, opts.RequestID, opts.SendRequestID).WithContext(ctx)
 				continue
 			}
 			logRetry(RetryEvent{Attempt: attempt + 1, Error: err, Outcome: "exhausted"})
@@ -234,25 +272,13 @@ func fetchWithRetryStage(client *http.Client, req *http.Request, targetURL strin
 		}
 
 		if (resp.StatusCode == http.StatusBadGateway || resp.StatusCode == http.StatusGatewayTimeout || (resp.StatusCode == http.StatusServiceUnavailable && resp.Header.Get("Retry-After") == "")) && attempt < maxRetries {
-			backoff := time.Duration(1<<uint(attempt)) * retryBackoffBase
-			if backoff > maxRetryWait {
-				backoff = maxRetryWait
-			}
-			backoff = addJitter(backoff)
-			if totalRetryWait+backoff > totalRetryTimeout {
-				logRetry(RetryEvent{Attempt: attempt + 1, StatusCode: resp.StatusCode, WaitTime: backoff, Outcome: "timeout"})
-				break
-			}
-			logRetry(RetryEvent{Attempt: attempt + 1, StatusCode: resp.StatusCode, WaitTime: backoff, Outcome: "retrying"})
-			_ = resp.Body.Close()
-			if werr := sleepCtx(ctx, backoff); werr != nil {
-				logRetry(RetryEvent{Attempt: attempt + 1, StatusCode: resp.StatusCode, Error: werr, WaitTime: backoff, Outcome: "canceled"})
-				result.Error = werr.Error()
+			outcome := waitAndRetry(expBackoff(attempt), RetryEvent{Attempt: attempt + 1, StatusCode: resp.StatusCode}, resp)
+			if outcome == retryCanceled {
 				return nil, retryCount, totalRetryWait
 			}
-			retryCount++
-			totalRetryWait += backoff
-			req = newGETRequest(targetURL, userAgent, opts.RequestID, opts.SendRequestID).WithContext(ctx)
+			if outcome == retryBudgetExceeded {
+				break
+			}
 			continue
 		}
 
@@ -267,20 +293,13 @@ func fetchWithRetryStage(client *http.Client, req *http.Request, targetURL strin
 				logRetry(RetryEvent{Attempt: attempt + 1, StatusCode: resp.StatusCode, WaitTime: retryAfter, Outcome: "exhausted"})
 				break
 			}
-			if totalRetryWait+retryAfter > totalRetryTimeout {
-				logRetry(RetryEvent{Attempt: attempt + 1, StatusCode: resp.StatusCode, WaitTime: retryAfter, Outcome: "timeout"})
-				break
-			}
-			logRetry(RetryEvent{Attempt: attempt + 1, StatusCode: resp.StatusCode, WaitTime: retryAfter, Outcome: "retrying"})
-			_ = resp.Body.Close()
-			if werr := sleepCtx(ctx, retryAfter); werr != nil {
-				logRetry(RetryEvent{Attempt: attempt + 1, StatusCode: resp.StatusCode, Error: werr, WaitTime: retryAfter, Outcome: "canceled"})
-				result.Error = werr.Error()
+			outcome := waitAndRetry(retryAfter, RetryEvent{Attempt: attempt + 1, StatusCode: resp.StatusCode}, resp)
+			if outcome == retryCanceled {
 				return nil, retryCount, totalRetryWait
 			}
-			retryCount++
-			totalRetryWait += retryAfter
-			req = newGETRequest(targetURL, userAgent, opts.RequestID, opts.SendRequestID).WithContext(ctx)
+			if outcome == retryBudgetExceeded {
+				break
+			}
 			continue
 		}
 

@@ -553,3 +553,39 @@ func TestFromURL_SchemaEmptyFieldsWarns(t *testing.T) {
 		t.Errorf("valid schema: result.Schema[title] = %v, want Title", valid.Schema["title"])
 	}
 }
+
+
+// regression: ALP-046 — the shared waitAndRetry tail must enforce
+// totalRetryTimeout: a Retry-After larger than the remaining budget stops the
+// retry loop immediately instead of sleeping.
+func TestRetryTotalBudgetEnforced(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Retry-After", "2")
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	defer server.Close()
+
+	var outcomes []string
+	opts := Options{
+		MaxRetries:        3,
+		MaxRetryWait:      5 * time.Second,
+		TotalRetryTimeout: 500 * time.Millisecond,
+		RetryLogger:       func(e RetryEvent) { outcomes = append(outcomes, e.Outcome) },
+	}
+	start := time.Now()
+	result := FromURLWithOptions(server.URL, opts)
+	elapsed := time.Since(start)
+
+	if elapsed > 1500*time.Millisecond {
+		t.Errorf("budget-exceeded retry took %v; must return without sleeping", elapsed)
+	}
+	if result.StatusCode != http.StatusServiceUnavailable {
+		t.Errorf("StatusCode = %d, want 503 handed back on budget exhaustion", result.StatusCode)
+	}
+	if result.RetryCount != 0 {
+		t.Errorf("RetryCount = %d, want 0 (no retry inside exhausted budget)", result.RetryCount)
+	}
+	if len(outcomes) == 0 || outcomes[len(outcomes)-1] != "timeout" {
+		t.Errorf("retry outcomes = %v, want final \"timeout\" event", outcomes)
+	}
+}
