@@ -48,6 +48,49 @@ func TestSummarizeSamplingRecommendation(t *testing.T) {
 	}
 }
 
+// regression: ALP-045 — the dense-pattern gate (URLs/pattern >= 10) left
+// sparse-clustering, heavily-undersampled sites with no coverage note at all.
+func TestSummarizeLowCoverageNote(t *testing.T) {
+	okPages := func(n int) []PageObject {
+		pages := make([]PageObject, n)
+		for i := range pages {
+			pages[i] = PageObject{Status: 200, ContentType: "article", Markdown: strings.Repeat("w ", 100)}
+		}
+		return pages
+	}
+	coverageNote := func(recs []string) string {
+		joined := strings.Join(recs, " | ")
+		switch {
+		case strings.Contains(joined, "sampling recommended"):
+			return "dense"
+		case strings.Contains(joined, "coverage"):
+			return "low-coverage"
+		default:
+			return "none"
+		}
+	}
+
+	// kubernetes.io-shaped: 6453 URLs, 941 patterns (6.9 URLs/pattern), 20 sampled.
+	if got := coverageNote(summarize(okPages(20), 6453, 941).Recommendations); got != "low-coverage" {
+		t.Errorf("k8s-shaped input: coverage note = %s, want low-coverage", got)
+	}
+
+	// smashingmagazine-shaped: 7844 URLs, 31 patterns (253 URLs/pattern), 30 sampled.
+	if got := coverageNote(summarize(okPages(30), 7844, 31).Recommendations); got != "dense" {
+		t.Errorf("smashing-shaped input: coverage note = %s, want dense", got)
+	}
+
+	// Fully sampled sitemap: no coverage note of either kind.
+	if got := coverageNote(summarize(okPages(40), 40, 12).Recommendations); got != "none" {
+		t.Errorf("fully sampled: coverage note = %s, want none", got)
+	}
+
+	// Moderately sampled (40%), sparse patterns: above the 25% floor, no note.
+	if got := coverageNote(summarize(okPages(40), 100, 50).Recommendations); got != "none" {
+		t.Errorf("40%% coverage sparse: coverage note = %s, want none", got)
+	}
+}
+
 func TestSummarizeEmptyIsValid(t *testing.T) {
 	sum := summarize(nil, 0, 0)
 	if sum.ContentTypes == nil {

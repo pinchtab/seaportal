@@ -39,8 +39,19 @@ func summarize(pages []PageObject, totalURLsInSitemap, patternCount int) ScrapeS
 	if thin > 0 {
 		recs = append(recs, fmt.Sprintf("%d pages have little extractable text (possible SPA/JS-only); consider PinchTab enrichment", thin))
 	}
-	if totalURLsInSitemap > 0 && patternCount > 0 && totalURLsInSitemap > len(pages) && totalURLsInSitemap/patternCount >= 10 {
+	// Coverage notes. The dense-pattern rec targets "many similar URLs per
+	// pattern → sample them". Its density gate has a blind spot: a site with
+	// sparse clustering (many patterns, e.g. multi-locale kubernetes.io at
+	// 6453 URLs / 941 patterns) AND heavy undersampling got no signal at all.
+	// The low-coverage fallback fires on the sampled fraction alone (< 25%),
+	// independent of how URLs cluster (ALP-045).
+	undersampled := totalURLsInSitemap > 0 && totalURLsInSitemap > len(pages)
+	switch {
+	case undersampled && patternCount > 0 && totalURLsInSitemap/patternCount >= 10:
 		recs = append(recs, fmt.Sprintf("sitemap lists %d URLs across %d patterns but only %d were sampled; sampling recommended", totalURLsInSitemap, patternCount, len(pages)))
+	case undersampled && len(pages)*4 < totalURLsInSitemap:
+		pct := float64(len(pages)) / float64(totalURLsInSitemap) * 100
+		recs = append(recs, fmt.Sprintf("only %d of %d sitemap URLs were sampled (%.1f%% coverage); raise --max-pages for broader coverage", len(pages), totalURLsInSitemap, pct))
 	}
 
 	return ScrapeSummary{
