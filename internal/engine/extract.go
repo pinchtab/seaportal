@@ -192,7 +192,7 @@ const (
 )
 
 // fetchWithRetryStage executes the fetch with exponential backoff retry logic.
-func fetchWithRetryStage(client *http.Client, req *http.Request, targetURL string, userAgent string, opts Options, cacheHitResp bool, maxRetries int, totalRetryTimeout time.Duration, result *Result) (*http.Response, int, time.Duration) {
+func fetchWithRetryStage(client *http.Client, req *http.Request, targetURL string, userAgent string, opts Options, cacheHitResp bool, maxRetries int, maxRetryWait time.Duration, totalRetryTimeout time.Duration, result *Result) (*http.Response, int, time.Duration) {
 	var resp *http.Response
 	var retryCount int
 	var totalRetryWait time.Duration
@@ -208,11 +208,9 @@ func fetchWithRetryStage(client *http.Client, req *http.Request, targetURL strin
 		}
 	}
 
-	maxRetryWait := opts.MaxRetryWait
-	if maxRetryWait == 0 {
-		maxRetryWait = 60 * time.Second
-	}
-
+	// maxRetryWait is resolved by the caller (opts.MaxRetryWait plus any
+	// per-domain DomainRetryConfig override, defaulted to 60s); the stage just
+	// clamps to it (ALP-047).
 	expBackoff := func(attempt int) time.Duration {
 		backoff := time.Duration(1<<uint(attempt)) * retryBackoffBase
 		if backoff > maxRetryWait {
@@ -577,7 +575,10 @@ func FromURLWithOptions(targetURL string, opts Options) (result Result) {
 		if limiter == nil {
 			limiter = NewHostRateLimiter()
 		}
-		limiter.Wait(domain, opts.RateLimit)
+		if err := limiter.Wait(reqCtx, domain, opts.RateLimit); err != nil {
+			result.Error = err.Error()
+			return result
+		}
 	}
 
 	req := newGETRequest(targetURL, userAgent, opts.RequestID, opts.SendRequestID).WithContext(reqCtx)
@@ -608,7 +609,7 @@ func FromURLWithOptions(targetURL string, opts Options) (result Result) {
 
 	// Fetch with retry stage.
 	if !cacheHitResp {
-		resp, retryCount, totalRetryWait = fetchWithRetryStage(client, req, targetURL, userAgent, opts, cacheHitResp, maxRetries, totalRetryTimeout, &result)
+		resp, retryCount, totalRetryWait = fetchWithRetryStage(client, req, targetURL, userAgent, opts, cacheHitResp, maxRetries, maxRetryWait, totalRetryTimeout, &result)
 		if result.Error != "" && resp == nil {
 			result.RetryCount = retryCount
 			result.TotalRetryWait = totalRetryWait

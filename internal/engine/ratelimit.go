@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"context"
 	"sync"
 	"time"
 )
@@ -18,19 +19,30 @@ func NewHostRateLimiter() *HostRateLimiter {
 	return &HostRateLimiter{lastReq: make(map[string]time.Time)}
 }
 
-// Wait sleeps if the current time is within minInterval of the last
-// recorded request for host. No-op when minInterval <= 0 or host is empty.
-func (l *HostRateLimiter) Wait(host string, minInterval time.Duration) {
-	if minInterval <= 0 || host == "" {
-		return
+// Wait blocks until host's next request slot, spacing requests to the same
+// host by minInterval. The slot is reserved under the lock and the wait
+// happens outside it, so a long crawl-delay on one host never blocks other
+// hosts, and concurrent callers for the same host each reserve successive
+// slots (ALP-048; the previous lock-held sleep serialized every host behind
+// one wait). Returns ctx's error if the context fires before the slot; the
+// reservation is kept — cancellation means the scrape is tearing down.
+// No-op when minInterval <= 0 or host is empty.
+func (l *HostRateLimiter) Wait(ctx context.Context, host string, minInterval time.Duration) error {
+	if ctx == nil {
+		ctx = context.Background()
 	}
+	if minInterval <= 0 || host == "" {
+		return ctx.Err()
+	}
+	now := time.Now()
 	l.mu.Lock()
-	defer l.mu.Unlock()
+	next := now
 	if last, ok := l.lastReq[host]; ok {
-		elapsed := time.Since(last)
-		if elapsed < minInterval {
-			time.Sleep(minInterval - elapsed)
+		if slot := last.Add(minInterval); slot.After(now) {
+			next = slot
 		}
 	}
-	l.lastReq[host] = time.Now()
+	l.lastReq[host] = next
+	l.mu.Unlock()
+	return sleepCtx(ctx, time.Until(next))
 }

@@ -35,7 +35,7 @@ func fetchAll(ctx context.Context, urls []string, opts ScrapeOptions, cfg poolCo
 		if err := ctx.Err(); err != nil {
 			return PageObject{URL: u, Error: err.Error()}
 		}
-		return fetchOne(u, extractOpts, limiter, robots, respectRobots, cfg.MinInterval)
+		return fetchOne(ctx, u, extractOpts, limiter, robots, respectRobots, cfg.MinInterval)
 	})
 }
 
@@ -95,7 +95,7 @@ dispatch:
 // fetchOne rate-limits, fetches, and extracts a single URL, mapping the extract
 // Result onto a PageObject. Richer page assembly (meta, schema, perf, links) is
 // ALP-006; here we carry the essentials plus any error.
-func fetchOne(u string, extractOpts Options, limiter *HostRateLimiter, robots *CrawlDelayCache, respectRobots bool, minInterval time.Duration) PageObject {
+func fetchOne(ctx context.Context, u string, extractOpts Options, limiter *HostRateLimiter, robots *CrawlDelayCache, respectRobots bool, minInterval time.Duration) PageObject {
 	host, scheme := hostScheme(u)
 	interval := minInterval
 	if respectRobots && host != "" {
@@ -103,8 +103,13 @@ func fetchOne(u string, extractOpts Options, limiter *HostRateLimiter, robots *C
 			interval = d
 		}
 	}
-	limiter.Wait(host, interval)
+	if err := limiter.Wait(ctx, host, interval); err != nil {
+		return PageObject{URL: u, Error: err.Error()}
+	}
 
+	// Bound the extract itself by the pool ctx too — a fetch dispatched just
+	// before the deadline must not run past it.
+	extractOpts.Context = ctx
 	r := FromURLWithOptions(u, extractOpts)
 	return PageObject{
 		URL:      u,

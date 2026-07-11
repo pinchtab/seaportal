@@ -129,7 +129,10 @@ func fetchHeadOnly(targetURL string, opts Options) (result Result) {
 		if limiter == nil {
 			limiter = NewHostRateLimiter()
 		}
-		limiter.Wait(domain, opts.RateLimit)
+		if err := limiter.Wait(opts.Context, domain, opts.RateLimit); err != nil {
+			result.Error = err.Error()
+			return result
+		}
 	}
 
 	req, err := http.NewRequest("GET", targetURL, nil)

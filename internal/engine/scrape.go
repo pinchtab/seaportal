@@ -298,7 +298,9 @@ func fetchAndAssemble(ctx context.Context, base *url.URL, urls []string, o Scrap
 		}
 		host, scheme := hostScheme(u)
 		if respectRobots && host != "" {
-			limiter.Wait(host, robots.GetDelayWithScheme(host, o.UserAgent, scheme))
+			if err := limiter.Wait(ctx, host, robots.GetDelayWithScheme(host, o.UserAgent, scheme)); err != nil {
+				return PageObject{URL: u, Error: err.Error()}
+			}
 		}
 		// TTFB here is the whole FetchBytes round-trip (headers + body):
 		// FetchBytes exposes no first-byte hook, and > 0 beats the structural 0
