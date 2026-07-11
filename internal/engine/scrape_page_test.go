@@ -122,14 +122,35 @@ func TestAssemblePageFailedStillPopulatesStatusAndError(t *testing.T) {
 }
 
 func TestClassifyContentTypeFallback(t *testing.T) {
-	if got := classifyContentType(nil, Metadata{}); got != "unknown" {
-		t.Errorf("empty classify = %q, want unknown", got)
-	}
-	if got := classifyContentType(nil, Metadata{OGType: "website"}); got != "page" {
+	// Structured metadata still wins (no regression).
+	if got := classifyContentType(nil, Metadata{OGType: "website"}, "", ""); got != "page" {
 		t.Errorf("og website = %q, want page", got)
 	}
-	if got := classifyContentType([]LDJSONBlock{{Type: "NewsArticle"}}, Metadata{}); got != "article" {
+	if got := classifyContentType([]LDJSONBlock{{Type: "NewsArticle"}}, Metadata{}, "", ""); got != "article" {
 		t.Errorf("NewsArticle = %q, want article", got)
+	}
+	// Empty body stays "unknown" even with no metadata.
+	if got := classifyContentType(nil, Metadata{}, "https://ex.com/x", ""); got != "unknown" {
+		t.Errorf("empty body = %q, want unknown", got)
+	}
+}
+
+func TestStructuralContentTypeFallback(t *testing.T) {
+	body := "<html><body><p>text</p></body></html>"
+	cases := []struct {
+		name, url, html, want string
+	}{
+		{"mdn-docs-url", "https://developer.mozilla.org/en-US/docs/Web/JavaScript", body, "article"},
+		{"blog-url", "https://ex.com/blog/hello", body, "article"},
+		{"article-element", "https://ex.com/x", "<html><body><article><h1>T</h1><p>a</p></article></body></html>", "article"},
+		{"prose-density", "https://ex.com/x", "<h1>T</h1><p>1</p><p>2</p><p>3</p><p>4</p><p>5</p>", "article"},
+		{"plain-page", "https://ex.com/", "<html><body><nav>menu</nav><p>hi</p></body></html>", "page"},
+		{"empty-body", "https://ex.com/docs/x", "", "unknown"},
+	}
+	for _, c := range cases {
+		if got := classifyContentType(nil, Metadata{}, c.url, c.html); got != c.want {
+			t.Errorf("%s: classify = %q, want %q", c.name, got, c.want)
+		}
 	}
 }
 

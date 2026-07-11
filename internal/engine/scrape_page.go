@@ -29,7 +29,7 @@ func assemblePage(base *url.URL, targetURL, htmlStr string, r Result, withPerfor
 	p.Schema = ldjsonToMaps(blocks)
 
 	p.InternalLinks, p.ExternalLinks = countLinks(base, ExtractLinks(htmlStr, targetURL))
-	p.ContentType = classifyContentType(blocks, meta)
+	p.ContentType = classifyContentType(blocks, meta, targetURL, htmlStr)
 
 	if withPerformance {
 		p.Performance = &PagePerformance{
@@ -101,8 +101,11 @@ func countLinks(base *url.URL, links []LinkRef) (internal, external int) {
 }
 
 // classifyContentType derives a coarse content type from JSON-LD @type, then
-// OpenGraph type, then falls back to "unknown".
-func classifyContentType(blocks []LDJSONBlock, m Metadata) string {
+// OpenGraph type. When neither is present it falls back to a structural
+// heuristic over the URL and HTML (ALP-041) so metadata-poor sites (e.g. MDN)
+// don't collapse to "unknown"; a genuinely empty body still classifies as
+// "unknown".
+func classifyContentType(blocks []LDJSONBlock, m Metadata, pageURL, html string) string {
 	for _, b := range blocks {
 		if t := normalizeContentType(b.Type); t != "" {
 			return t
@@ -111,7 +114,38 @@ func classifyContentType(blocks []LDJSONBlock, m Metadata) string {
 	if t := normalizeContentType(m.OGType); t != "" {
 		return t
 	}
-	return "unknown"
+	return structuralContentType(pageURL, html)
+}
+
+// articleURLSegments are path segments that strongly signal long-form content.
+var articleURLSegments = []string{"/blog", "/docs", "/article", "/post", "/news", "/guide", "/tutorial"}
+
+// structuralContentType infers a coarse type from URL shape and HTML structure
+// for pages that carry no JSON-LD/OpenGraph type. A page is "article" when its
+// URL sits under a docs/blog-style segment, or the HTML has a main <article>
+// element, or it reads as dense prose (a heading plus several paragraphs).
+// Anything else with a usable body is "page"; an empty body stays "unknown".
+func structuralContentType(pageURL, html string) string {
+	if strings.TrimSpace(html) == "" {
+		return "unknown"
+	}
+	if u, err := url.Parse(pageURL); err == nil {
+		path := strings.ToLower(u.Path)
+		for _, seg := range articleURLSegments {
+			if strings.Contains(path, seg) {
+				return "article"
+			}
+		}
+	}
+	lower := strings.ToLower(html)
+	if strings.Contains(lower, "<article") {
+		return "article"
+	}
+	headings := strings.Count(lower, "<h1") + strings.Count(lower, "<h2") + strings.Count(lower, "<h3")
+	if headings >= 1 && strings.Count(lower, "<p") >= 5 {
+		return "article"
+	}
+	return "page"
 }
 
 // normalizeContentType maps a schema.org / OpenGraph type onto one of a small
