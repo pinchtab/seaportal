@@ -152,7 +152,7 @@ seaportal scrape https://example.com --max-pages 50 --sample-strategy balanced
 |------|---------|-------------|
 | `--max-pages N` | 50 | Maximum total pages to process |
 | `--max-per-pattern N` | 8 | Max samples per URL pattern group |
-| `--full` | false | Disable sampling — fetch all discovered pages |
+| `--full` | false | Disable per-pattern sampling — take every discovered page, still capped at `--max-pages` |
 | `--include-patterns S` | "" | Comma-separated globs to include (`*` within a segment, `**` across) |
 | `--exclude-patterns S` | "" | Comma-separated globs to exclude |
 | `--sample-strategy S` | balanced | `random` \| `priority` \| `balanced` |
@@ -167,8 +167,11 @@ seaportal scrape https://example.com --max-pages 50 --sample-strategy balanced
 Sampling strategies: `balanced` spreads the budget across groups so a large
 group can't starve the others; `priority` takes the homepage and one
 representative per top-level section first; `random` samples uniformly within
-each group (seeded per-site for reproducibility). `--output directory` writes
-`result.json`, one `pages/<slug>.md` per page, and an `index.md` manifest.
+each group (seeded per-site for reproducibility). `--full` turns off the
+per-pattern cap but `--max-pages` remains the overall budget, so to fetch every
+page of a large site raise `--max-pages` accordingly (e.g. `--full --max-pages
+1000`). `--output directory` writes `result.json`, one `pages/<slug>.md` per
+page, and an `index.md` manifest.
 
 Sample JSON output (abridged):
 

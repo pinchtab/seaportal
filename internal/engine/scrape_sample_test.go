@@ -47,12 +47,35 @@ func TestSampleCapsEnforced(t *testing.T) {
 	}
 }
 
-func TestSampleFullBypassesCaps(t *testing.T) {
+func TestSampleFullBypassesPerPatternCap(t *testing.T) {
+	// Full disables the per-pattern cap: with a budget large enough for the
+	// whole corpus, every URL comes back despite MaxPerPattern 1.
 	groups := bigCorpus()
-	opts := ScrapeOptions{BaseURL: "https://ex.com", MaxPages: 5, MaxPerPattern: 1, Full: true}
+	opts := ScrapeOptions{BaseURL: "https://ex.com", MaxPages: 100, MaxPerPattern: 1, Full: true}
 	got := sample(groups, opts)
 	if len(got) != 38 { // 1 + 20 + 15 + 2
 		t.Errorf("Full sample = %d URLs, want all 38", len(got))
+	}
+}
+
+func TestSampleFullRespectsMaxPages(t *testing.T) {
+	// Full still honors MaxPages as a total upper bound — a large sitemap must
+	// not blow past the budget (ALP-034). This mirrors the crawl-fallback path,
+	// which already caps discovery at MaxPages.
+	groups := bigCorpus() // 38 URLs
+	opts := ScrapeOptions{BaseURL: "https://ex.com", MaxPages: 5, MaxPerPattern: 1, Full: true}
+	got := sample(groups, opts)
+	if len(got) != 5 {
+		t.Errorf("Full with MaxPages 5 sampled %d URLs, want <= 5", len(got))
+	}
+	if hasDup(got) {
+		t.Errorf("result has duplicates: %v", got)
+	}
+
+	// Small site (fewer URLs than budget): Full returns everything, unchanged.
+	small := groupByPattern([]string{"https://ex.com/", "https://ex.com/about"})
+	if g := sample(small, ScrapeOptions{BaseURL: "https://ex.com", MaxPages: 50, Full: true}); len(g) != 2 {
+		t.Errorf("Full on small site sampled %d URLs, want 2", len(g))
 	}
 }
 

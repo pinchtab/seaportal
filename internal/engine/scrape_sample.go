@@ -21,7 +21,15 @@ func sample(groups []PatternGroup, opts ScrapeOptions) []string {
 	filtered := filterGroups(groups, o.IncludePatterns, o.ExcludePatterns)
 
 	if o.Full {
-		return allURLs(filtered)
+		// Full disables per-pattern sampling but MaxPages stays a real upper
+		// bound: sitemap discovery can return thousands of URLs, and without
+		// this cap --full would fetch them all (the crawl-fallback path already
+		// caps discovery at MaxPages, so this keeps both paths consistent).
+		urls := allURLs(filtered)
+		if len(urls) > o.MaxPages {
+			urls = urls[:o.MaxPages]
+		}
+		return urls
 	}
 
 	switch o.SampleStrategy {
