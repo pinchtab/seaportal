@@ -445,3 +445,40 @@ func TestFromURL_XHTMLStillHTML(t *testing.T) {
 		t.Errorf("XHTML routed through raw passthrough; must use the HTML path")
 	}
 }
+
+// regression: ALP-038 — binary responses (image/*, octet-stream) fell through
+// into readability/markdown, which parses binary bytes as HTML and stalls for
+// minutes. The gate must run on the default path (no ContentTypePreflight).
+func TestFromURL_BinaryContentSkippedFast(t *testing.T) {
+	binaryBody := make([]byte, 128*1024)
+	for i := range binaryBody {
+		binaryBody[i] = byte(i * 7 % 251)
+	}
+
+	for _, ct := range []string{"image/png", "image/jpeg", "application/octet-stream"} {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", ct)
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write(binaryBody)
+		}))
+
+		start := time.Now()
+		result := FromURLWithOptions(server.URL, Options{})
+		elapsed := time.Since(start)
+		server.Close()
+
+		want := "skipped binary content: " + ct
+		if result.Error != want {
+			t.Errorf("%s: expected error %q, got %q", ct, want, result.Error)
+		}
+		if elapsed > 5*time.Second {
+			t.Errorf("%s: skip took %v; binary bytes reached the HTML pipeline", ct, elapsed)
+		}
+		if result.StatusCode != http.StatusOK {
+			t.Errorf("%s: expected status 200 on skip result, got %d", ct, result.StatusCode)
+		}
+		if result.ResponseContentType != ct {
+			t.Errorf("%s: expected responseContentType preserved, got %q", ct, result.ResponseContentType)
+		}
+	}
+}

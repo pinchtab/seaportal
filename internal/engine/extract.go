@@ -614,24 +614,30 @@ func FromURLWithOptions(targetURL string, opts Options) (result Result) {
 	}
 
 
-	// PDF branch: when the response is application/pdf and the caller hasn't
-	// opted out via --no-pdf, route the bytes through ExtractPDFText and reuse
-	// the same post-content pipeline (link retention, truncation, chunking)
-	// as the markdown path. HTML-specific stages (readability, dedupe, prune
-	// fallback, JSON-LD fallback) are skipped — they don't apply to PDFs.
+	// Binary gate on the DEFAULT path (ALP-038): image/audio/video/archive/
+	// octet-stream bodies must never reach readability/markdown — binary
+	// bytes parsed as HTML stall for minutes. The same guard previously ran
+	// only in the opt-in HEAD preflight. PDFs are exempt (extracted below)
+	// unless the caller opted out via --no-pdf.
 	ctLower := strings.ToLower(respContentType)
-	if strings.Contains(ctLower, "application/pdf") {
-		if opts.NoPDF {
-			result.Error = fmt.Sprintf("skipped binary content: %s", respContentType)
-			result.StatusCode = resp.StatusCode
-			result.ContentLength = int64(len(bodyBytes))
-			result.ResponseContentType = respContentType
-			result.TimeMs = time.Since(start).Milliseconds()
-			result.FetchTimeMs = time.Since(start).Milliseconds()
-			result.TTFBMs = ttfbMs
-			result.DownloadMs = downloadMs
-			return result
-		}
+	isPDF := strings.Contains(ctLower, "application/pdf")
+	if isBinaryContentType(respContentType) || (isPDF && opts.NoPDF) {
+		result.Error = fmt.Sprintf("skipped binary content: %s", respContentType)
+		result.StatusCode = resp.StatusCode
+		result.ContentLength = int64(len(bodyBytes))
+		result.ResponseContentType = respContentType
+		result.TimeMs = time.Since(start).Milliseconds()
+		result.FetchTimeMs = time.Since(start).Milliseconds()
+		result.TTFBMs = ttfbMs
+		result.DownloadMs = downloadMs
+		return result
+	}
+
+	// PDF branch: route the bytes through ExtractPDFText and reuse the same
+	// post-content pipeline (link retention, truncation, chunking) as the
+	// markdown path. HTML-specific stages (readability, dedupe, prune
+	// fallback, JSON-LD fallback) are skipped — they don't apply to PDFs.
+	if isPDF {
 		md, perr := ExtractPDFText(bodyBytes)
 		if perr != nil {
 			result.Error = "pdf extraction failed: " + perr.Error()
