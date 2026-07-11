@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -372,5 +373,75 @@ and fonts which need to verify that every glyph is reachable.</p>
 	}
 	if result.Language != "en" {
 		t.Errorf("Language fallback: got %q, want %q (content length=%d)", result.Language, "en", len(result.Content))
+	}
+}
+
+// ALP-036: JSON/XML bodies must pass through verbatim. The HTML→markdown path
+// escapes `_`/`[`, turning "node_id" into the invalid JSON escape "node\_id".
+func TestFromURL_JSONPassthroughUnescaped(t *testing.T) {
+	body := `{"node_id":"R_kgDONaN_id","full_name":"pinchtab/seaportal","key_a":"v_b"}`
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(body))
+	}))
+	defer server.Close()
+
+	result := FromURL(server.URL)
+
+	if result.Error != "" {
+		t.Fatalf("extraction failed: %s", result.Error)
+	}
+	if strings.Contains(result.Content, `\_`) {
+		t.Errorf("JSON content markdown-escaped (contains \\_): %q", result.Content)
+	}
+	if result.Content != body {
+		t.Errorf("JSON not passed through verbatim:\n got: %q\nwant: %q", result.Content, body)
+	}
+	// The body must still parse as JSON (no invalid \_ escapes).
+	var v map[string]any
+	if err := json.Unmarshal([]byte(result.Content), &v); err != nil {
+		t.Errorf("extracted JSON does not round-trip: %v", err)
+	}
+	if result.ExtractionMethod != "raw" {
+		t.Errorf("ExtractionMethod = %q, want raw", result.ExtractionMethod)
+	}
+}
+
+func TestFromURL_XMLPassthroughUnescaped(t *testing.T) {
+	body := `<?xml version="1.0"?><root><node_id>a_b</node_id></root>`
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/xml")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(body))
+	}))
+	defer server.Close()
+
+	result := FromURL(server.URL)
+
+	if result.Error != "" {
+		t.Fatalf("extraction failed: %s", result.Error)
+	}
+	if strings.Contains(result.Content, `\_`) {
+		t.Errorf("XML content markdown-escaped (contains \\_): %q", result.Content)
+	}
+	if result.Content != body {
+		t.Errorf("XML not passed through verbatim:\n got: %q\nwant: %q", result.Content, body)
+	}
+}
+
+// XHTML is HTML and must keep flowing through the readability/markdown path,
+// not the raw JSON/XML branch.
+func TestFromURL_XHTMLStillHTML(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/xhtml+xml")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`<html><body><article><h1>Title</h1><p>Some body text here.</p></article></body></html>`))
+	}))
+	defer server.Close()
+
+	result := FromURL(server.URL)
+	if result.ExtractionMethod == "raw" {
+		t.Errorf("XHTML routed through raw passthrough; must use the HTML path")
 	}
 }

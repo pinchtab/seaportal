@@ -21,6 +21,20 @@ The default verb extracts a URL. It writes the rendered Markdown and JSON to `re
   ```
   In stdin mode, `--head-only`, `--respect-robots`, and `--retries` are ignored.
 
+## Content types
+
+`seaportal` routes a response by its `Content-Type`:
+
+- **HTML** (`text/html`, `application/xhtml+xml`) → readability + HTML→markdown.
+- **PDF** (`application/pdf`) → text extraction (disable with `--no-pdf`).
+- **JSON / XML** (`application/json`, `application/xml`, `text/xml`, and
+  `+json`/`+xml` variants) → returned **verbatim**, without markdown escaping,
+  so structured bodies stay valid (a JSON `"node_id"` is not corrupted into
+  `"node\_id"`).
+- **Other text** (`text/plain`, `text/csv`) → returned as-is.
+- **Binary** (images, archives, `application/octet-stream`, …) → skipped with a
+  "skipped binary content" error.
+
 ## Extract flags
 
 | Flag | Default | Description |

@@ -726,6 +726,71 @@ func FromURLWithOptions(targetURL string, opts Options) (result Result) {
 		return result
 	}
 
+	// Non-HTML text branch: JSON/XML (and their +json/+xml variants) pass
+	// through verbatim, mirroring the PDF bypass above. The HTML→markdown
+	// conversion further down escapes markdown metacharacters (`_`, `[`, …),
+	// which corrupts structured text — e.g. a JSON body's "node_id" becomes the
+	// invalid escape "node\_id" (ALP-036). Skipping readability/dedupe/markdown
+	// keeps the body byte-for-byte (subject only to opt-in truncation/chunking).
+	if isRawTextContentType(respContentType) {
+		content := string(bodyBytes)
+
+		if opts.MaxTokens > 0 {
+			if truncated, didTrunc := TruncateMarkdownAtParagraph(content, opts.MaxTokens); didTrunc {
+				content = truncated
+				result.Truncated = true
+			}
+		}
+		if opts.Chunk.Strategy != ChunkOff {
+			result.Chunks = ChunkMarkdown(content, opts.Chunk)
+		}
+
+		result.URL = targetURL
+		result.Content = content
+		result.Length = len(content)
+		result.ExtractionMethod = "raw"
+		result.StatusCode = resp.StatusCode
+		result.ContentLength = int64(len(bodyBytes))
+		result.ResponseContentType = respContentType
+		result.TimeMs = time.Since(start).Milliseconds()
+		result.FetchTimeMs = time.Since(start).Milliseconds()
+		result.TTFBMs = ttfbMs
+		result.DownloadMs = downloadMs
+		result.RetryCount = retryCount
+		result.TotalRetryWait = totalRetryWait
+		result.HeadPreflightStatus = headPreflightStatus
+		result.RedirectCount = tracker.count
+		result.RedirectChain = tracker.chain
+		if resp.Request != nil && resp.Request.URL != nil {
+			result.FinalURL = resp.Request.URL.String()
+		}
+
+		result.QualityInfo = ComputeQuality(content)
+		result.Quality = result.QualityInfo.Score
+		result.Fingerprint = SemanticFingerprint(content)
+		result.Confidence = 90
+		result.Profile = PageProfile{
+			Class:       PageStatic,
+			Outcome:     OutcomeExtract,
+			Reasons:     []string{"raw-passthrough"},
+			Confidence:  90,
+			Trustworthy: true,
+		}
+		result.PageClass = PageStatic
+		result.Validation = ValidateExtraction(&result)
+
+		populateResponseHeaders(&result, resp)
+		result.TraceFormats, result.TraceCorrelation = computeTraceInfo(result)
+		result.CDNProvider, result.CDNSignals = fingerprintCDN(result)
+		result.ViaHops = parseViaHeader(result.ResponseVia)
+		result.ProxyLayers = len(result.ViaHops)
+		result.RequestAcceptEncoding = DefaultAcceptEncoding
+		result.RequestID = opts.RequestID
+
+		mergePreWarnings(&result, preWarnings)
+		return result
+	}
+
 	html := string(bodyBytes)
 	contentLength := int64(len(bodyBytes))
 	fetchTimeMs := time.Since(start).Milliseconds()
