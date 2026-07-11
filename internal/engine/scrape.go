@@ -18,6 +18,11 @@ var ErrNotImplemented = errors.New("seaportal: ScrapeSite not implemented")
 // ErrMissingBaseURL is returned when ScrapeOptions.BaseURL is empty.
 var ErrMissingBaseURL = errors.New("seaportal: ScrapeOptions.BaseURL is required")
 
+// ErrInvalidBaseURL is returned when ScrapeOptions.BaseURL is set but is not a
+// valid absolute URL (e.g. a bare host like "example.com" missing its scheme),
+// as opposed to ErrMissingBaseURL for a genuinely empty value.
+var ErrInvalidBaseURL = errors.New("seaportal: ScrapeOptions.BaseURL is not a valid absolute URL")
+
 // SampleStrategy selects how pages are sampled within a URL pattern group.
 type SampleStrategy string
 
@@ -180,7 +185,7 @@ func ScrapeSite(ctx context.Context, opts *ScrapeOptions) (*ScrapeResult, error)
 	o := opts.normalized()
 	base, err := url.Parse(o.BaseURL)
 	if err != nil || base.Host == "" {
-		return nil, ErrMissingBaseURL
+		return nil, fmt.Errorf("%w: %q", ErrInvalidBaseURL, o.BaseURL)
 	}
 
 	// One overall wall-clock deadline shared by discovery, fetch, and retries.

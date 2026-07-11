@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -105,5 +106,19 @@ func TestScrapeSiteValidatesBaseURL(t *testing.T) {
 	}
 	if _, err := ScrapeSite(context.Background(), nil); !errors.Is(err, ErrMissingBaseURL) {
 		t.Fatalf("nil opts err = %v, want ErrMissingBaseURL", err)
+	}
+	// A supplied-but-malformed base URL (bare host, no scheme) is invalid, not
+	// missing — distinct sentinel, and the message names the offending value.
+	for _, bad := range []string{"example.com", "not-a-url"} {
+		_, err := ScrapeSite(context.Background(), &ScrapeOptions{BaseURL: bad})
+		if !errors.Is(err, ErrInvalidBaseURL) {
+			t.Errorf("BaseURL %q err = %v, want ErrInvalidBaseURL", bad, err)
+		}
+		if errors.Is(err, ErrMissingBaseURL) {
+			t.Errorf("BaseURL %q wrongly reported as missing: %v", bad, err)
+		}
+		if err != nil && !strings.Contains(err.Error(), bad) {
+			t.Errorf("BaseURL %q err %q does not name the value", bad, err)
+		}
 	}
 }
