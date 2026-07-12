@@ -132,10 +132,10 @@ func TestAssemblePageFailedStillPopulatesStatusAndError(t *testing.T) {
 
 func TestClassifyContentTypeFromResult(t *testing.T) {
 	// Structured metadata still wins (no regression).
-	if got := classifyContentType(Result{LDJSONBlocks: []LDJSONBlock{{Type: "NewsArticle"}}, Content: "x"}, ""); got != "article" {
+	if got := classifyContentType(Result{ResponseHeaders: ResponseHeaders{LDJSONBlocks: []LDJSONBlock{{Type: "NewsArticle"}}}, Content: "x"}, ""); got != "article" {
 		t.Errorf("NewsArticle = %q, want article", got)
 	}
-	if got := classifyContentType(Result{LDJSONBlocks: []LDJSONBlock{{Type: "Product"}}, Content: "x"}, "https://ex.com/w"); got != "product" {
+	if got := classifyContentType(Result{ResponseHeaders: ResponseHeaders{LDJSONBlocks: []LDJSONBlock{{Type: "Product"}}}, Content: "x"}, "https://ex.com/w"); got != "product" {
 		t.Errorf("Product = %q, want product", got)
 	}
 	// Empty extraction stays "unknown" even with URL hints.
