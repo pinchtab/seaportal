@@ -178,7 +178,7 @@ func TestPopulateResponseHeaders_ContentTypeOnResult(t *testing.T) {
 	if result.ResponseContentType != "text/html; charset=utf-8" {
 		t.Errorf("ResponseContentType: got %q", result.ResponseContentType)
 	}
-	if result.ResponseHeaders.ResponseETag != `"e1"` {
-		t.Errorf("ResponseETag: got %q", result.ResponseHeaders.ResponseETag)
+	if result.ResponseETag != `"e1"` {
+		t.Errorf("ResponseETag: got %q", result.ResponseETag)
 	}
 }

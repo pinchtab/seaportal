@@ -12,6 +12,7 @@ linters:
     - ineffassign
     - misspell
     - unconvert
+    - thelper
   exclusions:
     paths:
       - testdata

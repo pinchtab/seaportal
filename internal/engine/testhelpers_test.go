@@ -16,11 +16,11 @@ import (
 // repoTestdataDir resolves the repo-root testdata directory by walking up from
 // the working directory — the one robust version of the cwd-guessing that
 // internal/testserver/server.go does with hardcoded "..", "../.." probes.
-func repoTestdataDir(t testing.TB) string {
-	t.Helper()
+func repoTestdataDir(tb testing.TB) string {
+	tb.Helper()
 	dir, err := os.Getwd()
 	if err != nil {
-		t.Fatalf("getwd: %v", err)
+		tb.Fatalf("getwd: %v", err)
 	}
 	for {
 		cand := filepath.Join(dir, "testdata")
@@ -29,7 +29,7 @@ func repoTestdataDir(t testing.TB) string {
 		}
 		parent := filepath.Dir(dir)
 		if parent == dir {
-			t.Fatalf("testdata directory not found walking up from %s", dir)
+			tb.Fatalf("testdata directory not found walking up from %s", dir)
 		}
 		dir = parent
 	}
@@ -38,12 +38,12 @@ func repoTestdataDir(t testing.TB) string {
 // loadFixture reads a fixture by its testdata-relative path (slash-separated,
 // e.g. "static/wikipedia-latin-phrases.html") and fails the test on any error.
 // Takes testing.TB so benchmarks can share it.
-func loadFixture(t testing.TB, name string) string {
-	t.Helper()
-	path := filepath.Join(repoTestdataDir(t), filepath.FromSlash(name))
+func loadFixture(tb testing.TB, name string) string {
+	tb.Helper()
+	path := filepath.Join(repoTestdataDir(tb), filepath.FromSlash(name))
 	data, err := os.ReadFile(path)
 	if err != nil {
-		t.Fatalf("read fixture %s: %v", name, err)
+		tb.Fatalf("read fixture %s: %v", name, err)
 	}
 	return string(data)
 }
@@ -52,8 +52,8 @@ func loadFixture(t testing.TB, name string) string {
 // with sane defaults: text/html content type, and 404 for anything not in the
 // map (including robots.txt and sitemap.xml, so extraction tests don't get
 // surprise discovery behavior). Closed automatically via t.Cleanup.
-func newSiteServer(t testing.TB, pages map[string]string) *httptest.Server {
-	t.Helper()
+func newSiteServer(tb testing.TB, pages map[string]string) *httptest.Server {
+	tb.Helper()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, ok := pages[r.URL.Path]
 		if !ok {
@@ -63,6 +63,6 @@ func newSiteServer(t testing.TB, pages map[string]string) *httptest.Server {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		_, _ = w.Write([]byte(body))
 	}))
-	t.Cleanup(srv.Close)
+	tb.Cleanup(srv.Close)
 	return srv
 }
