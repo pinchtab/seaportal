@@ -15,16 +15,15 @@ package main
 
 import (
 	"encoding/csv"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 	"time"
 
-	"github.com/pinchtab/seaportal/internal/engine"
+	"github.com/pinchtab/seaportal"
+	"github.com/pinchtab/seaportal/internal/corpus"
 )
 
 // classOrder controls the canonical row/column order for the confusion
@@ -101,29 +100,16 @@ func runClassify(args []string) {
 		os.Exit(1)
 	}
 
-	if err := os.MkdirAll(*output, 0o755); err != nil {
-		fmt.Fprintln(os.Stderr, "mkdir output:", err)
+	jsonPath, mdPath, err := emitReports(*output, "classify", report, renderClassifyMarkdown(report))
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	ts := time.Now().UTC().Format("20060102-150405")
-	jsonPath := filepath.Join(*output, fmt.Sprintf("classify_%s.json", ts))
-	mdPath := filepath.Join(*output, fmt.Sprintf("classify_%s.md", ts))
-	csvPath := filepath.Join(*output, fmt.Sprintf("classify_%s.csv", ts))
-
-	if err := writeClassifyJSON(jsonPath, report); err != nil {
-		fmt.Fprintln(os.Stderr, "write json:", err)
-		os.Exit(1)
-	}
-	if err := atomicWrite(mdPath, renderClassifyMarkdown(report)); err != nil {
-		fmt.Fprintln(os.Stderr, "write markdown:", err)
-		os.Exit(1)
-	}
+	csvPath := strings.TrimSuffix(jsonPath, ".json") + ".csv"
 	if err := writeClassifyCSV(csvPath, report); err != nil {
 		fmt.Fprintln(os.Stderr, "write csv:", err)
 		os.Exit(1)
 	}
-	fmt.Println("wrote", jsonPath)
-	fmt.Println("wrote", mdPath)
 	fmt.Println("wrote", csvPath)
 	fmt.Printf("classify: %d/%d correct (accuracy=%.3f). See %s\n",
 		report.Correct, report.Total, report.Accuracy, mdPath)
@@ -135,15 +121,7 @@ func runClassify(args []string) {
 // from accuracy math. A failed fixture read aborts the run.
 func classifyCorpus(corpusPath string) (ClassifyReport, error) {
 	var empty ClassifyReport
-	entries, err := engine.LoadCorpus(corpusPath)
-	if err != nil {
-		return empty, fmt.Errorf("load corpus: %w", err)
-	}
 
-	repoRoot := resolveRepoRoot(corpusPath)
-
-	// matrix[expected][predicted] = count. Predicted "EMPTY" is the
-	// sentinel for "profile pipeline did not populate Class".
 	// matrix[expected][predicted] = count. Predicted "EMPTY" is the
 	// sentinel for "profile pipeline did not populate Class".
 	matrix := make(map[string]map[string]int)
@@ -151,25 +129,16 @@ func classifyCorpus(corpusPath string) (ClassifyReport, error) {
 		matrix[c] = make(map[string]int)
 	}
 
-	rows := make([]FixtureRow, 0, len(entries))
+	var rows []FixtureRow
 	skipped := 0
 
-	for _, entry := range entries {
+	err := forEachFixture(corpusPath, func(entry corpus.Entry, html, baseURL string) error {
 		if strings.TrimSpace(entry.ExpectClass) == "" {
 			fmt.Fprintf(os.Stderr, "skip %s: empty expect_class\n", entry.Path)
 			skipped++
-			continue
+			return nil
 		}
-		path := entry.Path
-		if !filepath.IsAbs(path) {
-			path = filepath.Join(repoRoot, path)
-		}
-		htmlBytes, readErr := os.ReadFile(path)
-		if readErr != nil {
-			return empty, fmt.Errorf("read fixture %s: %w", entry.Path, readErr)
-		}
-		baseURL := "https://corpus.local/" + slugify(entry.Path)
-		result := engine.FromHTML(string(htmlBytes), baseURL)
+		result := seaportal.FromHTML(html, baseURL)
 
 		predicted := string(result.Profile.Class)
 		if predicted == "" {
@@ -197,6 +166,10 @@ func classifyCorpus(corpusPath string) (ClassifyReport, error) {
 			IsBlocked:      result.IsBlocked,
 			SPASignals:     result.SPASignals,
 		})
+		return nil
+	})
+	if err != nil {
+		return empty, err
 	}
 
 	total := len(rows)
@@ -325,31 +298,6 @@ func flattenConfusion(matrix map[string]map[string]int) []ConfusionCell {
 	return out
 }
 
-// slugify converts a fixture path into a deterministic URL-safe slug so
-// the synthetic baseURL is stable across runs and free of "/" segments
-// that would confuse downstream URL parsing.
-func slugify(p string) string {
-	var b strings.Builder
-	b.Grow(len(p))
-	for _, r := range strings.ToLower(p) {
-		switch {
-		case r >= 'a' && r <= 'z', r >= '0' && r <= '9':
-			b.WriteRune(r)
-		default:
-			b.WriteByte('-')
-		}
-	}
-	return strings.Trim(b.String(), "-")
-}
-
-func writeClassifyJSON(path string, r ClassifyReport) error {
-	raw, err := json.MarshalIndent(r, "", "  ")
-	if err != nil {
-		return err
-	}
-	return atomicWrite(path, string(raw)+"\n")
-}
-
 func writeClassifyCSV(path string, r ClassifyReport) error {
 	keys := confusionAxes(r)
 	tmp := path + ".tmp"
@@ -434,11 +382,10 @@ func confusionAxes(r ClassifyReport) []string {
 
 func renderClassifyMarkdown(r ClassifyReport) string {
 	var b strings.Builder
-	fmt.Fprintln(&b, "# SeaPortal Classify Report")
-	fmt.Fprintln(&b)
-	fmt.Fprintf(&b, "- Captured: %s\n", r.CapturedAt)
-	fmt.Fprintf(&b, "- Git SHA: `%s`\n", r.GitSHA)
-	fmt.Fprintf(&b, "- Corpus: `%s`\n", r.Corpus)
+	reportHeader(&b, "SeaPortal Classify Report",
+		"Captured", r.CapturedAt,
+		"Git SHA", "`"+r.GitSHA+"`",
+		"Corpus", "`"+r.Corpus+"`")
 	fmt.Fprintf(&b, "- Total: %d (skipped: %d)\n", r.Total, r.Skipped)
 	fmt.Fprintf(&b, "- Correct: %d\n", r.Correct)
 	fmt.Fprintf(&b, "- Accuracy: %.4f\n\n", r.Accuracy)

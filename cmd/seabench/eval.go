@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"sort"
 	"strings"
 	"time"
 
@@ -17,7 +16,7 @@ import (
 	mdtable "github.com/JohannesKaufmann/html-to-markdown/v2/plugin/table"
 	"github.com/go-shiori/go-readability"
 	"github.com/pinchtab/seaportal"
-	"github.com/pinchtab/seaportal/internal/engine"
+	"github.com/pinchtab/seaportal/internal/corpus"
 )
 
 // extractor wraps a single extraction implementation under test.
@@ -78,15 +77,13 @@ func runEval(args []string) {
 		os.Exit(2)
 	}
 
-	entries, err := engine.LoadCorpus(*corpusPath)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "load corpus:", err)
-		os.Exit(1)
-	}
-
 	extractors := buildExtractors()
 
-	cards, perFixture := scoreCorpus(entries, extractors, *corpusPath)
+	cards, perFixture, err := scoreCorpus(*corpusPath, extractors)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "eval:", err)
+		os.Exit(1)
+	}
 	aggregates := aggregateCards(cards, extractors)
 
 	report := renderReport(*corpusPath, extractors, aggregates, perFixture)
@@ -197,28 +194,13 @@ func stripTags(html string) string {
 
 // scoreCorpus runs every extractor over every fixture, returns the flat
 // scoreCard list plus a fixture-indexed map for the per-fixture detail
-// table. Fixtures that fail to load are reported via stderr and skipped.
-func scoreCorpus(entries []engine.CorpusEntry, extractors []extractor, corpusPath string) ([]scoreCard, map[string][]scoreCard) {
-	cards := make([]scoreCard, 0, len(entries)*len(extractors))
-	perFixture := make(map[string][]scoreCard, len(entries))
+// table. Charset fixtures reach each extractor as raw bytes (seaportal
+// decodes; others may mojibake — that's a real signal, don't fix it).
+func scoreCorpus(corpusPath string, extractors []extractor) ([]scoreCard, map[string][]scoreCard, error) {
+	var cards []scoreCard
+	perFixture := make(map[string][]scoreCard)
 
-	repoRoot := resolveRepoRoot(corpusPath)
-
-	for _, entry := range entries {
-		path := entry.Path
-		if !filepath.IsAbs(path) {
-			path = filepath.Join(repoRoot, path)
-		}
-		htmlBytes, err := os.ReadFile(path)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "skip %s: %v\n", entry.Path, err)
-			continue
-		}
-		// Charset fixtures: hand each extractor the raw bytes. Seaportal
-		// decodes; others may mojibake. That's a real signal — don't fix it.
-		html := string(htmlBytes)
-		baseURL := "https://example.invalid/" + filepath.Base(entry.Path)
-
+	err := forEachFixture(corpusPath, func(entry corpus.Entry, html, baseURL string) error {
 		noSignal := len(entry.MustInclude) == 0 && len(entry.MustExclude) == 0
 
 		for _, ex := range extractors {
@@ -241,7 +223,7 @@ func scoreCorpus(entries []engine.CorpusEntry, extractors []extractor, corpusPat
 				}
 				out = o
 			}
-			card.TimeNanos = medianNanos(times)
+			card.TimeNanos = percentile(times, 0.50)
 			if len(out) < skipThreshold {
 				card.Skipped = true
 			}
@@ -252,8 +234,12 @@ func scoreCorpus(entries []engine.CorpusEntry, extractors []extractor, corpusPat
 			cards = append(cards, card)
 			perFixture[entry.Path] = append(perFixture[entry.Path], card)
 		}
+		return nil
+	})
+	if err != nil {
+		return nil, nil, err
 	}
-	return cards, perFixture
+	return cards, perFixture, nil
 }
 
 // safeExtract calls fn with a recover guard so that an extractor panic on
@@ -286,15 +272,6 @@ func countMatches(haystack string, needles []string) (present, absent int) {
 		}
 	}
 	return present, absent
-}
-
-func medianNanos(xs []int64) int64 {
-	if len(xs) == 0 {
-		return 0
-	}
-	cp := append([]int64(nil), xs...)
-	sort.Slice(cp, func(i, j int) bool { return cp[i] < cp[j] })
-	return cp[len(cp)/2]
 }
 
 // aggregateCards micro-averages TP/FP/FN across all signal-bearing fixtures
@@ -368,45 +345,4 @@ func precisionRecallF1(tp, fp, fn int) (precision, recall, f1 float64) {
 		f1 = 2 * precision * recall / (precision + recall)
 	}
 	return precision, recall, f1
-}
-
-func mean(xs []float64) float64 {
-	if len(xs) == 0 {
-		return 0
-	}
-	var sum float64
-	for _, x := range xs {
-		sum += x
-	}
-	return sum / float64(len(xs))
-}
-
-// atomicWrite writes to <path>.tmp then renames into place so a partial
-// run can't corrupt the baseline report.
-func atomicWrite(path string, content string) error {
-	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, []byte(content), 0o644); err != nil {
-		return err
-	}
-	return os.Rename(tmp, path)
-}
-
-// resolveRepoRoot finds the repo root by walking up from the corpus path
-// until a go.mod surfaces. Falls back to the corpus's parent dir on miss.
-func resolveRepoRoot(corpusPath string) string {
-	abs, err := filepath.Abs(corpusPath)
-	if err != nil {
-		return "."
-	}
-	dir := filepath.Dir(abs)
-	for {
-		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
-			return dir
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			return filepath.Dir(abs)
-		}
-		dir = parent
-	}
 }
