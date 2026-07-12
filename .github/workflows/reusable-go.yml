@@ -58,13 +58,45 @@ jobs:
         # here without -race — same contracts, a fraction of the wall time.
         run: go test -count=1 ./internal/engine/ -run 'TestExtract_WikipediaLatinPhrases|TestBM25Quality_WikipediaLatinPhrases|TestClassifier_AccuracyOnCorpus|TestPreprocessBaseline_ExtractionMatrix'
 
-      - name: Coverage summary
+      - name: Integration tests
+        # `-tags=integration` gates the MCP JSON-RPC conformance suite, the
+        # MCP cold-start budget, and the FromURL latency budget (p95 ≤ 1.5s,
+        # p99 ≤ 2.5s). Runs in this non-race lane — the latency gate measures
+        # wall time and -race would skew it.
+        run: go test -tags=integration ./cmd/seaportal/ ./internal/engine/ -run 'TestMCP|TestLatencyBudget' -count=1 -timeout 600s
+
+      - name: Allocation budgets (advisory)
+        # Compares B/op and allocs/op of the hot-path benchmarks against the
+        # committed baseline (tests/bench/profiles/allocs_baseline.json, ±15%
+        # tolerance). Advisory for now: continue-on-error keeps drift from
+        # failing the job, but the warning annotation stays visible on the
+        # run. Regenerate the baseline with scripts/regen-allocs-baseline.sh.
+        continue-on-error: true
+        run: |
+          if ! go test -tags=allocs -run TestAllocationBudgets ./internal/engine/ -count=1; then
+            echo "::warning title=Allocation budget drift::TestAllocationBudgets drifted beyond ±15% of tests/bench/profiles/allocs_baseline.json. If intentional, regenerate the baseline with scripts/regen-allocs-baseline.sh."
+            exit 1
+          fi
+
+      - name: Coverage summary & floor
+        # The floor lives in .github/coverage-floor.txt; raise it as coverage
+        # improves. If a change legitimately lowers total coverage, lower the
+        # floor in the same PR so the drop is explicit and reviewed.
         run: |
           coverage=$(go tool cover -func=coverage.out | tail -1)
           echo "### Coverage" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
           echo "$coverage" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
+          total=$(echo "$coverage" | grep -Eo '[0-9]+\.[0-9]+%' | tr -d '%')
+          floor=$(cat .github/coverage-floor.txt)
+          echo "Total coverage: ${total}% (floor: ${floor}%)"
+          if awk -v total="$total" -v floor="$floor" 'BEGIN { exit (total >= floor) ? 0 : 1 }'; then
+            echo "Coverage is at or above the floor."
+          else
+            echo "::error title=Coverage below floor::Total coverage ${total}% is below the ${floor}% floor in .github/coverage-floor.txt."
+            exit 1
+          fi
 
   lint:
     name: Lint

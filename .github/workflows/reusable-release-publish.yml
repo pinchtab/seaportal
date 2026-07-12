@@ -59,6 +59,14 @@ jobs:
           node-version: '22'
           registry-url: 'https://registry.npmjs.org'
 
+      # Publishing gate: the package tests (platform detection, bin wrapper,
+      # package structure) must pass before anything is pushed to the registry.
+      - name: Test npm package
+        working-directory: npm
+        run: |
+          npm ci --ignore-scripts
+          npm test
+
       - name: Extract version
         id: version
         run: |
