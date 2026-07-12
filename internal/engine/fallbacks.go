@@ -186,7 +186,7 @@ func applyTextFallback(result *Result, html string) bool {
 	result.HeadingCount = textResult.Headings
 	result.LinkCount = textResult.Links
 	result.SPASignals = append(result.SPASignals, "text-fallback")
-	result.Confidence = ComputeConfidence(result.Length, result.HeadingCount, result.ParagraphCount, len(result.SPASignals), result.IsBlocked)
+	result.Confidence = computeConfidence(confidenceInputsFrom(result))
 	refreshContentMetrics(result)
 	result.ExtractionMethod = "text-fallback"
 	return true
@@ -210,7 +210,7 @@ func applyLDJSONSupplement(result *Result, ldBlocks []LDJSONBlock) bool {
 		result.Length = len(result.Content)
 		result.SPASignals = append(result.SPASignals, "ldjson-supplemented")
 		refreshContentMetrics(result)
-		result.Confidence = ComputeConfidence(result.Length, result.HeadingCount, result.ParagraphCount, len(result.SPASignals), result.IsBlocked)
+		result.Confidence = computeConfidence(confidenceInputsFrom(result))
 		supplemented = true
 	}
 	result.LDJSONBlocks = ldBlocks

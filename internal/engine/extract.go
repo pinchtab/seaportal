@@ -448,7 +448,7 @@ func fromHTMLInternal(html string, targetURL string, start time.Time, opts Optio
 		result.Language = DetectLanguage(result.Content)
 	}
 
-	result.Confidence = ComputeConfidence(result.Length, result.HeadingCount, result.ParagraphCount, len(result.SPASignals), result.IsBlocked)
+	result.Confidence = computeConfidence(confidenceInputsFrom(&result))
 
 	applyIndexPageFallback(&result, html)
 
@@ -603,7 +603,7 @@ func processArticle(article readability.Article, targetURL string, start time.Ti
 	}
 	result.ParagraphCount = CountPattern(article.Content, `<p[\s>]`)
 
-	result.Confidence = ComputeConfidence(result.Length, result.HeadingCount, result.ParagraphCount, 0, false)
+	result.Confidence = computeConfidence(confidenceInputs{length: result.Length, headingCount: result.HeadingCount, paragraphCount: result.ParagraphCount})
 
 	result.QualityInfo = ComputeQuality(markdown)
 	result.Quality = result.QualityInfo.Score
