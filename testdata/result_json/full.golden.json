@@ -1,0 +1,361 @@
+{
+  "url": "URL-v",
+  "canonicalUrl": "CanonicalURL-v",
+  "title": "Title-v",
+  "content": "Content-v",
+  "byline": "Byline-v",
+  "publishedDate": "PublishedDate-v",
+  "language": "Language-v",
+  "charset": "Charset-v",
+  "section": "Section-v",
+  "description": "Description-v",
+  "imageUrl": "ImageURL-v",
+  "excerpt": "Excerpt-v",
+  "sitename": "SiteName-v",
+  "length": 7901,
+  "timeMs": 9864,
+  "confidence": 5657,
+  "isSpa": true,
+  "isBlocked": true,
+  "spaSignals": [
+    "SPASignals0-v"
+  ],
+  "error": "Error-v",
+  "fromCache": true,
+  "cacheHit": true,
+  "cacheRevalidated": true,
+  "cacheStale": true,
+  "statusCode": 6606,
+  "headOnly": true,
+  "protocol": "Protocol-v",
+  "blockedByRobots": true,
+  "headingCount": 5684,
+  "linkCount": 2312,
+  "paragraphCount": 8472,
+  "quality": 6758.5,
+  "qualityInfo": {
+    "contentLength": 1933,
+    "headingCount": 3805,
+    "paragraphCount": 8397,
+    "listCount": 3479,
+    "codeBlockCount": 1761,
+    "linkCount": 3495,
+    "textDensity": 5841.5,
+    "score": 1002.5
+  },
+  "profile": {
+    "class": "Profile.Class-v",
+    "outcome": "Profile.Outcome-v",
+    "decision": "Profile.Decision-v",
+    "browserRecommended": true,
+    "reasons": [
+      "Profile.Reasons0-v"
+    ],
+    "confidence": 8960,
+    "trustworthy": true
+  },
+  "pageClass": "PageClass-v",
+  "fingerprint": "Fingerprint-v",
+  "validation": {
+    "isValid": true,
+    "needsBrowser": true,
+    "confidence": 4732.5,
+    "issues": [
+      "Validation.Issues0-v"
+    ],
+    "linkDensity": 9476.5,
+    "skeletonScore": 6831.5,
+    "contentRatio": 2384.5
+  },
+  "retryCount": 3448,
+  "totalRetryWait": 5156,
+  "headPreflightStatus": 4604,
+  "fetchTimeMs": 7514,
+  "parseTimeMs": 2713,
+  "convertTimeMs": 6261,
+  "contentLength": 8542,
+  "responseContentType": "ResponseContentType-v",
+  "redirectCount": 5008,
+  "redirectChain": [
+    "RedirectChain0-v"
+  ],
+  "finalUrl": "FinalURL-v",
+  "isSoft404": true,
+  "soft404Hints": [
+    "Soft404Hints0-v"
+  ],
+  "responseEtag": "ResponseETag-v",
+  "responseLastModified": "ResponseLastModified-v",
+  "responseContentEncoding": "ResponseContentEncoding-v",
+  "responseServer": "ResponseServer-v",
+  "responseXForwardedFor": "ResponseXForwardedFor-v",
+  "requestAcceptEncoding": "RequestAcceptEncoding-v",
+  "ttfbMs": 6901,
+  "downloadMs": 8757,
+  "responseVia": "ResponseVia-v",
+  "responseConnection": "ResponseConnection-v",
+  "responseAge": "ResponseAge-v",
+  "responseCacheControl": "ResponseCacheControl-v",
+  "responseXCache": "ResponseXCache-v",
+  "responseVary": "ResponseVary-v",
+  "responseXCacheHits": "ResponseXCacheHits-v",
+  "responseSurrogateControl": "ResponseSurrogateControl-v",
+  "responseCfCacheStatus": "ResponseCFCacheStatus-v",
+  "responseXServedBy": "ResponseXServedBy-v",
+  "responseXFastlyRequestId": "ResponseXFastlyRequestID-v",
+  "responseXAkamaiTransformed": "ResponseXAkamaiTransformed-v",
+  "responseXAkamaiSessionInfo": "ResponseXAkamaiSessionInfo-v",
+  "responseXAkamaiRequestId": "ResponseXAkamaiRequestID-v",
+  "responseXRequestId": "ResponseXRequestId-v",
+  "responseXCorrelationId": "ResponseXCorrelationId-v",
+  "responseXVarnish": "ResponseXVarnish-v",
+  "responseXCdn": "ResponseXCDN-v",
+  "responseXTraceId": "ResponseXTraceId-v",
+  "responseXB3TraceId": "ResponseXB3TraceId-v",
+  "responseXB3SpanId": "ResponseXB3SpanId-v",
+  "responseXB3ParentSpanId": "ResponseXB3ParentSpanId-v",
+  "responseXB3Sampled": "ResponseXB3Sampled-v",
+  "responseB3": "ResponseB3-v",
+  "responseTraceparent": "ResponseTraceparent-v",
+  "responseTracestate": "ResponseTracestate-v",
+  "responseXAmznTraceId": "ResponseXAmznTraceId-v",
+  "traceFormats": [
+    "TraceFormats0-v"
+  ],
+  "traceCorrelation": "TraceCorrelation-v",
+  "responseNel": "ResponseNEL-v",
+  "responseReportTo": "ResponseReportTo-v",
+  "responsePermissionsPolicy": "ResponsePermissionsPolicy-v",
+  "responseExpectCt": "ResponseExpectCT-v",
+  "responseFeaturePolicy": "ResponseFeaturePolicy-v",
+  "responseReportingEndpoints": "ResponseReportingEndpoints-v",
+  "responseCsp": "ResponseCSP-v",
+  "responseCspReportOnly": "ResponseCSPReportOnly-v",
+  "responseCorp": "ResponseCORP-v",
+  "responseCoep": "ResponseCOEP-v",
+  "responseCoop": "ResponseCOOP-v",
+  "responseHsts": "ResponseHSTS-v",
+  "responseXContentTypeOptions": "ResponseXContentTypeOptions-v",
+  "responseXFrameOptions": "ResponseXFrameOptions-v",
+  "responseReferrerPolicy": "ResponseReferrerPolicy-v",
+  "responseXXssProtection": "ResponseXXSSProtection-v",
+  "responseXPermittedCrossDomainPolicies": "ResponseXPermittedCrossDomainPolicies-v",
+  "responseXDownloadOptions": "ResponseXDownloadOptions-v",
+  "responseClearSiteData": "ResponseClearSiteData-v",
+  "responseTimingAllowOrigin": "ResponseTimingAllowOrigin-v",
+  "responseOriginAgentCluster": "ResponseOriginAgentCluster-v",
+  "responseDocumentPolicy": "ResponseDocumentPolicy-v",
+  "responseAcceptCH": "ResponseAcceptCH-v",
+  "responseSecChUa": "ResponseSecCHUA-v",
+  "responseSecChUaMobile": "ResponseSecCHUAMobile-v",
+  "responseSecChUaPlatform": "ResponseSecCHUAPlatform-v",
+  "responseSecChUaFullVersionList": "ResponseSecCHUAFullVersionList-v",
+  "responseSecChPrefersColorScheme": "ResponseSecCHPrefersColorScheme-v",
+  "responseCriticalCh": "ResponseCriticalCH-v",
+  "responseCoepReportOnly": "ResponseCOEPReportOnly-v",
+  "responseCoopReportOnly": "ResponseCOOPReportOnly-v",
+  "responseDocumentPolicyReportOnly": "ResponseDocumentPolicyReportOnly-v",
+  "responseSourceMap": "ResponseSourceMap-v",
+  "responseAccessControlAllowOrigin": "ResponseAccessControlAllowOrigin-v",
+  "responseAccessControlAllowMethods": "ResponseAccessControlAllowMethods-v",
+  "responseAccessControlAllowHeaders": "ResponseAccessControlAllowHeaders-v",
+  "responseAccessControlAllowCredentials": "ResponseAccessControlAllowCredentials-v",
+  "responseAccessControlExposeHeaders": "ResponseAccessControlExposeHeaders-v",
+  "responseAccessControlMaxAge": "ResponseAccessControlMaxAge-v",
+  "responseLink": "ResponseLink-v",
+  "llmsTxtUrl": "LLMsTxtURL-v",
+  "ldJsonBlocks": [
+    {
+      "type": "LDJSONBlocks0.Type-v",
+      "headline": "LDJSONBlocks0.Headline-v",
+      "description": "LDJSONBlocks0.Description-v",
+      "author": "LDJSONBlocks0.Author-v",
+      "datePublished": "LDJSONBlocks0.DatePub-v",
+      "publisher": "LDJSONBlocks0.Publisher-v",
+      "url": "LDJSONBlocks0.URL-v",
+      "keywords": "LDJSONBlocks0.Keywords-v",
+      "inLanguage": "LDJSONBlocks0.Language-v",
+      "articleSection": "LDJSONBlocks0.Section-v",
+      "articleBody": "LDJSONBlocks0.Body-v"
+    }
+  ],
+  "hasLlmContent": true,
+  "responseXRobotsTag": "ResponseXRobotsTag-v",
+  "responseContentDisposition": "ResponseContentDisposition-v",
+  "responseXContentDuration": "ResponseXContentDuration-v",
+  "responseRefresh": "ResponseRefresh-v",
+  "responseContentLanguage": "ResponseContentLanguage-v",
+  "responseXUaCompatible": "ResponseXUACompatible-v",
+  "responseAcceptRanges": "ResponseAcceptRanges-v",
+  "responseTransferEncoding": "ResponseTransferEncoding-v",
+  "responseContentRange": "ResponseContentRange-v",
+  "responsePragma": "ResponsePragma-v",
+  "responseXPoweredBy": "ResponseXPoweredBy-v",
+  "responseXAspNetVersion": "ResponseXAspNetVersion-v",
+  "responseXAspNetMvcVersion": "ResponseXAspNetMvcVersion-v",
+  "responseServerTiming": "ResponseServerTiming-v",
+  "responseXGenerator": "ResponseXGenerator-v",
+  "responseXRuntime": "ResponseXRuntime-v",
+  "responseXDrupalCache": "ResponseXDrupalCache-v",
+  "responseXMagentoCacheControl": "ResponseXMagentoCacheControl-v",
+  "responseXDrupalDynamicCache": "ResponseXDrupalDynamicCache-v",
+  "responseXMagentoTags": "ResponseXMagentoTags-v",
+  "responseXShopifyStage": "ResponseXShopifyStage-v",
+  "responseXShopifyRequestId": "ResponseXShopifyRequestID-v",
+  "responseXWpTotal": "ResponseXWPTotal-v",
+  "responseXWpTotalPages": "ResponseXWPTotalPages-v",
+  "responseXCraftCache": "ResponseXCraftCache-v",
+  "responseXDiscourseRoute": "ResponseXDiscourseRoute-v",
+  "responseXGhostCacheStatus": "ResponseXGhostCacheStatus-v",
+  "responseXJoomlaCache": "ResponseXJoomlaCache-v",
+  "responseXDiscourseMediaType": "ResponseXDiscourseMediaType-v",
+  "responseXPrestaShopCache": "ResponseXPrestaShopCache-v",
+  "responseXMagentoCacheDebug": "ResponseXMagentoCacheDebug-v",
+  "responseXTypo3Cache": "ResponseXTypo3Cache-v",
+  "responseXWixRequestId": "ResponseXWixRequestId-v",
+  "responseXSquarespaceRequestId": "ResponseXSquarespaceRequestId-v",
+  "responseXWebflowRequestId": "ResponseXWebflowRequestId-v",
+  "responseXContentfulRequestId": "ResponseXContentfulRequestId-v",
+  "responseXNetlifyRequestId": "ResponseXNetlifyRequestId-v",
+  "responseXVercelId": "ResponseXVercelId-v",
+  "responseXHerokuRequestId": "ResponseXHerokuRequestId-v",
+  "responseXRenderRequestId": "ResponseXRenderRequestId-v",
+  "responseXRailwayRequestId": "ResponseXRailwayRequestId-v",
+  "responseXFlyRequestId": "ResponseXFlyRequestId-v",
+  "responseXDenoRegion": "ResponseXDenoRegion-v",
+  "responseXCloudflareWorkersRequestId": "ResponseXCloudflareWorkersRequestId-v",
+  "responseXAzureRef": "ResponseXAzureRef-v",
+  "responseXGcpRegion": "ResponseXGCPRegion-v",
+  "responseXAmzCfId": "ResponseXAmzCfId-v",
+  "normalizedCacheStatus": "NormalizedCacheStatus-v",
+  "cacheStatusSource": "CacheStatusSource-v",
+  "cdnProvider": "CDNProvider-v",
+  "cdnSignals": [
+    "CDNSignals0-v"
+  ],
+  "viaHops": [
+    {
+      "protocol": "ViaHops0.Protocol-v",
+      "host": "ViaHops0.Host-v",
+      "comment": "ViaHops0.Comment-v"
+    }
+  ],
+  "proxyLayers": 1293,
+  "cacheAge": 9828,
+  "cacheMaxAge": 4784,
+  "cacheSMaxAge": 9367,
+  "cacheFreshness": 6256,
+  "cacheIsStale": true,
+  "cacheStaleWhileRevalidate": 6900,
+  "cacheStaleIfError": 7717,
+  "cacheHasSwr": true,
+  "cdnEdgeLocation": "CDNEdgeLocation-v",
+  "cacheMustRevalidate": true,
+  "cacheProxyRevalidate": true,
+  "cacheNoCache": true,
+  "cacheNoCacheFields": [
+    "CacheNoCacheFields0-v"
+  ],
+  "cacheNoStore": true,
+  "cacheImmutable": true,
+  "cachePrivate": true,
+  "cachePublic": true,
+  "cachePolicySummary": "CachePolicySummary-v",
+  "cachePolicyScore": 4171,
+  "effectiveCdnTtl": 6279,
+  "cacheRecommendations": [
+    "CacheRecommendations0-v"
+  ],
+  "cdnOptimizationIssues": [
+    "CDNOptimizationIssues0-v"
+  ],
+  "surrogateMaxAge": 8572,
+  "surrogateStaleWhileRevalidate": 6424,
+  "surrogateStaleIfError": 6505,
+  "surrogateNoStore": true,
+  "surrogateNoStoreRemote": true,
+  "requestId": "RequestID-v",
+  "cacheHitRateEstimate": "CacheHitRateEstimate-v",
+  "bandwidthSavingsLevel": "BandwidthSavingsLevel-v",
+  "cacheCostAnalysis": "CacheCostAnalysis-v",
+  "dedupeApplied": true,
+  "duplicatesRemoved": 3589,
+  "duplicateSignals": [
+    "DuplicateSignals0-v"
+  ],
+  "nearDuplicatesRemoved": 2735,
+  "nearDuplicateSignals": [
+    "NearDuplicateSignals0-v"
+  ],
+  "originalBlockCount": 1534,
+  "uniqueBlockCount": 7522,
+  "links": [
+    {
+      "href": "Links0.Href-v",
+      "text": "Links0.Text-v",
+      "rel": "Links0.Rel-v"
+    }
+  ],
+  "images": [
+    {
+      "src": "Images0.Src-v",
+      "alt": "Images0.Alt-v",
+      "srcset": "Images0.Srcset-v",
+      "title": "Images0.Title-v"
+    }
+  ],
+  "tables": [
+    {
+      "caption": "Tables0.Caption-v",
+      "headers": [
+        "Tables0.Headers0-v"
+      ],
+      "rows": [
+        [
+          "Tables0.Rows00-v"
+        ]
+      ]
+    }
+  ],
+  "comments": [
+    {
+      "author": "Comments0.Author-v",
+      "text": "Comments0.Text-v",
+      "timestamp": "Comments0.Timestamp-v"
+    }
+  ],
+  "chunks": [
+    {
+      "index": 1755,
+      "heading": "Chunks0.Heading-v",
+      "text": "Chunks0.Text-v",
+      "tokens": 7915
+    }
+  ],
+  "splitFiles": [
+    {
+      "path": "SplitFiles0.Path-v",
+      "index": 9380,
+      "of": 6713,
+      "bytes": 7779
+    }
+  ],
+  "rankedSections": [
+    {
+      "score": 1246.5,
+      "heading": "RankedSections0.Heading-v",
+      "text": "RankedSections0.Text-v",
+      "tokens": 5246
+    }
+  ],
+  "schema": {
+    "SchemaK-v": "SchemaV-iv"
+  },
+  "warnings": [
+    "Warnings0-v"
+  ],
+  "truncated": true,
+  "pruneFallbackUsed": true,
+  "extractionMethod": "ExtractionMethod-v",
+  "securityBlock": "SecurityBlock-v"
+}
