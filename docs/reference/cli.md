@@ -10,7 +10,7 @@ seaportal help                     # Show usage
 seaportal version                  # Show version (also --version / -v)
 ```
 
-The default verb extracts a URL. It writes the rendered Markdown and JSON to `renders/seaportal/<host>_<timestamp>.{md,json}` and prints the content plus a classification summary. Use `--json`, `--xml`, or `--snapshot` to control the format.
+The default verb extracts a URL and prints the content plus a classification summary to stdout. Pass `--save-dir <dir>` to also write the rendered Markdown and JSON to `<dir>/<host>_<timestamp>.{md,json}`. Use `--json`, `--xml`, or the `snapshot` subcommand to control the format.
 
 ## Input modes
 

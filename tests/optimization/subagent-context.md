@@ -7,7 +7,7 @@ You are running a capability test against the `seaportal` CLI. Your job is to so
 Before you start, read `skills/seaportal/SKILL.md` for the full CLI surface. Quick refresher:
 
 ```bash
-seaportal <url>                              # Markdown + frontmatter (also writes ./renders/seaportal/…)
+seaportal <url>                              # Markdown + frontmatter to stdout
 seaportal --json <url>                       # full Result struct
 seaportal --snapshot <url>                   # a11y tree as JSON
 seaportal --snapshot --format=compact <url>  # a11y tree as compact text (best for tokens)

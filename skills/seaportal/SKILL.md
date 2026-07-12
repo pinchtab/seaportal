@@ -23,7 +23,7 @@ CLI-first read-only web fetcher. Use the `seaportal` command. **No JavaScript ex
 ## Core Commands
 
 ```bash
-seaportal <url>                              # Markdown + frontmatter (also writes renders/seaportal/*.md, *.json)
+seaportal <url>                              # Markdown + frontmatter to stdout (--save-dir <dir> to also write files)
 seaportal --json <url>                       # Full Result struct as JSON
 seaportal --xml <url>                        # TEI-Lite XML (teiHeader metadata + text/body content)
 seaportal --snapshot <url>                   # Accessibility tree as JSON
@@ -249,7 +249,7 @@ For search URLs specifically, `--probe-search` short-circuits CNN/DDG-style JS s
 
 ## Output side-effects
 
-The default Markdown mode (no flag) **also writes two files** under `./renders/seaportal/<domain>_<timestamp>.{md,json}` from the working directory. If running from a directory where that's unwanted, use `--json` or `--snapshot` instead — those only print to stdout.
+All modes print to stdout only by default. Pass `--save-dir <dir>` to also write the rendered Markdown and JSON to `<dir>/<domain>_<timestamp>.{md,json}`.
 
 ## TEI-Lite XML output (`--xml`)
 
