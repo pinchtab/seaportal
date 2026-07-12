@@ -3,10 +3,10 @@ package engine
 
 import "strings"
 
-// computeTraceInfo analyzes tracing headers and returns formats present and correlation info.
-// Returns (formats, correlation) where formats is a list of tracing standards present
-// and correlation notes when B3 and W3C trace IDs match.
-func computeTraceInfo(r Result) ([]string, string) {
+// computeTraceInfo analyzes the tracing response headers and returns the
+// TraceInfo summary: which tracing standards are present, plus a correlation
+// note when B3 and W3C trace IDs match.
+func computeTraceInfo(r *ResponseHeaders) TraceInfo {
 	var formats []string
 	var correlation string
 
@@ -49,7 +49,7 @@ func computeTraceInfo(r Result) ([]string, string) {
 		}
 	}
 
-	return formats, correlation
+	return TraceInfo{TraceFormats: formats, TraceCorrelation: correlation}
 }
 
 // extractW3CTraceID extracts the trace-id from a W3C Traceparent header.

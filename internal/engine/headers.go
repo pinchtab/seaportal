@@ -5,213 +5,218 @@ import (
 	"net/http"
 )
 
-// populateResponseHeaders copies all HTTP response headers to the Result struct.
-// This is a mechanical mapping of headers to Result fields for observability.
+// populateResponseHeaders copies all echoed HTTP response headers onto the
+// Result: the ResponseHeaders sub-struct plus ResponseContentType, which
+// lives in TransportInfo for wire-order.
 func populateResponseHeaders(result *Result, resp *http.Response) {
 	result.ResponseContentType = resp.Header.Get("Content-Type")
+	result.ResponseHeaders.populate(resp.Header)
+}
 
+// populate is the mechanical header→field mapping for observability.
+func (h *ResponseHeaders) populate(hdr http.Header) {
 	// Response caching headers for conditional request support
-	result.ResponseETag = resp.Header.Get("ETag")
-	result.ResponseLastModified = resp.Header.Get("Last-Modified")
+	h.ResponseETag = hdr.Get("ETag")
+	h.ResponseLastModified = hdr.Get("Last-Modified")
 
 	// Response metadata for debugging/analytics
-	result.ResponseContentEncoding = resp.Header.Get("Content-Encoding")
-	result.ResponseServer = resp.Header.Get("Server")
-	result.ResponseXForwardedFor = resp.Header.Get("X-Forwarded-For")
+	h.ResponseContentEncoding = hdr.Get("Content-Encoding")
+	h.ResponseServer = hdr.Get("Server")
+	h.ResponseXForwardedFor = hdr.Get("X-Forwarded-For")
 
 	// HTTP proxy and caching headers
-	result.ResponseVia = resp.Header.Get("Via")
-	result.ResponseConnection = resp.Header.Get("Connection")
-	result.ResponseAge = resp.Header.Get("Age")
+	h.ResponseVia = hdr.Get("Via")
+	h.ResponseConnection = hdr.Get("Connection")
+	h.ResponseAge = hdr.Get("Age")
 
 	// Cache policy and CDN headers
-	result.ResponseCacheControl = resp.Header.Get("Cache-Control")
-	result.ResponseXCache = resp.Header.Get("X-Cache")
-	result.ResponseVary = resp.Header.Get("Vary")
+	h.ResponseCacheControl = hdr.Get("Cache-Control")
+	h.ResponseXCache = hdr.Get("X-Cache")
+	h.ResponseVary = hdr.Get("Vary")
 
 	// CDN-specific headers
-	result.ResponseXCacheHits = resp.Header.Get("X-Cache-Hits")
-	result.ResponseSurrogateControl = resp.Header.Get("Surrogate-Control")
-	result.ResponseCFCacheStatus = resp.Header.Get("CF-Cache-Status")
+	h.ResponseXCacheHits = hdr.Get("X-Cache-Hits")
+	h.ResponseSurrogateControl = hdr.Get("Surrogate-Control")
+	h.ResponseCFCacheStatus = hdr.Get("CF-Cache-Status")
 
 	// Fastly-specific headers
-	result.ResponseXServedBy = resp.Header.Get("X-Served-By")
-	result.ResponseXFastlyRequestID = resp.Header.Get("X-Fastly-Request-ID")
+	h.ResponseXServedBy = hdr.Get("X-Served-By")
+	h.ResponseXFastlyRequestID = hdr.Get("X-Fastly-Request-ID")
 
 	// Akamai-specific headers
-	result.ResponseXAkamaiTransformed = resp.Header.Get("X-Akamai-Transformed")
-	result.ResponseXAkamaiSessionInfo = resp.Header.Get("X-Akamai-Session-Info")
-	result.ResponseXAkamaiRequestID = resp.Header.Get("X-Akamai-Request-ID")
+	h.ResponseXAkamaiTransformed = hdr.Get("X-Akamai-Transformed")
+	h.ResponseXAkamaiSessionInfo = hdr.Get("X-Akamai-Session-Info")
+	h.ResponseXAkamaiRequestID = hdr.Get("X-Akamai-Request-ID")
 
 	// Request correlation headers (generic)
-	result.ResponseXRequestId = resp.Header.Get("X-Request-Id")
-	result.ResponseXCorrelationId = resp.Header.Get("X-Correlation-Id")
+	h.ResponseXRequestId = hdr.Get("X-Request-Id")
+	h.ResponseXCorrelationId = hdr.Get("X-Correlation-Id")
 
 	// Varnish-specific headers
-	result.ResponseXVarnish = resp.Header.Get("X-Varnish")
+	h.ResponseXVarnish = hdr.Get("X-Varnish")
 
 	// Generic CDN headers
-	result.ResponseXCDN = resp.Header.Get("X-CDN")
+	h.ResponseXCDN = hdr.Get("X-CDN")
 
 	// OpenTelemetry / Zipkin distributed tracing headers
-	result.ResponseXTraceId = resp.Header.Get("X-Trace-Id")
-	result.ResponseXB3TraceId = resp.Header.Get("X-B3-TraceId")
-	result.ResponseXB3SpanId = resp.Header.Get("X-B3-SpanId")
-	result.ResponseXB3ParentSpanId = resp.Header.Get("X-B3-ParentSpanId")
-	result.ResponseXB3Sampled = resp.Header.Get("X-B3-Sampled")
-	result.ResponseB3 = resp.Header.Get("b3")
-	result.ResponseTraceparent = resp.Header.Get("Traceparent")
-	result.ResponseTracestate = resp.Header.Get("Tracestate")
-	result.ResponseXAmznTraceId = resp.Header.Get("X-Amzn-Trace-Id")
+	h.ResponseXTraceId = hdr.Get("X-Trace-Id")
+	h.ResponseXB3TraceId = hdr.Get("X-B3-TraceId")
+	h.ResponseXB3SpanId = hdr.Get("X-B3-SpanId")
+	h.ResponseXB3ParentSpanId = hdr.Get("X-B3-ParentSpanId")
+	h.ResponseXB3Sampled = hdr.Get("X-B3-Sampled")
+	h.ResponseB3 = hdr.Get("b3")
+	h.ResponseTraceparent = hdr.Get("Traceparent")
+	h.ResponseTracestate = hdr.Get("Tracestate")
+	h.ResponseXAmznTraceId = hdr.Get("X-Amzn-Trace-Id")
 
-	result.ResponseNEL = resp.Header.Get("NEL")
+	h.ResponseNEL = hdr.Get("NEL")
 
 	// Report-To header (endpoint configuration for NEL and other reporting APIs)
-	result.ResponseReportTo = resp.Header.Get("Report-To")
+	h.ResponseReportTo = hdr.Get("Report-To")
 
 	// Browser security and feature policy headers
-	result.ResponsePermissionsPolicy = resp.Header.Get("Permissions-Policy")
-	result.ResponseExpectCT = resp.Header.Get("Expect-CT")
-	result.ResponseFeaturePolicy = resp.Header.Get("Feature-Policy")
-	result.ResponseReportingEndpoints = resp.Header.Get("Reporting-Endpoints")
-	result.ResponseCSP = resp.Header.Get("Content-Security-Policy")
-	result.ResponseCSPReportOnly = resp.Header.Get("Content-Security-Policy-Report-Only")
+	h.ResponsePermissionsPolicy = hdr.Get("Permissions-Policy")
+	h.ResponseExpectCT = hdr.Get("Expect-CT")
+	h.ResponseFeaturePolicy = hdr.Get("Feature-Policy")
+	h.ResponseReportingEndpoints = hdr.Get("Reporting-Endpoints")
+	h.ResponseCSP = hdr.Get("Content-Security-Policy")
+	h.ResponseCSPReportOnly = hdr.Get("Content-Security-Policy-Report-Only")
 
 	// Cross-Origin isolation headers
-	result.ResponseCORP = resp.Header.Get("Cross-Origin-Resource-Policy")
-	result.ResponseCOEP = resp.Header.Get("Cross-Origin-Embedder-Policy")
-	result.ResponseCOOP = resp.Header.Get("Cross-Origin-Opener-Policy")
+	h.ResponseCORP = hdr.Get("Cross-Origin-Resource-Policy")
+	h.ResponseCOEP = hdr.Get("Cross-Origin-Embedder-Policy")
+	h.ResponseCOOP = hdr.Get("Cross-Origin-Opener-Policy")
 
 	// Transport security
-	result.ResponseHSTS = resp.Header.Get("Strict-Transport-Security")
+	h.ResponseHSTS = hdr.Get("Strict-Transport-Security")
 
 	// Legacy security headers
-	result.ResponseXContentTypeOptions = resp.Header.Get("X-Content-Type-Options")
-	result.ResponseXFrameOptions = resp.Header.Get("X-Frame-Options")
+	h.ResponseXContentTypeOptions = hdr.Get("X-Content-Type-Options")
+	h.ResponseXFrameOptions = hdr.Get("X-Frame-Options")
 
 	// Privacy/referrer control
-	result.ResponseReferrerPolicy = resp.Header.Get("Referrer-Policy")
+	h.ResponseReferrerPolicy = hdr.Get("Referrer-Policy")
 
 	// Legacy security headers (deprecated but still common)
-	result.ResponseXXSSProtection = resp.Header.Get("X-XSS-Protection")
-	result.ResponseXPermittedCrossDomainPolicies = resp.Header.Get("X-Permitted-Cross-Domain-Policies")
-	result.ResponseXDownloadOptions = resp.Header.Get("X-Download-Options")
+	h.ResponseXXSSProtection = hdr.Get("X-XSS-Protection")
+	h.ResponseXPermittedCrossDomainPolicies = hdr.Get("X-Permitted-Cross-Domain-Policies")
+	h.ResponseXDownloadOptions = hdr.Get("X-Download-Options")
 
 	// Privacy and session control
-	result.ResponseClearSiteData = resp.Header.Get("Clear-Site-Data")
+	h.ResponseClearSiteData = hdr.Get("Clear-Site-Data")
 
 	// Performance API access control
-	result.ResponseTimingAllowOrigin = resp.Header.Get("Timing-Allow-Origin")
+	h.ResponseTimingAllowOrigin = hdr.Get("Timing-Allow-Origin")
 
 	// Process isolation
-	result.ResponseOriginAgentCluster = resp.Header.Get("Origin-Agent-Cluster")
+	h.ResponseOriginAgentCluster = hdr.Get("Origin-Agent-Cluster")
 
 	// Document feature control
-	result.ResponseDocumentPolicy = resp.Header.Get("Document-Policy")
+	h.ResponseDocumentPolicy = hdr.Get("Document-Policy")
 
 	// Client hints negotiation
-	result.ResponseAcceptCH = resp.Header.Get("Accept-CH")
+	h.ResponseAcceptCH = hdr.Get("Accept-CH")
 
 	// Client hints response headers
-	result.ResponseSecCHUA = resp.Header.Get("Sec-CH-UA")
-	result.ResponseSecCHUAMobile = resp.Header.Get("Sec-CH-UA-Mobile")
-	result.ResponseSecCHUAPlatform = resp.Header.Get("Sec-CH-UA-Platform")
-	result.ResponseSecCHUAFullVersionList = resp.Header.Get("Sec-CH-UA-Full-Version-List")
-	result.ResponseSecCHPrefersColorScheme = resp.Header.Get("Sec-CH-Prefers-Color-Scheme")
+	h.ResponseSecCHUA = hdr.Get("Sec-CH-UA")
+	h.ResponseSecCHUAMobile = hdr.Get("Sec-CH-UA-Mobile")
+	h.ResponseSecCHUAPlatform = hdr.Get("Sec-CH-UA-Platform")
+	h.ResponseSecCHUAFullVersionList = hdr.Get("Sec-CH-UA-Full-Version-List")
+	h.ResponseSecCHPrefersColorScheme = hdr.Get("Sec-CH-Prefers-Color-Scheme")
 
 	// Critical client hints (require page reload if not provided)
-	result.ResponseCriticalCH = resp.Header.Get("Critical-CH")
+	h.ResponseCriticalCH = hdr.Get("Critical-CH")
 
 	// Cross-origin policy report-only headers
-	result.ResponseCOEPReportOnly = resp.Header.Get("Cross-Origin-Embedder-Policy-Report-Only")
-	result.ResponseCOOPReportOnly = resp.Header.Get("Cross-Origin-Opener-Policy-Report-Only")
+	h.ResponseCOEPReportOnly = hdr.Get("Cross-Origin-Embedder-Policy-Report-Only")
+	h.ResponseCOOPReportOnly = hdr.Get("Cross-Origin-Opener-Policy-Report-Only")
 
 	// Document policy report-only header
-	result.ResponseDocumentPolicyReportOnly = resp.Header.Get("Document-Policy-Report-Only")
+	h.ResponseDocumentPolicyReportOnly = hdr.Get("Document-Policy-Report-Only")
 
 	// Source map header (also check legacy X-SourceMap)
-	result.ResponseSourceMap = resp.Header.Get("SourceMap")
-	if result.ResponseSourceMap == "" {
-		result.ResponseSourceMap = resp.Header.Get("X-SourceMap")
+	h.ResponseSourceMap = hdr.Get("SourceMap")
+	if h.ResponseSourceMap == "" {
+		h.ResponseSourceMap = hdr.Get("X-SourceMap")
 	}
 
 	// CORS response headers
-	result.ResponseAccessControlAllowOrigin = resp.Header.Get("Access-Control-Allow-Origin")
-	result.ResponseAccessControlAllowMethods = resp.Header.Get("Access-Control-Allow-Methods")
-	result.ResponseAccessControlAllowHeaders = resp.Header.Get("Access-Control-Allow-Headers")
-	result.ResponseAccessControlAllowCredentials = resp.Header.Get("Access-Control-Allow-Credentials")
-	result.ResponseAccessControlExposeHeaders = resp.Header.Get("Access-Control-Expose-Headers")
-	result.ResponseAccessControlMaxAge = resp.Header.Get("Access-Control-Max-Age")
+	h.ResponseAccessControlAllowOrigin = hdr.Get("Access-Control-Allow-Origin")
+	h.ResponseAccessControlAllowMethods = hdr.Get("Access-Control-Allow-Methods")
+	h.ResponseAccessControlAllowHeaders = hdr.Get("Access-Control-Allow-Headers")
+	h.ResponseAccessControlAllowCredentials = hdr.Get("Access-Control-Allow-Credentials")
+	h.ResponseAccessControlExposeHeaders = hdr.Get("Access-Control-Expose-Headers")
+	h.ResponseAccessControlMaxAge = hdr.Get("Access-Control-Max-Age")
 
-	result.ResponseLink = resp.Header.Get("Link")
+	h.ResponseLink = hdr.Get("Link")
 
 	// Robots and indexing control
-	result.ResponseXRobotsTag = resp.Header.Get("X-Robots-Tag")
+	h.ResponseXRobotsTag = hdr.Get("X-Robots-Tag")
 
 	// Content disposition for download/attachment detection
-	result.ResponseContentDisposition = resp.Header.Get("Content-Disposition")
+	h.ResponseContentDisposition = hdr.Get("Content-Disposition")
 
-	result.ResponseXContentDuration = resp.Header.Get("X-Content-Duration")
+	h.ResponseXContentDuration = hdr.Get("X-Content-Duration")
 
 	// HTTP-level refresh/redirect
-	result.ResponseRefresh = resp.Header.Get("Refresh")
+	h.ResponseRefresh = hdr.Get("Refresh")
 
-	result.ResponseContentLanguage = resp.Header.Get("Content-Language")
+	h.ResponseContentLanguage = hdr.Get("Content-Language")
 
 	// IE compatibility mode
-	result.ResponseXUACompatible = resp.Header.Get("X-UA-Compatible")
+	h.ResponseXUACompatible = hdr.Get("X-UA-Compatible")
 
-	result.ResponseAcceptRanges = resp.Header.Get("Accept-Ranges")
+	h.ResponseAcceptRanges = hdr.Get("Accept-Ranges")
 
 	// Transfer encoding (chunked response detection)
-	result.ResponseTransferEncoding = resp.Header.Get("Transfer-Encoding")
+	h.ResponseTransferEncoding = hdr.Get("Transfer-Encoding")
 
 	// Partial content tracking (206 responses)
-	result.ResponseContentRange = resp.Header.Get("Content-Range")
+	h.ResponseContentRange = hdr.Get("Content-Range")
 
 	// Legacy cache control (HTTP/1.0 compatibility)
-	result.ResponsePragma = resp.Header.Get("Pragma")
+	h.ResponsePragma = hdr.Get("Pragma")
 
 	// Server technology fingerprinting
-	result.ResponseXPoweredBy = resp.Header.Get("X-Powered-By")
+	h.ResponseXPoweredBy = hdr.Get("X-Powered-By")
 
-	result.ResponseXAspNetVersion = resp.Header.Get("X-AspNet-Version")
-	result.ResponseXAspNetMvcVersion = resp.Header.Get("X-AspNetMvc-Version")
-	result.ResponseServerTiming = resp.Header.Get("Server-Timing")
+	h.ResponseXAspNetVersion = hdr.Get("X-AspNet-Version")
+	h.ResponseXAspNetMvcVersion = hdr.Get("X-AspNetMvc-Version")
+	h.ResponseServerTiming = hdr.Get("Server-Timing")
 
 	// CMS/generator fingerprinting
-	result.ResponseXGenerator = resp.Header.Get("X-Generator")
+	h.ResponseXGenerator = hdr.Get("X-Generator")
 
-	result.ResponseXRuntime = resp.Header.Get("X-Runtime")
-	result.ResponseXDrupalCache = resp.Header.Get("X-Drupal-Cache")
-	result.ResponseXMagentoCacheControl = resp.Header.Get("X-Magento-Cache-Control")
-	result.ResponseXDrupalDynamicCache = resp.Header.Get("X-Drupal-Dynamic-Cache")
-	result.ResponseXMagentoTags = resp.Header.Get("X-Magento-Tags")
-	result.ResponseXShopifyStage = resp.Header.Get("X-Shopify-Stage")
-	result.ResponseXShopifyRequestID = resp.Header.Get("X-Shopify-Request-ID")
-	result.ResponseXWPTotal = resp.Header.Get("X-WP-Total")
-	result.ResponseXWPTotalPages = resp.Header.Get("X-WP-TotalPages")
-	result.ResponseXCraftCache = resp.Header.Get("X-Craft-Cache")
-	result.ResponseXDiscourseRoute = resp.Header.Get("X-Discourse-Route")
-	result.ResponseXGhostCacheStatus = resp.Header.Get("X-Ghost-Cache-Status")
-	result.ResponseXJoomlaCache = resp.Header.Get("X-Joomla-Cache")
-	result.ResponseXDiscourseMediaType = resp.Header.Get("X-Discourse-Media-Type")
-	result.ResponseXPrestaShopCache = resp.Header.Get("X-PrestaShop-Cache")
-	result.ResponseXMagentoCacheDebug = resp.Header.Get("X-Magento-Cache-Debug")
-	result.ResponseXTypo3Cache = resp.Header.Get("X-Typo3-Cache")
-	result.ResponseXWixRequestId = resp.Header.Get("X-Wix-Request-Id")
-	result.ResponseXSquarespaceRequestId = resp.Header.Get("X-Squarespace-Request-Id")
-	result.ResponseXWebflowRequestId = resp.Header.Get("X-Webflow-Request-Id")
-	result.ResponseXContentfulRequestId = resp.Header.Get("X-Contentful-Request-Id")
-	result.ResponseXNetlifyRequestId = resp.Header.Get("X-Netlify-Request-Id")
-	result.ResponseXVercelId = resp.Header.Get("X-Vercel-Id")
-	result.ResponseXHerokuRequestId = resp.Header.Get("X-Heroku-Request-Id")
-	result.ResponseXRenderRequestId = resp.Header.Get("X-Render-Request-Id")
-	result.ResponseXRailwayRequestId = resp.Header.Get("X-Railway-Request-Id")
-	result.ResponseXFlyRequestId = resp.Header.Get("X-Fly-Request-Id")
-	result.ResponseXDenoRegion = resp.Header.Get("X-Deno-Region")
-	result.ResponseXCloudflareWorkersRequestId = resp.Header.Get("X-Cloudflare-Workers-Request-Id")
-	result.ResponseXAzureRef = resp.Header.Get("X-Azure-Ref")
-	result.ResponseXGCPRegion = resp.Header.Get("X-GCP-Region")
-	result.ResponseXAmzCfId = resp.Header.Get("X-Amz-Cf-Id")
+	h.ResponseXRuntime = hdr.Get("X-Runtime")
+	h.ResponseXDrupalCache = hdr.Get("X-Drupal-Cache")
+	h.ResponseXMagentoCacheControl = hdr.Get("X-Magento-Cache-Control")
+	h.ResponseXDrupalDynamicCache = hdr.Get("X-Drupal-Dynamic-Cache")
+	h.ResponseXMagentoTags = hdr.Get("X-Magento-Tags")
+	h.ResponseXShopifyStage = hdr.Get("X-Shopify-Stage")
+	h.ResponseXShopifyRequestID = hdr.Get("X-Shopify-Request-ID")
+	h.ResponseXWPTotal = hdr.Get("X-WP-Total")
+	h.ResponseXWPTotalPages = hdr.Get("X-WP-TotalPages")
+	h.ResponseXCraftCache = hdr.Get("X-Craft-Cache")
+	h.ResponseXDiscourseRoute = hdr.Get("X-Discourse-Route")
+	h.ResponseXGhostCacheStatus = hdr.Get("X-Ghost-Cache-Status")
+	h.ResponseXJoomlaCache = hdr.Get("X-Joomla-Cache")
+	h.ResponseXDiscourseMediaType = hdr.Get("X-Discourse-Media-Type")
+	h.ResponseXPrestaShopCache = hdr.Get("X-PrestaShop-Cache")
+	h.ResponseXMagentoCacheDebug = hdr.Get("X-Magento-Cache-Debug")
+	h.ResponseXTypo3Cache = hdr.Get("X-Typo3-Cache")
+	h.ResponseXWixRequestId = hdr.Get("X-Wix-Request-Id")
+	h.ResponseXSquarespaceRequestId = hdr.Get("X-Squarespace-Request-Id")
+	h.ResponseXWebflowRequestId = hdr.Get("X-Webflow-Request-Id")
+	h.ResponseXContentfulRequestId = hdr.Get("X-Contentful-Request-Id")
+	h.ResponseXNetlifyRequestId = hdr.Get("X-Netlify-Request-Id")
+	h.ResponseXVercelId = hdr.Get("X-Vercel-Id")
+	h.ResponseXHerokuRequestId = hdr.Get("X-Heroku-Request-Id")
+	h.ResponseXRenderRequestId = hdr.Get("X-Render-Request-Id")
+	h.ResponseXRailwayRequestId = hdr.Get("X-Railway-Request-Id")
+	h.ResponseXFlyRequestId = hdr.Get("X-Fly-Request-Id")
+	h.ResponseXDenoRegion = hdr.Get("X-Deno-Region")
+	h.ResponseXCloudflareWorkersRequestId = hdr.Get("X-Cloudflare-Workers-Request-Id")
+	h.ResponseXAzureRef = hdr.Get("X-Azure-Ref")
+	h.ResponseXGCPRegion = hdr.Get("X-GCP-Region")
+	h.ResponseXAmzCfId = hdr.Get("X-Amz-Cf-Id")
 }

@@ -15,6 +15,29 @@ import (
 // Result holds the extraction output for a URL.
 type Result = engine.Result
 
+// Result's observability tail is grouped into anonymous embedded sub-structs;
+// field promotion keeps flat access (r.TTFBMs, r.RetryCount, …) working and
+// the JSON wire format is unchanged. The aliases below make the group types
+// nameable through the facade.
+
+// TransportInfo groups Result's retry/timing/redirect telemetry.
+type TransportInfo = engine.TransportInfo
+
+// ResponseHeaders groups Result's per-header response echoes.
+type ResponseHeaders = engine.ResponseHeaders
+
+// TraceInfo summarises distributed-tracing headers on the response.
+type TraceInfo = engine.TraceInfo
+
+// CDNInfo is the CDN/proxy-chain fingerprint derived from response headers.
+type CDNInfo = engine.CDNInfo
+
+// CacheAnalysis groups Result's cache-policy analysis fields.
+type CacheAnalysis = engine.CacheAnalysis
+
+// DedupeStats groups Result's block-deduplication statistics.
+type DedupeStats = engine.DedupeStats
+
 // Options controls extraction behaviour.
 type Options = engine.Options
 
@@ -259,7 +282,9 @@ type FlattenSitemapOptions = engine.FlattenSitemapOptions
 
 // FlattenSitemap fetches a sitemap URL and recursively flattens
 // `<sitemapindex>` references into a single slice of SitemapEntry.
-var FlattenSitemap = engine.FlattenSitemap
+func FlattenSitemap(ctx context.Context, sitemapURL string, opts FlattenSitemapOptions) ([]SitemapEntry, error) {
+	return engine.FlattenSitemap(ctx, sitemapURL, opts)
+}
 
 // FeedItem is a normalised feed entry across RSS 2.0, Atom 1.0, and
 // JSON Feed 1.x sources.
@@ -270,7 +295,9 @@ type ParseFeedOptions = engine.ParseFeedOptions
 
 // ParseFeed fetches a feed URL and parses it as RSS 2.0, Atom 1.0, or
 // JSON Feed 1.x, returning a unified slice of FeedItem.
-var ParseFeed = engine.ParseFeed
+func ParseFeed(ctx context.Context, feedURL string, opts ParseFeedOptions) ([]FeedItem, error) {
+	return engine.ParseFeed(ctx, feedURL, opts)
+}
 
 // SemanticFingerprint generates a content fingerprint for change detection.
 func SemanticFingerprint(content string) string {
