@@ -18,19 +18,19 @@ import (
 var version = "dev"
 
 func printUsage(w io.Writer) {
-	fmt.Fprintln(w, "SeaPortal - Extract clean Markdown from URLs with SPA detection")
-	fmt.Fprintln(w, "")
-	fmt.Fprintln(w, "Usage:")
-	fmt.Fprintln(w, "  seaportal [options] <url>          Extract Markdown / JSON / snapshot (default verb)")
-	fmt.Fprintln(w, "  seaportal sitemap <url> [flags]    Flatten a sitemap.xml (and recurse sitemap-index)")
-	fmt.Fprintln(w, "  seaportal feed <url> [flags]       Parse RSS / Atom / JSON Feed into unified entries")
-	fmt.Fprintln(w, "  seaportal scrape <url> [flags]     Scrape a whole site into structured output")
-	fmt.Fprintln(w, "  seaportal snapshot <url> [flags]   Print the accessibility-tree snapshot for a URL")
-	fmt.Fprintln(w, "  seaportal mcp                      Run as an MCP (Model Context Protocol) server over stdio")
-	fmt.Fprintln(w, "  seaportal version                  Print the seaportal version")
-	fmt.Fprintln(w, "  seaportal help                     Show this help")
-	fmt.Fprintln(w, "")
-	fmt.Fprintln(w, "Run 'seaportal -h' for the full list of extract options.")
+	_, _ = fmt.Fprintln(w, "SeaPortal - Extract clean Markdown from URLs with SPA detection")
+	_, _ = fmt.Fprintln(w, "")
+	_, _ = fmt.Fprintln(w, "Usage:")
+	_, _ = fmt.Fprintln(w, "  seaportal [options] <url>          Extract Markdown / JSON / snapshot (default verb)")
+	_, _ = fmt.Fprintln(w, "  seaportal sitemap <url> [flags]    Flatten a sitemap.xml (and recurse sitemap-index)")
+	_, _ = fmt.Fprintln(w, "  seaportal feed <url> [flags]       Parse RSS / Atom / JSON Feed into unified entries")
+	_, _ = fmt.Fprintln(w, "  seaportal scrape <url> [flags]     Scrape a whole site into structured output")
+	_, _ = fmt.Fprintln(w, "  seaportal snapshot <url> [flags]   Print the accessibility-tree snapshot for a URL")
+	_, _ = fmt.Fprintln(w, "  seaportal mcp                      Run as an MCP (Model Context Protocol) server over stdio")
+	_, _ = fmt.Fprintln(w, "  seaportal version                  Print the seaportal version")
+	_, _ = fmt.Fprintln(w, "  seaportal help                     Show this help")
+	_, _ = fmt.Fprintln(w, "")
+	_, _ = fmt.Fprintln(w, "Run 'seaportal -h' for the full list of extract options.")
 }
 
 func main() {

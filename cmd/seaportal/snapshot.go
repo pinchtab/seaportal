@@ -55,16 +55,16 @@ func renderSnapshot(w io.Writer, htmlContent, filter, format string, maxTokens i
 		MaxTokens:         maxTokens,
 	})
 	if err != nil {
-		return fmt.Errorf("Error building snapshot: %v", err)
+		return fmt.Errorf("building snapshot: %w", err)
 	}
 	if format == "compact" {
-		fmt.Fprintln(w, tree.ToCompact())
+		_, _ = fmt.Fprintln(w, tree.ToCompact())
 		return nil
 	}
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
 	if err := enc.Encode(tree); err != nil {
-		return fmt.Errorf("Error encoding JSON: %v", err)
+		return fmt.Errorf("encoding JSON: %w", err)
 	}
 	return nil
 }

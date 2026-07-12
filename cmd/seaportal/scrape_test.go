@@ -24,7 +24,7 @@ func scrapeTestServer(t *testing.T) *httptest.Server {
 			body += `<a href="/about">About</a><a href="/blog/1">Post</a>`
 		}
 		body += `<p>Body content for extraction.</p></body></html>`
-		w.Write([]byte(body))
+		_, _ = w.Write([]byte(body))
 	})
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)

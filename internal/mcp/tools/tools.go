@@ -88,10 +88,9 @@ func registerFetchURL(srv *mcp.Server) {
 			if v, ok := args["max_tokens"].(float64); ok {
 				opts.MaxTokens = int(v)
 			}
-			// Wire the handler context so a client cancel / server shutdown can
+			// The handler context lets a client cancel / server shutdown
 			// interrupt an in-flight retry backoff (ALP-043).
-			opts.Context = ctx
-			return marshalResult(seaportal.FromURLWithOptions(url, opts), "result")
+			return marshalResult(seaportal.FromURLContext(ctx, url, opts), "result")
 		},
 	)
 }

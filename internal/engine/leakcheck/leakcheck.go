@@ -68,12 +68,12 @@ const pollInterval = 10 * time.Millisecond
 //
 // Pass any testing.TB-compatible value; the helper uses Errorf rather
 // than Fatalf so the test still records other failures from its body.
-func CheckLeak(t testing.TB) {
-	t.Helper()
+func CheckLeak(tb testing.TB) {
+	tb.Helper()
 	runtime.Gosched()
 	before := runtime.NumGoroutine()
 
-	t.Cleanup(func() {
+	tb.Cleanup(func() {
 		deadline := time.Now().Add(waitWindow)
 		var after int
 		for {
@@ -89,7 +89,7 @@ func CheckLeak(t testing.TB) {
 		}
 		buf := make([]byte, 1<<16)
 		n := runtime.Stack(buf, true)
-		t.Errorf("goroutine leak: started with %d, ended with %d (delta %d > tolerance %d)\n--- goroutine dump ---\n%s",
+		tb.Errorf("goroutine leak: started with %d, ended with %d (delta %d > tolerance %d)\n--- goroutine dump ---\n%s",
 			before, after, after-before, tolerance, buf[:n])
 	})
 }

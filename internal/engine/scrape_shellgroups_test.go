@@ -18,10 +18,10 @@ func shellGroupsServer(t *testing.T) *httptest.Server {
 	t.Cleanup(srv.Close)
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		switch {
-		case r.URL.Path == "/robots.txt":
+		switch r.URL.Path {
+		case "/robots.txt":
 			http.NotFound(w, r)
-		case r.URL.Path == "/sitemap.xml":
+		case "/sitemap.xml":
 			w.Header().Set("Content-Type", "application/xml")
 			var b strings.Builder
 			b.WriteString(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`)

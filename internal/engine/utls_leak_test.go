@@ -13,8 +13,6 @@ import (
 	"time"
 
 	"github.com/pinchtab/seaportal/internal/engine/leakcheck"
-
-	"golang.org/x/net/http2"
 )
 
 // startCountingH2Server is like startTLSServer (utls_h2_test.go) but also
@@ -241,7 +239,6 @@ func TestChromeTransport_H2TransportSharedAcrossDials(t *testing.T) {
 	if first.IdleConnTimeout != h2IdleConnTimeout {
 		t.Errorf("IdleConnTimeout = %v, want %v", first.IdleConnTimeout, h2IdleConnTimeout)
 	}
-	var _ *http2.Transport = first // compile-time type pin
 }
 
 func mustParseURL(t *testing.T, raw string) *url.URL {

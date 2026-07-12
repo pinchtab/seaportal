@@ -10,7 +10,7 @@ import (
 // lives in TransportInfo for wire-order.
 func populateResponseHeaders(result *Result, resp *http.Response) {
 	result.ResponseContentType = resp.Header.Get("Content-Type")
-	result.ResponseHeaders.populate(resp.Header)
+	result.populate(resp.Header)
 }
 
 // populate is the mechanical header→field mapping for observability.

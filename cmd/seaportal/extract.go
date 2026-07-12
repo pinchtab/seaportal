@@ -254,12 +254,7 @@ func runExtract(ctx context.Context, rawArgs []string) {
 	f := registerExtractFlags(cli)
 
 	usage := func(w io.Writer) {
-		fmt.Fprintln(w, "SeaPortal - Extract clean Markdown from URLs with SPA detection")
-		fmt.Fprintln(w, "")
-		fmt.Fprintln(w, "Usage:")
-		fmt.Fprintln(w, "  seaportal [options] <url>")
-		fmt.Fprintln(w, "")
-		fmt.Fprintln(w, "Options:")
+		_, _ = fmt.Fprint(w, "SeaPortal - Extract clean Markdown from URLs with SPA detection\n\nUsage:\n  seaportal [options] <url>\n\nOptions:\n")
 		cli.SetOutput(w)
 		cli.PrintDefaults()
 		cli.SetOutput(os.Stderr)
@@ -321,13 +316,12 @@ func runExtract(ctx context.Context, rawArgs []string) {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(2)
 	}
-	opts.Context = ctx // Ctrl-C / SIGTERM cancels the in-flight fetch
-
 	var result seaportal.Result
 	if stdinMode {
 		result = seaportal.FromHTMLWithOptions(stdinHTML, targetURL, opts)
 	} else {
-		result = seaportal.FromURLWithOptions(targetURL, opts)
+		// Ctrl-C / SIGTERM cancels the in-flight fetch.
+		result = seaportal.FromURLContext(ctx, targetURL, opts)
 	}
 
 	if err := renderResult(os.Stdout, &result, outCfg, targetURL); err != nil {
@@ -418,7 +412,9 @@ func renderSplitFiles(w io.Writer, result *seaportal.Result, cfg outputConfig) e
 	}
 	result.SplitFiles = files
 	for _, f := range files {
-		fmt.Fprintf(w, "%s\t%d/%d\t%d\n", f.Path, f.Index, f.Of, f.Bytes)
+		if _, err := fmt.Fprintf(w, "%s\t%d/%d\t%d\n", f.Path, f.Index, f.Of, f.Bytes); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -427,7 +423,7 @@ func renderJSON(w io.Writer, result *seaportal.Result) error {
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
 	if err := enc.Encode(result); err != nil {
-		return fmt.Errorf("Error encoding JSON: %v", err)
+		return fmt.Errorf("encoding JSON: %w", err)
 	}
 	return nil
 }
@@ -435,12 +431,12 @@ func renderJSON(w io.Writer, result *seaportal.Result) error {
 func renderTEIXML(w io.Writer, result *seaportal.Result) error {
 	data, err := seaportal.ResultToTEIXML(*result)
 	if err != nil {
-		return fmt.Errorf("Error encoding XML: %v", err)
+		return fmt.Errorf("encoding XML: %w", err)
 	}
 	if _, err := w.Write(data); err != nil {
-		return fmt.Errorf("Error writing XML: %v", err)
+		return fmt.Errorf("writing XML: %w", err)
 	}
-	fmt.Fprintln(w)
+	_, _ = fmt.Fprintln(w)
 	return nil
 }
 
@@ -451,7 +447,7 @@ func renderTEIXML(w io.Writer, result *seaportal.Result) error {
 func renderMarkdown(w io.Writer, result *seaportal.Result, saveDir, targetURL string) error {
 	doc := markdownDocument(result)
 	if saveDir == "" {
-		fmt.Fprintln(w, doc)
+		_, _ = fmt.Fprintln(w, doc)
 		return nil
 	}
 
@@ -471,16 +467,16 @@ func renderMarkdown(w io.Writer, result *seaportal.Result, saveDir, targetURL st
 		fmt.Fprintf(os.Stderr, "Warning: could not save JSON: %v\n", err)
 	}
 
-	fmt.Fprintf(w, "Saved: %s (%d bytes, %dms, confidence: %d%%)\n", filename, result.Length, result.TimeMs, result.Confidence)
-	fmt.Fprintf(w, "📋 Classification: %s\n", result.Profile.String())
+	_, _ = fmt.Fprintf(w, "Saved: %s (%d bytes, %dms, confidence: %d%%)\n", filename, result.Length, result.TimeMs, result.Confidence)
+	_, _ = fmt.Fprintf(w, "📋 Classification: %s\n", result.Profile.String())
 	if len(result.Profile.Reasons) > 0 {
-		fmt.Fprintf(w, "   Reasons: %v\n", result.Profile.Reasons)
+		_, _ = fmt.Fprintf(w, "   Reasons: %v\n", result.Profile.Reasons)
 	}
 	if result.IsSPA {
-		fmt.Fprintf(w, "⚠️  SPA detected: %v\n", result.SPASignals)
+		_, _ = fmt.Fprintf(w, "⚠️  SPA detected: %v\n", result.SPASignals)
 	}
-	fmt.Fprintln(w, "\n--- Content ---")
-	fmt.Fprintln(w, doc)
+	_, _ = fmt.Fprintln(w, "\n--- Content ---")
+	_, _ = fmt.Fprintln(w, doc)
 	return nil
 }
 

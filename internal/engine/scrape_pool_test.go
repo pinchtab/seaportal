@@ -28,7 +28,7 @@ func poolFixture(t *testing.T, robotsBody string) *httptest.Server {
 	})
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		fmt.Fprintf(w, "<html><head><title>Page %s</title></head><body><h1>Hi</h1><p>%s body text here for extraction.</p></body></html>", r.URL.Path, r.URL.Path)
+		_, _ = fmt.Fprintf(w, "<html><head><title>Page %s</title></head><body><h1>Hi</h1><p>%s body text here for extraction.</p></body></html>", r.URL.Path, r.URL.Path)
 	})
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)

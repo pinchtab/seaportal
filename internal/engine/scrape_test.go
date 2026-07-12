@@ -83,12 +83,12 @@ func TestScrapeSiteEndToEnd(t *testing.T) {
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/":
-			w.Write([]byte(`<html><head><title>Home</title></head><body><h1>Home</h1>` +
+			_, _ = w.Write([]byte(`<html><head><title>Home</title></head><body><h1>Home</h1>` +
 				`<a href="/about">About</a><a href="/blog/1">Post 1</a><a href="/blog/2">Post 2</a></body></html>`))
 		case "/sitemap.xml":
 			http.NotFound(w, r) // force crawl fallback
 		default:
-			w.Write([]byte(`<html><head><title>` + r.URL.Path + `</title></head><body><h1>` + r.URL.Path + `</h1><p>Some body content for extraction here.</p></body></html>`))
+			_, _ = w.Write([]byte(`<html><head><title>` + r.URL.Path + `</title></head><body><h1>` + r.URL.Path + `</h1><p>Some body content for extraction here.</p></body></html>`))
 		}
 	})
 	srv := httptest.NewServer(mux)
@@ -206,7 +206,7 @@ func TestScrapeSiteDiscoveryDoesNotStarveFetch(t *testing.T) {
 		case strings.HasPrefix(r.URL.Path, "/s/"):
 			time.Sleep(slow) // slow section pages (fetched during crawl for links)
 			id := strings.TrimPrefix(r.URL.Path, "/s/")
-			fmt.Fprintf(w, `<html><body><h1>Section</h1><a href="/p/%s">Leaf %s</a></body></html>`, id, id)
+			_, _ = fmt.Fprintf(w, `<html><body><h1>Section</h1><a href="/p/%s">Leaf %s</a></body></html>`, id, id)
 		default: // /p/* leaf pages: fast, only fetched in the fetch phase
 			_, _ = w.Write([]byte(`<html><body><h1>Leaf</h1><p>Real leaf content worth extracting here.</p></body></html>`))
 		}
