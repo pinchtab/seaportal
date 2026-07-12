@@ -48,7 +48,7 @@ func discover(ctx context.Context, opts ScrapeOptions) (discoveryResult, error) 
 		if perr != nil {
 			return false
 		}
-		return robots.IsAllowed(u.Host, o.UserAgent, u.Scheme, u.Path)
+		return robots.IsAllowed(ctx, u.Host, o.UserAgent, u.Scheme, u.Path)
 	}
 
 	res := discoveryResult{}
@@ -176,7 +176,7 @@ func crawlSameHost(ctx context.Context, seed, host string, o ScrapeOptions, maxU
 			if perr != nil || !strings.EqualFold(pu.Host, host) {
 				continue // same-host only; external excluded
 			}
-			if respectRobots && !robots.IsAllowed(pu.Host, o.UserAgent, pu.Scheme, pu.Path) {
+			if respectRobots && !robots.IsAllowed(ctx, pu.Host, o.UserAgent, pu.Scheme, pu.Path) {
 				continue
 			}
 			visited[nu] = true

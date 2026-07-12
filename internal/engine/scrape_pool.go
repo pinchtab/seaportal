@@ -99,7 +99,7 @@ func fetchOne(ctx context.Context, u string, extractOpts Options, limiter *HostR
 	host, scheme := hostScheme(u)
 	interval := minInterval
 	if respectRobots && host != "" {
-		if d := robots.GetDelayWithScheme(host, extractOpts.UserAgent, scheme); d > interval {
+		if d := robots.GetDelayWithScheme(ctx, host, extractOpts.UserAgent, scheme); d > interval {
 			interval = d
 		}
 	}

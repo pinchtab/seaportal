@@ -298,7 +298,7 @@ func fetchAndAssemble(ctx context.Context, base *url.URL, urls []string, o Scrap
 		}
 		host, scheme := hostScheme(u)
 		if respectRobots && host != "" {
-			if err := limiter.Wait(ctx, host, robots.GetDelayWithScheme(host, o.UserAgent, scheme)); err != nil {
+			if err := limiter.Wait(ctx, host, robots.GetDelayWithScheme(ctx, host, o.UserAgent, scheme)); err != nil {
 				return PageObject{URL: u, Error: err.Error()}
 			}
 		}

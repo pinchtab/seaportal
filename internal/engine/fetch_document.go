@@ -170,12 +170,16 @@ func fetchDocument(targetURL string, opts Options, start time.Time, result *Resu
 		}
 	}
 
-	if !checkRobotsAllowed(opts, targetURL, domain, st.userAgent, result) {
+	if !checkRobotsAllowed(reqCtx, opts, targetURL, domain, st.userAgent, result) {
 		return st, false
 	}
 
-	if err := applyCrawlDelay(reqCtx, opts, targetURL, domain, st.userAgent); err != nil {
-		result.Error = err.Error()
+	crawlWarning, crawlErr := applyCrawlDelay(reqCtx, opts, targetURL, domain, st.userAgent)
+	if crawlWarning != "" {
+		st.preWarnings = append(st.preWarnings, crawlWarning)
+	}
+	if crawlErr != nil {
+		result.Error = crawlErr.Error()
 		return st, false
 	}
 
