@@ -106,14 +106,14 @@ func fetchDocument(targetURL string, opts Options, start time.Time, result *Resu
 	if strings.HasPrefix(targetURL, "data:") {
 		mime, body, derr := parseDataURL(targetURL)
 		if derr != nil {
-			result.Error = derr.Error()
+			result.setError(derr)
 			return st, false
 		}
 		switch mime {
 		case "text/html", "text/plain":
 			*result = fromHTMLInternal(string(body), targetURL, start, opts)
 		default:
-			result.Error = "data: URL mime not supported: " + mime
+			result.setError(errors.New("data: URL mime not supported: " + mime))
 		}
 		return st, false
 	}
@@ -124,7 +124,7 @@ func fetchDocument(targetURL string, opts Options, start time.Time, result *Resu
 	// Control hook re-checks the resolved IP at connect to close DNS rebinding.
 	if opts.Security != nil {
 		if err := opts.Security.ValidateURL(reqCtx, targetURL); err != nil {
-			result.Error = err.Error()
+			result.setError(err)
 			result.SecurityBlock = err.Error()
 			return st, false
 		}
@@ -134,7 +134,7 @@ func fetchDocument(targetURL string, opts Options, start time.Time, result *Resu
 
 	client, clientErr := buildFetchClient(opts, domain, st.tracker)
 	if clientErr != nil {
-		result.Error = "invalid proxy URL: " + clientErr.Error()
+		result.setError(fmt.Errorf("invalid proxy URL: %w", clientErr))
 		return st, false
 	}
 	st.client = client
@@ -155,7 +155,7 @@ func fetchDocument(targetURL string, opts Options, start time.Time, result *Resu
 			if opts.ContentTypePreflight && st.headPreflightStatus == http.StatusOK {
 				if isBinaryContentType(contentType) {
 					result.HeadPreflightStatus = st.headPreflightStatus
-					result.Error = fmt.Sprintf("skipped binary content: %s", contentType)
+					result.setError(fmt.Errorf("skipped binary content: %s", contentType))
 					return st, false
 				}
 			}
@@ -163,7 +163,7 @@ func fetchDocument(targetURL string, opts Options, start time.Time, result *Resu
 			if opts.HeadPreflight {
 				if st.headPreflightStatus == http.StatusNotFound || st.headPreflightStatus == http.StatusGone {
 					result.HeadPreflightStatus = st.headPreflightStatus
-					result.Error = fmt.Sprintf("HEAD preflight returned %d", st.headPreflightStatus)
+					result.setError(fmt.Errorf("HEAD preflight returned %d", st.headPreflightStatus))
 					return st, false
 				}
 			}
@@ -179,12 +179,12 @@ func fetchDocument(targetURL string, opts Options, start time.Time, result *Resu
 		st.preWarnings = append(st.preWarnings, crawlWarning)
 	}
 	if crawlErr != nil {
-		result.Error = crawlErr.Error()
+		result.setError(crawlErr)
 		return st, false
 	}
 
 	if err := applyRateLimit(reqCtx, opts, domain); err != nil {
-		result.Error = err.Error()
+		result.setError(err)
 		return st, false
 	}
 
@@ -243,7 +243,7 @@ func fetchDocument(targetURL string, opts Options, start time.Time, result *Resu
 	bodyBytes, err := limitedReadAll(resp.Body, st.maxBody, ErrResponseTooLarge)
 	st.downloadMs = time.Since(downloadStart).Milliseconds()
 	if err != nil {
-		result.Error = err.Error()
+		result.setError(err)
 		if errors.Is(err, ErrResponseTooLarge) {
 			result.SecurityBlock = err.Error()
 		}
@@ -274,7 +274,7 @@ func fetchDocument(targetURL string, opts Options, start time.Time, result *Resu
 	ctLower := strings.ToLower(st.respContentType)
 	isPDF := strings.Contains(ctLower, "application/pdf")
 	if isBinaryContentType(st.respContentType) || (isPDF && opts.NoPDF) {
-		result.Error = fmt.Sprintf("skipped binary content: %s", st.respContentType)
+		result.setError(fmt.Errorf("skipped binary content: %s", st.respContentType))
 		result.StatusCode = resp.StatusCode
 		result.ContentLength = int64(len(st.bodyBytes))
 		result.ResponseContentType = st.respContentType
@@ -299,14 +299,14 @@ func renegotiateHTML(targetURL string, opts Options, st *fetchState, result *Res
 	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8")
 	resp, err := st.client.Do(req)
 	if err != nil {
-		result.Error = err.Error()
+		result.setError(err)
 		return false
 	}
 	st.resp = resp
 
 	bodyBytes, err := limitedReadAll(resp.Body, st.maxBody, ErrResponseTooLarge)
 	if err != nil {
-		result.Error = err.Error()
+		result.setError(err)
 		if errors.Is(err, ErrResponseTooLarge) {
 			result.SecurityBlock = err.Error()
 		}
@@ -427,7 +427,7 @@ func fetchWithRetryStage(req *http.Request, targetURL string, opts Options, st *
 			event.Error = werr
 			event.Outcome = "canceled"
 			logRetry(event)
-			result.Error = werr.Error()
+			result.setError(werr)
 			return retryCanceled
 		}
 		retryCount++
@@ -444,14 +444,14 @@ func fetchWithRetryStage(req *http.Request, targetURL string, opts Options, st *
 				outcome := waitAndRetry(expBackoff(attempt), RetryEvent{Attempt: attempt + 1, Error: err}, nil)
 				if outcome != retryProceed {
 					if result.Error == "" {
-						result.Error = err.Error()
+						result.setError(err)
 					}
 					return nil
 				}
 				continue
 			}
 			logRetry(RetryEvent{Attempt: attempt + 1, Error: err, Outcome: "exhausted"})
-			result.Error = err.Error()
+			result.setError(err)
 			return nil
 		}
 
@@ -506,7 +506,7 @@ func decompressAndRestoreCharsetStage(bodyBytes []byte, resp *http.Response, opt
 		}
 		decompressed, decompErr := decompressBodyLimited(bodyBytes, contentEncoding, maxDecomp)
 		if errors.Is(decompErr, ErrDecompressTooLarge) {
-			result.Error = decompErr.Error()
+			result.setError(decompErr)
 			result.SecurityBlock = decompErr.Error()
 			return nil, preWarnings, ""
 		}
@@ -515,11 +515,11 @@ func decompressAndRestoreCharsetStage(bodyBytes []byte, resp *http.Response, opt
 				trimmed := bytes.TrimSpace(bodyBytes)
 				if len(trimmed) > 0 && (trimmed[0] == '<' || trimmed[0] == '{') {
 				} else {
-					result.Error = fmt.Sprintf("decompression error (%s): %v", contentEncoding, decompErr)
+					result.setError(fmt.Errorf("decompression error (%s): %w", contentEncoding, decompErr))
 					return nil, preWarnings, ""
 				}
 			} else {
-				result.Error = fmt.Sprintf("decompression error (%s): %v", contentEncoding, decompErr)
+				result.setError(fmt.Errorf("decompression error (%s): %w", contentEncoding, decompErr))
 				return nil, preWarnings, ""
 			}
 		} else {

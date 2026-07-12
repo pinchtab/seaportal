@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"errors"
 	"time"
 )
 
@@ -104,6 +105,45 @@ type Result struct {
 	// (SSRF / private-IP / blocked-scheme / blocked-domain / size-cap). Empty
 	// when no policy is active or the fetch passed every check.
 	SecurityBlock string `json:"securityBlock,omitempty"`
+
+	// err preserves the sentinel-carrying error chain behind the Error string
+	// (T17). Deliberately unexported with NO json tag: the wire format is
+	// locked by TestResultJSONWireStability and must not change. Set via
+	// setError; read via Err().
+	err error
+}
+
+// setError records e on the result: Error gets the flattened string (exactly
+// what the historical `result.Error = err.Error()` sites produced) and err
+// keeps the chain so callers can errors.Is/errors.As against the engine
+// sentinels. A nil e is a no-op.
+func (r *Result) setError(e error) {
+	if e == nil {
+		return
+	}
+	r.Error = e.Error()
+	r.err = e
+}
+
+// Err returns the error that produced Result.Error with its wrap chain intact,
+// or nil when extraction succeeded. Unlike the JSON-serialized Error string,
+// the returned error preserves sentinel identity, so
+//
+//	errors.Is(result.Err(), engine.ErrPrivateIPBlocked)
+//	errors.Is(result.Err(), engine.ErrBlockedByRobots)
+//	errors.Is(result.Err(), context.Canceled)
+//
+// all work as expected. When Error was assigned as a bare string by code that
+// bypassed setError, Err still returns a non-nil (opaque) error so the
+// "failed ⇔ Err() != nil" invariant holds.
+func (r *Result) Err() error {
+	if r.err != nil {
+		return r.err
+	}
+	if r.Error != "" {
+		return errors.New(r.Error)
+	}
+	return nil
 }
 
 // TransportInfo groups the transport/telemetry fields stamped by

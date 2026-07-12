@@ -13,7 +13,34 @@ import (
 )
 
 // Result holds the extraction output for a URL.
+//
+// Failures are reported two ways: Result.Error is the JSON-serialized string,
+// and Result.Err() returns the underlying error with its wrap chain intact —
+// errors.Is / errors.As work against the exported sentinels (ErrPrivateIPBlocked,
+// ErrBlockedByRobots, ErrResponseTooLarge, ErrNeedsBrowser, context.Canceled, …),
+// so callers can branch on failure kind without string matching.
 type Result = engine.Result
+
+// Sentinel errors preserved on Result.Err(). Security sentinels are wrapped
+// with target context at the block site; match with errors.Is.
+var (
+	// ErrSecurityScheme: URL scheme rejected by SecurityPolicy.AllowedSchemes.
+	ErrSecurityScheme = engine.ErrSecurityScheme
+	// ErrSecurityDomain: host rejected by the domain allow/deny lists.
+	ErrSecurityDomain = engine.ErrSecurityDomain
+	// ErrPrivateIPBlocked: target resolves to a private/internal IP (SSRF guard).
+	ErrPrivateIPBlocked = engine.ErrPrivateIPBlocked
+	// ErrSecurityResolve: target host could not be resolved for validation.
+	ErrSecurityResolve = engine.ErrSecurityResolve
+	// ErrResponseTooLarge: raw response body exceeded MaxResponseBytes.
+	ErrResponseTooLarge = engine.ErrResponseTooLarge
+	// ErrDecompressTooLarge: decompressed body exceeded MaxDecompressedBytes.
+	ErrDecompressTooLarge = engine.ErrDecompressTooLarge
+	// ErrBlockedByRobots: robots.txt disallows the target (RespectRobots set).
+	ErrBlockedByRobots = engine.ErrBlockedByRobots
+	// ErrNeedsBrowser: FastMode determined the page needs a real browser.
+	ErrNeedsBrowser = engine.ErrNeedsBrowser
+)
 
 // Result's observability tail is grouped into anonymous embedded sub-structs;
 // field promotion keeps flat access (r.TTFBMs, r.RetryCount, …) working and

@@ -8,11 +8,18 @@ package engine
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"time"
 )
+
+// ErrBlockedByRobots is the sentinel recorded on Result when RespectRobots is
+// set and robots.txt disallows the target path. Match with
+// errors.Is(result.Err(), ErrBlockedByRobots); Result.BlockedByRobots carries
+// the same signal as a serialized bool.
+var ErrBlockedByRobots = errors.New("blocked by robots.txt")
 
 // buildFetchClient assembles the http.Client for a fetch: per-domain timeout,
 // redirect tracking (security-checked when a policy is set), the shared pooled
@@ -130,7 +137,7 @@ func checkRobotsAllowed(ctx context.Context, opts Options, targetURL, domain, us
 	if cache.IsAllowed(ctx, host, userAgent, scheme, parsed.RequestURI()) {
 		return true
 	}
-	result.Error = "blocked by robots.txt"
+	result.setError(ErrBlockedByRobots)
 	result.BlockedByRobots = true
 	ensureProfile(result)
 	result.Profile.Reasons = append(result.Profile.Reasons, "blocked-by-robots")

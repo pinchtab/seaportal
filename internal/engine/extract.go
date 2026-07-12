@@ -5,6 +5,7 @@ import (
 	"compress/flate"
 	"compress/gzip"
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -61,6 +62,12 @@ func extractDomain(rawURL string) string {
 	}
 	return u.Hostname()
 }
+
+// ErrNeedsBrowser is the sentinel wrapped into Result errors when FastMode
+// bails early because the page needs a real browser to render. Match with
+// errors.Is(result.Err(), ErrNeedsBrowser); the wrapped message carries the
+// specific reason.
+var ErrNeedsBrowser = errors.New("needs-browser")
 
 // Must match a real browser exactly — Cloudflare blocks truncated/incomplete UAs.
 const DefaultUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
@@ -175,7 +182,7 @@ func FromURLWithOptions(targetURL string, opts Options) (result Result) {
 				Confidence:   0.1,
 				Issues:       []string{reason},
 			}
-			result.Error = "needs-browser: " + reason
+			result.setError(fmt.Errorf("%w: %s", ErrNeedsBrowser, reason))
 			applyStatusBlockedProfile(&result, st.resp.StatusCode)
 			return result
 		}
@@ -270,7 +277,7 @@ func FromResponse(resp *http.Response, targetURL string, start time.Time) (resul
 	article, err := readability.FromReader(resp.Body, parsedURL)
 	parseEnd := time.Now()
 	if err != nil {
-		result.Error = err.Error()
+		result.setError(err)
 		return result
 	}
 
@@ -389,7 +396,8 @@ func fromHTMLInternal(html string, targetURL string, start time.Time, opts Optio
 	article, err := readability.FromReader(strings.NewReader(html), parsedURL)
 	parseEnd := time.Now()
 	if err != nil {
-		result = Result{URL: targetURL, Error: err.Error(), SPASignals: spaSignals, IsSPA: isSPA, IsBlocked: isBlocked}
+		result = Result{URL: targetURL, SPASignals: spaSignals, IsSPA: isSPA, IsBlocked: isBlocked}
+		result.setError(err)
 		return result
 	}
 
@@ -450,7 +458,7 @@ func fromHTMLInternal(html string, targetURL string, start time.Time, opts Optio
 	applyProbeSearchOverride(&result, opts)
 
 	if opts.FailFast && result.IsSPA && result.Confidence < 30 {
-		result.Error = fmt.Sprintf("SPA detected with low confidence (%d%%), signals: %v", result.Confidence, result.SPASignals)
+		result.setError(fmt.Errorf("SPA detected with low confidence (%d%%), signals: %v", result.Confidence, result.SPASignals))
 	}
 
 	if canonicalPick != "" && canonicalPick != result.URL {
@@ -547,7 +555,7 @@ func processArticle(article readability.Article, targetURL string, start time.Ti
 	markdown, err := convertHTMLToMarkdown(article.Content)
 	convertEnd := time.Now()
 	if err != nil {
-		result.Error = err.Error()
+		result.setError(err)
 		return result
 	}
 
