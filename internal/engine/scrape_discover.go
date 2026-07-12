@@ -25,8 +25,10 @@ var reSitemapDirective = regexp.MustCompile(`(?im)^\s*sitemap:\s*(\S+)`)
 // from robots.txt plus the conventional /sitemap.xml, flatten sitemap indexes
 // via FlattenSitemap, and — if no sitemap yields URLs — fall back to a bounded
 // same-host crawl seeded from the homepage. When RespectRobots is set,
-// disallowed paths are dropped from the candidate set.
-func discover(ctx context.Context, opts ScrapeOptions) (discoveryResult, error) {
+// disallowed paths are dropped from the candidate set. robots and limiter are
+// the run-shared cache/limiter created by ScrapeSite (T03) so robots.txt is
+// fetched once per host across discovery and the fetch phase.
+func discover(ctx context.Context, opts ScrapeOptions, robots *CrawlDelayCache, limiter *HostRateLimiter) (discoveryResult, error) {
 	o := opts.normalized()
 	base, err := url.Parse(strings.TrimSpace(o.BaseURL))
 	if err != nil || base.Host == "" {
@@ -38,7 +40,6 @@ func discover(ctx context.Context, opts ScrapeOptions) (discoveryResult, error) 
 		scheme = "https"
 	}
 
-	robots := newCrawlDelayCacheWithFetch(FetchBytesOptions{Security: o.Security})
 	respectRobots := o.RespectRobots != nil && *o.RespectRobots
 	allowed := func(rawURL string) bool {
 		if !respectRobots {
@@ -89,7 +90,7 @@ func discover(ctx context.Context, opts ScrapeOptions) (discoveryResult, error) 
 
 	// 3. Crawl fallback when no sitemap produced any URLs.
 	if !res.SitemapFound {
-		for _, u := range crawlSameHost(ctx, scheme+"://"+host+"/", host, o, o.MaxPages, defaultCrawlDepth) {
+		for _, u := range crawlSameHost(ctx, scheme+"://"+host+"/", host, o, robots, limiter, o.MaxPages, defaultCrawlDepth) {
 			add(u)
 		}
 	}
@@ -128,8 +129,11 @@ func discoverSitemapURLs(ctx context.Context, scheme, host string, o ScrapeOptio
 
 // crawlSameHost does a bounded breadth-first crawl from seed, following only
 // same-host links, up to maxURLs pages and maxDepth deep. Disallowed paths are
-// skipped when RespectRobots is set. Returns the visited URLs in BFS order.
-func crawlSameHost(ctx context.Context, seed, host string, o ScrapeOptions, maxURLs, maxDepth int) []string {
+// skipped when RespectRobots is set, and each crawl fetch honours the robots
+// crawl-delay (clamped) through the run-shared limiter — the BFS previously
+// hammered the host with no spacing at all (T03). Returns the visited URLs in
+// BFS order.
+func crawlSameHost(ctx context.Context, seed, host string, o ScrapeOptions, robots *CrawlDelayCache, limiter *HostRateLimiter, maxURLs, maxDepth int) []string {
 	if maxURLs <= 0 {
 		maxURLs = DefaultScrapeMaxPages
 	}
@@ -137,7 +141,6 @@ func crawlSameHost(ctx context.Context, seed, host string, o ScrapeOptions, maxU
 		maxDepth = 0
 	}
 	respectRobots := o.RespectRobots != nil && *o.RespectRobots
-	robots := newCrawlDelayCacheWithFetch(FetchBytesOptions{Security: o.Security})
 
 	type item struct {
 		url   string
@@ -160,6 +163,13 @@ func crawlSameHost(ctx context.Context, seed, host string, o ScrapeOptions, maxU
 		found = append(found, cur.url)
 		if cur.depth >= maxDepth {
 			continue
+		}
+		if respectRobots {
+			curHost, curScheme := hostScheme(cur.url)
+			delay, _ := clampCrawlDelay(robots.GetDelayWithScheme(ctx, curHost, o.UserAgent, curScheme))
+			if limiter.Wait(ctx, curHost, delay) != nil {
+				break // ctx fired while waiting for the slot
+			}
 		}
 		body, _, status, err := FetchBytes(ctx, cur.url, FetchBytesOptions{
 			Timeout:   o.Timeout,

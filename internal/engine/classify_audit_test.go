@@ -103,12 +103,15 @@ func TestClassifyPageAudit(t *testing.T) {
 <div id="root"></div>
 <noscript>You need to enable JavaScript to run this app.</noscript>
 </body></html>`,
-			wantClass:       PageSPA,
-			wantIsSPA:       true,
-			wantOutcome:     OutcomeNeedsBrowser,
-			wantDecision:    DecisionBrowserNeeded,
-			wantBrowserRec:  true,
-			wantContentType: "page",
+			wantClass:      PageSPA,
+			wantIsSPA:      true,
+			wantOutcome:    OutcomeNeedsBrowser,
+			wantDecision:   DecisionBrowserNeeded,
+			wantBrowserRec: true,
+			// T07: with classification reading the extraction Result instead of
+			// raw HTML, an empty SPA shell (nothing extractable) is honestly
+			// "unknown" rather than "page".
+			wantContentType: "unknown",
 		},
 		{
 			// JS-shell whose "enable JavaScript" warning sits in regular DOM, not
@@ -209,7 +212,9 @@ func TestClassifyPageAudit(t *testing.T) {
 				t.Errorf("browserRecommended = %v, want %v", profile.BrowserRecommended, tc.wantBrowserRec)
 			}
 			if tc.wantContentType != "" {
-				got := classifyContentType(ExtractLDJSON(tc.html), ExtractMetadata(tc.html), tc.url, tc.html)
+				// T07: classifyContentType consumes the extraction Result (the
+				// converged scrape path retains no raw HTML).
+				got := classifyContentType(r, tc.url)
 				if got != tc.wantContentType {
 					t.Errorf("contentType = %q, want %q", got, tc.wantContentType)
 				}

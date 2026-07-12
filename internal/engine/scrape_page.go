@@ -6,14 +6,16 @@ import (
 	"strings"
 )
 
-// assemblePage turns a fetched/extracted page into a fully-populated PageObject.
-// It wires the existing extractors (metadata, JSON-LD, links) over the raw HTML
-// rather than recomputing, and carries the markdown/title/status from the
-// extraction Result. Internal vs external links are counted relative to base.
-// Performance (TTFB, total bytes, request count) is filled only when
+// assemblePage turns an extraction Result into a fully-populated PageObject.
+// On the converged fetch path (T07) the page's raw HTML is no longer in hand,
+// so everything derives from the Result: the metadata fields the pipeline
+// resolved, the LD-JSON blocks it recorded, the opt-in captured link list
+// (Options.WithLinks), and its structural metrics for content-type
+// classification. Internal vs external links are counted relative to base.
+// Performance (TTFB, fetched bytes, request count) is filled only when
 // withPerformance is set. A failed page (r.Error != "") still yields a
 // PageObject with its status and error.
-func assemblePage(base *url.URL, targetURL, htmlStr string, r Result, withPerformance bool) PageObject {
+func assemblePage(base *url.URL, targetURL string, r Result, withPerformance bool) PageObject {
 	p := PageObject{
 		URL:      targetURL,
 		Title:    r.Title,
@@ -22,28 +24,25 @@ func assemblePage(base *url.URL, targetURL, htmlStr string, r Result, withPerfor
 		Error:    r.Error,
 	}
 
-	meta := ExtractMetadata(htmlStr)
-	p.Meta = metaMap(r, meta)
-
-	blocks := ExtractLDJSON(htmlStr)
-	p.Schema = ldjsonToMaps(blocks)
-
-	p.InternalLinks, p.ExternalLinks = countLinks(base, ExtractLinks(htmlStr, targetURL))
-	p.ContentType = classifyContentType(blocks, meta, targetURL, htmlStr)
+	p.Meta = metaMap(r)
+	p.Schema = ldjsonToMaps(r.LDJSONBlocks)
+	p.InternalLinks, p.ExternalLinks = countLinks(base, r.Links)
+	p.ContentType = classifyContentType(r, targetURL)
 
 	if withPerformance {
 		p.Performance = &PagePerformance{
 			TTFBMillis: r.TTFBMs,
-			TotalBytes: int64(len(htmlStr)),
+			TotalBytes: r.ContentLength,
 			Requests:   1,
 		}
 	}
 	return p
 }
 
-// metaMap flattens the extracted Metadata (falling back to Result fields) into
-// the PageObject.Meta string map, dropping empty values.
-func metaMap(r Result, m Metadata) map[string]string {
+// metaMap flattens the Result's resolved metadata (JSON-LD first, <meta>
+// fill-when-empty — see applyLDJSONMetadata/applyMetadata) into the
+// PageObject.Meta string map, dropping empty values.
+func metaMap(r Result) map[string]string {
 	out := map[string]string{}
 	put := func(k, v string) {
 		if strings.TrimSpace(v) != "" {
@@ -51,15 +50,13 @@ func metaMap(r Result, m Metadata) map[string]string {
 		}
 	}
 	put("title", r.Title)
-	put("description", firstNonEmpty(m.Description, r.Description))
-	put("author", firstNonEmpty(m.Author, r.Byline))
-	put("publishedDate", firstNonEmpty(m.PublishedDate, r.PublishedDate))
-	put("language", firstNonEmpty(m.Language, r.Language))
-	put("section", firstNonEmpty(m.Section, r.Section))
-	put("image", firstNonEmpty(m.ImageURL, r.ImageURL))
+	put("description", r.Description)
+	put("author", r.Byline)
+	put("publishedDate", r.PublishedDate)
+	put("language", r.Language)
+	put("section", r.Section)
+	put("image", r.ImageURL)
 	put("siteName", r.SiteName)
-	put("ogType", m.OGType)
-	put("keywords", m.Keywords)
 	if len(out) == 0 {
 		return nil
 	}
@@ -100,33 +97,20 @@ func countLinks(base *url.URL, links []LinkRef) (internal, external int) {
 	return internal, external
 }
 
-// classifyContentType derives a coarse content type from JSON-LD @type, then
-// OpenGraph type. When neither is present it falls back to a structural
-// heuristic over the URL and HTML (ALP-041) so metadata-poor sites (e.g. MDN)
-// don't collapse to "unknown"; a genuinely empty body still classifies as
-// "unknown".
-func classifyContentType(blocks []LDJSONBlock, m Metadata, pageURL, html string) string {
-	for _, b := range blocks {
+// classifyContentType derives a coarse content type from the extraction
+// Result: JSON-LD @type first, then a structural heuristic over the URL shape
+// and the extractor's own metrics (ALP-041) so metadata-poor sites (e.g. MDN)
+// don't collapse to "unknown". A page with no extractable content classifies
+// as "unknown". (On the converged fetch path the raw HTML is not retained, so
+// og:type-only pages without JSON-LD fall through to the structural
+// heuristics — T07.)
+func classifyContentType(r Result, pageURL string) string {
+	for _, b := range r.LDJSONBlocks {
 		if t := normalizeContentType(b.Type); t != "" {
 			return t
 		}
 	}
-	if t := normalizeContentType(m.OGType); t != "" {
-		return t
-	}
-	return structuralContentType(pageURL, html)
-}
-
-// articleURLSegments are path segments that strongly signal long-form content.
-var articleURLSegments = []string{"/blog", "/docs", "/article", "/post", "/news", "/guide", "/tutorial"}
-
-// structuralContentType infers a coarse type from URL shape and HTML structure
-// for pages that carry no JSON-LD/OpenGraph type. A page is "article" when its
-// URL sits under a docs/blog-style segment, or the HTML has a main <article>
-// element, or it reads as dense prose (a heading plus several paragraphs).
-// Anything else with a usable body is "page"; an empty body stays "unknown".
-func structuralContentType(pageURL, html string) string {
-	if strings.TrimSpace(html) == "" {
+	if strings.TrimSpace(r.Content) == "" {
 		return "unknown"
 	}
 	if u, err := url.Parse(pageURL); err == nil {
@@ -137,16 +121,16 @@ func structuralContentType(pageURL, html string) string {
 			}
 		}
 	}
-	lower := strings.ToLower(html)
-	if strings.Contains(lower, "<article") {
-		return "article"
-	}
-	headings := strings.Count(lower, "<h1") + strings.Count(lower, "<h2") + strings.Count(lower, "<h3")
-	if headings >= 1 && strings.Count(lower, "<p") >= 5 {
+	// Dense prose (a heading plus several paragraphs, as counted by the
+	// extraction pipeline) reads as an article.
+	if r.HeadingCount >= 1 && r.ParagraphCount >= 5 {
 		return "article"
 	}
 	return "page"
 }
+
+// articleURLSegments are path segments that strongly signal long-form content.
+var articleURLSegments = []string{"/blog", "/docs", "/article", "/post", "/news", "/guide", "/tutorial"}
 
 // normalizeContentType maps a schema.org / OpenGraph type onto one of a small
 // set of categories, or "" when unrecognized (so the caller can fall through).
