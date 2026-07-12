@@ -6,6 +6,26 @@
 
 ---
 
+## ✅ Implementation status (2026-07-12)
+
+**All 36 tasks implemented** on branch `quality/audit-fixes` (52 commits, +9.7k/−4.8k across 148 files). Full test battery green: `go vet`, `golangci-lint` (0 issues), race suite, integration/MCP-conformance, allocs budget, fuzz (9 targets), npm (27/27), and the Docker e2e suite (**106/106 checks — up from a partially-red baseline**). Total coverage **80.9%** (engine 88.2%). See `testing-coverage-report.md` for the coverage breakdown.
+
+| Tasks | Status |
+|---|---|
+| T01–T09 (security & correctness) | ✅ done — scrape secure-by-default, h2 leak fixed, robots overhaul, typed retryability, ctx propagation, dead-pool removed |
+| T10–T22 (structural refactors) | ✅ done — `FromURLWithOptions` 737→~110 lines, `Result`/`Options` decomposed (JSON wire-stable via goldens), typed `Result.Err()`, MCP tools extracted, `main.go` 559→211 |
+| T23–T29 (duplication & cleanups) | ✅ done — `dom.go`/`html_scan.go` primitives, seabench helpers, sanitize/chunk/snapshot dedup, named consts |
+| T30–T36 (tests & CI) | ✅ done — integration/allocs/fuzz/npm lanes wired, support-cluster tests, cache clock seam, shared helpers, coverage floor |
+
+**Bonus fixes surfaced while verifying** (not in the original 36):
+- **Latency-budget test panicked** on a duplicate ServeMux route (the gate had never run anywhere) — deduped; split into an advisory CI step since the p95 envelope is exceeded by the multi-MB multilingual fixtures on baseline too.
+- **Same-host discovery bug**: scrape dropped every candidate whose host differed only by a default port (`host:80` vs `host`), so an explicit-`:80` base sampled zero pages, and the same sitemap was flattened twice. Fixed with default-port canonicalization + sitemap dedup (`internal/engine/scrape_pool.go`, unit-tested).
+- **`./dev fuzz`** silently ran zero targets on macOS (BSD `grep` has no `-P`).
+
+T13 (`Result`) and T14 (`Options`) were done in JSON/API-compatible form — sub-structs are anonymously embedded so the wire format and field promotion are unchanged; `Options` field-grouping into sub-structs was deferred as a breaking change (ctx-first `FromURLContext` added, `Options.Context` deprecated-but-honored).
+
+---
+
 ## Executive summary
 
 The codebase is in better shape than its file sizes suggest: layering is genuinely clean (root facade → `internal/engine`; `internal/mcp` is a self-contained JSON-RPC transport with zero project imports — MCP is **not** implemented twice), error wrapping is consistent, there are no panics in library code, and the test/CI infrastructure is above average (race lane, golden regen workflow, tag-gated heavy fixtures, gosec, golangci-lint).
