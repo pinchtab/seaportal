@@ -45,10 +45,11 @@ func finalizeTransport(result *Result, opts Options, st *fetchState, contentLeng
 	}
 
 	populateResponseHeaders(result, resp)
-	result.TraceFormats, result.TraceCorrelation = computeTraceInfo(*result)
-	result.CDNProvider, result.CDNSignals = fingerprintCDN(*result)
-	result.ViaHops = parseViaHeader(result.ResponseVia)
-	result.ProxyLayers = len(result.ViaHops)
+	result.TraceInfo = computeTraceInfo(&result.ResponseHeaders)
+	cdn := fingerprintCDN(&result.ResponseHeaders)
+	cdn.ViaHops = parseViaHeader(result.ResponseVia)
+	cdn.ProxyLayers = len(cdn.ViaHops)
+	result.CDNInfo = cdn
 	result.RequestAcceptEncoding = DefaultAcceptEncoding
 	result.RequestID = opts.RequestID
 

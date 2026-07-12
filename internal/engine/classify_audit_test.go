@@ -136,9 +136,9 @@ func TestClassifyPageAudit(t *testing.T) {
 			// browser is spent.
 			name: "binary-image-png",
 			seed: &Result{
-				ResponseContentType: "image/png",
-				Error:               "skipped binary content: image/png",
-				StatusCode:          200,
+				TransportInfo: TransportInfo{ResponseContentType: "image/png"},
+				Error:         "skipped binary content: image/png",
+				StatusCode:    200,
 			},
 			wantClass:      PageDynamic,
 			wantIsSPA:      false,
@@ -151,9 +151,9 @@ func TestClassifyPageAudit(t *testing.T) {
 			// binary content-type (ALP-038).
 			name: "binary-octet-stream",
 			seed: &Result{
-				ResponseContentType: "application/octet-stream",
-				Error:               "skipped binary content: application/octet-stream",
-				StatusCode:          200,
+				TransportInfo: TransportInfo{ResponseContentType: "application/octet-stream"},
+				Error:         "skipped binary content: application/octet-stream",
+				StatusCode:    200,
 			},
 			wantClass:      PageDynamic,
 			wantIsSPA:      false,
@@ -167,13 +167,13 @@ func TestClassifyPageAudit(t *testing.T) {
 			// extractable static/ssr document, never unsupported.
 			name: "pdf-extractable",
 			seed: &Result{
-				ResponseContentType: "application/pdf",
-				StatusCode:          200,
-				Content:             "Quarterly Report. Revenue grew twelve percent year over year across all regions.",
-				Length:              1200,
-				Confidence:          85,
-				HeadingCount:        2,
-				ParagraphCount:      3,
+				TransportInfo:  TransportInfo{ResponseContentType: "application/pdf"},
+				StatusCode:     200,
+				Content:        "Quarterly Report. Revenue grew twelve percent year over year across all regions.",
+				Length:         1200,
+				Confidence:     85,
+				HeadingCount:   2,
+				ParagraphCount: 3,
 			},
 			wantClass:      PageSSR,
 			wantIsSPA:      false,
