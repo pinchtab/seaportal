@@ -18,12 +18,6 @@ import (
 	"golang.org/x/net/http2"
 )
 
-// testTLSConfig, when non-nil, is merged into the utls.Config used by
-// dialTLSChrome before handshake. Test-only hook so httptest TLS servers
-// (self-signed certs) can be reached without weakening the production path.
-// Production callers MUST leave this nil.
-var testTLSConfig *utls.Config
-
 var (
 	utlsClient     *http.Client
 	utlsClientOnce sync.Once
@@ -118,6 +112,14 @@ type chromeTransport struct {
 	proxyURL *url.URL
 	security *SecurityPolicy
 
+	// tlsConfig, when non-nil, is merged into the utls.Config used by
+	// dialTLSChrome before handshake (InsecureSkipVerify / RootCAs only).
+	// Test seam (T16): lets httptest TLS servers with self-signed certs be
+	// trusted on the specific transport instance a test builds — replacing
+	// the former package-global testTLSConfig hook. Production construction
+	// sites leave it nil.
+	tlsConfig *utls.Config
+
 	mu      sync.Mutex
 	h2Trans *http2.Transport             // shared wrapper for dialled h2 conns
 	h2Conns map[string]*http2.ClientConn // keyed by canonical host:port
@@ -184,7 +186,7 @@ func (t *chromeTransport) dialTLS(req *http.Request) (*utls.UConn, error) {
 	if t.proxyURL != nil {
 		return dialTLSChromeViaProxy(req.Context(), t.proxyURL, req.URL.Hostname(), req.URL.Host)
 	}
-	return dialTLSChrome(req.Context(), req.URL.Hostname(), req.URL.Host, t.security.dialControl())
+	return dialTLSChrome(req.Context(), req.URL.Hostname(), req.URL.Host, t.security.dialControl(), t.tlsConfig)
 }
 
 // plainTransport returns the RoundTripper for non-HTTPS requests. Built once
@@ -419,8 +421,10 @@ func canonicalHostPort(host string) string {
 
 // dialTLSChrome establishes a TLS connection impersonating Chrome 120. The
 // optional control hook (from SecurityPolicy.dialControl) validates the
-// post-DNS resolved IP before connect, closing the DNS-rebinding window.
-func dialTLSChrome(ctx context.Context, serverName, host string, control func(network, address string, c syscall.RawConn) error) (*utls.UConn, error) {
+// post-DNS resolved IP before connect, closing the DNS-rebinding window. The
+// optional tlsOverride (from chromeTransport.tlsConfig) merges trust-related
+// fields into the handshake config.
+func dialTLSChrome(ctx context.Context, serverName, host string, control func(network, address string, c syscall.RawConn) error, tlsOverride *utls.Config) (*utls.UConn, error) {
 	dialer := &net.Dialer{
 		Timeout:   dialTimeout,
 		KeepAlive: dialKeepAlive,
@@ -437,12 +441,12 @@ func dialTLSChrome(ctx context.Context, serverName, host string, control func(ne
 	cfg := &utls.Config{
 		ServerName: serverName,
 	}
-	if testTLSConfig != nil {
-		if testTLSConfig.InsecureSkipVerify {
+	if tlsOverride != nil {
+		if tlsOverride.InsecureSkipVerify {
 			cfg.InsecureSkipVerify = true
 		}
-		if testTLSConfig.RootCAs != nil {
-			cfg.RootCAs = testTLSConfig.RootCAs
+		if tlsOverride.RootCAs != nil {
+			cfg.RootCAs = tlsOverride.RootCAs
 		}
 	}
 	tlsConn := utls.UClient(conn, cfg, utls.HelloChrome_120)

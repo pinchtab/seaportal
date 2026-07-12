@@ -22,11 +22,6 @@ import (
 	"time"
 )
 
-// retryBackoffBase is the unit of exponential retry backoff (hop N waits
-// 2^N × base, capped by maxRetryWait). Production is 1s; tests shrink it to a
-// few milliseconds so retry-path coverage runs without real-time sleeps.
-var retryBackoffBase = time.Second
-
 // backgroundRefreshTimeout bounds one stale-while-revalidate refresh GET
 // (request context and client timeout). See spawnBackgroundRefresh for why
 // the refresh deliberately ignores the caller's Options.Context.
@@ -60,6 +55,7 @@ type retryConfig struct {
 	maxRetries        int
 	maxRetryWait      time.Duration
 	totalRetryTimeout time.Duration
+	backoffBase       time.Duration
 }
 
 // resolveRetryConfig resolves opts-level retry settings plus any per-domain
@@ -71,6 +67,7 @@ func resolveRetryConfig(opts Options, domain string) retryConfig {
 		maxRetries:        opts.MaxRetries,
 		maxRetryWait:      opts.MaxRetryWait,
 		totalRetryTimeout: opts.TotalRetryTimeout,
+		backoffBase:       opts.RetryBackoffBase,
 	}
 	if opts.DomainRetryConfig != nil && domain != "" {
 		if domainCfg, ok := opts.DomainRetryConfig[domain]; ok {
@@ -87,6 +84,9 @@ func resolveRetryConfig(opts Options, domain string) retryConfig {
 	}
 	if cfg.totalRetryTimeout == 0 {
 		cfg.totalRetryTimeout = DefaultTotalRetryTimeout
+	}
+	if cfg.backoffBase <= 0 {
+		cfg.backoffBase = DefaultRetryBackoffBase
 	}
 	return cfg
 }
@@ -389,6 +389,7 @@ func fetchWithRetryStage(req *http.Request, targetURL string, opts Options, st *
 	maxRetries := retryCfg.maxRetries
 	maxRetryWait := retryCfg.maxRetryWait
 	totalRetryTimeout := retryCfg.totalRetryTimeout
+	backoffBase := retryCfg.backoffBase
 
 	// The request's context bounds the whole retry loop: backoff sleeps below
 	// select on it so the deadline / SIGINT can interrupt a wait, and rebuilt
@@ -405,7 +406,7 @@ func fetchWithRetryStage(req *http.Request, targetURL string, opts Options, st *
 	// per-domain DomainRetryConfig override, defaulted to 60s); the stage just
 	// clamps to it (ALP-047).
 	expBackoff := func(attempt int) time.Duration {
-		backoff := time.Duration(1<<uint(attempt)) * retryBackoffBase
+		backoff := time.Duration(1<<uint(attempt)) * backoffBase
 		if backoff > maxRetryWait {
 			backoff = maxRetryWait
 		}

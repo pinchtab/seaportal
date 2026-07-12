@@ -505,8 +505,8 @@ func TestSleepCtx(t *testing.T) {
 // ALP-043: a retry backoff wait must be interruptible by the request context —
 // an overall deadline / SIGINT should preempt an in-flight retry sleep instead
 // of blocking for the full backoff. Uses a Retry-After of 1s (a deterministic
-// wait, unaffected by the test's shrunk retryBackoffBase) that a 100ms deadline
-// must cut short.
+// wait, unaffected by Options.RetryBackoffBase) that a 100ms deadline must
+// cut short.
 func TestFromURL_RetrySleepInterruptedByContext(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Retry-After", "1")

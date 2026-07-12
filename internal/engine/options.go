@@ -76,6 +76,15 @@ type Options struct {
 	// previously baked-in 30s client timeout (T19).
 	ClientTimeout time.Duration
 
+	// RetryBackoffBase is the unit of exponential retry backoff: attempt N
+	// waits 2^N × base (jittered, capped by MaxRetryWait). 0 =
+	// DefaultRetryBackoffBase (1s). Injection seam (T16): tests shrink it to
+	// a few milliseconds per-Options to exercise real retry logic without
+	// real-time sleeps — replacing the former package-global retryBackoffBase
+	// hook. Retry-After-driven waits are unaffected (they sleep the header
+	// value, not this base).
+	RetryBackoffBase time.Duration
+
 	HeadPreflight        bool
 	ContentTypePreflight bool
 	RetryLogger          func(event RetryEvent)
