@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"regexp"
 	"strings"
 	"time"
@@ -37,11 +36,16 @@ func fetchHeadOnly(targetURL string, opts Options) (result Result) {
 	start := time.Now()
 	result = Result{URL: targetURL, HeadOnly: true}
 
+	reqCtx := opts.Context
+	if reqCtx == nil {
+		reqCtx = context.Background()
+	}
+
 	// Pre-fetch security gate (mirrors FromURLWithOptions). The 16 KB cap makes
 	// the body-size policy irrelevant here, but SSRF / scheme / domain / redirect
 	// rules still apply to a head-only triage fetch.
 	if opts.Security != nil {
-		if err := opts.Security.ValidateURL(context.Background(), targetURL); err != nil {
+		if err := opts.Security.ValidateURL(reqCtx, targetURL); err != nil {
 			result.Error = err.Error()
 			result.SecurityBlock = err.Error()
 			return result
@@ -50,92 +54,26 @@ func fetchHeadOnly(targetURL string, opts Options) (result Result) {
 
 	domain := extractDomain(targetURL)
 
-	timeout := 30 * time.Second
-	if opts.DomainTimeout != nil && domain != "" {
-		if domainTimeout, ok := opts.DomainTimeout[domain]; ok && domainTimeout > 0 {
-			timeout = domainTimeout
-		}
-	}
-
 	tracker := &redirectTracker{}
 
-	checkRedirect := tracker.checkRedirect
-	if opts.Security != nil {
-		checkRedirect = opts.Security.redirectChecker(tracker)
-	}
-
-	sharedC, clientErr := getClientForOptions(opts)
+	client, clientErr := buildFetchClient(opts, domain, tracker)
 	if clientErr != nil {
 		result.Error = "invalid proxy URL: " + clientErr.Error()
 		return result
 	}
 
-	var client *http.Client
-	if opts.NoPooling || (opts.DomainTimeout != nil && domain != "" && opts.DomainTimeout[domain] > 0) {
-		client = &http.Client{Timeout: timeout, CheckRedirect: checkRedirect}
-		if opts.Proxy != "" {
-			client.Transport = sharedC.Transport
-		}
-	} else {
-		client = &http.Client{
-			Timeout:       sharedC.Timeout,
-			Transport:     sharedC.Transport,
-			CheckRedirect: checkRedirect,
-		}
-	}
-	if opts.Security != nil && opts.Proxy == "" {
-		client.Transport = &chromeTransport{security: opts.Security}
-	}
-	if opts.Transport != nil {
-		client.Transport = opts.Transport
+	userAgent := resolveUserAgentFor(opts, domain)
+
+	if !checkRobotsAllowed(opts, targetURL, domain, userAgent, &result) {
+		return result
 	}
 
-	userAgent := DefaultUserAgent
-	if opts.UserAgent != "" {
-		userAgent = ResolveUserAgent(opts.UserAgent)
-	}
-	if opts.DomainUserAgent != nil && domain != "" {
-		if ua, ok := opts.DomainUserAgent[domain]; ok && ua != "" {
-			userAgent = ua
-		}
+	if err := applyRateLimit(reqCtx, opts, domain); err != nil {
+		result.Error = err.Error()
+		return result
 	}
 
-	if opts.RespectRobots && domain != "" {
-		cache := opts.CrawlDelayCache
-		if cache == nil {
-			cache = NewCrawlDelayCache()
-		}
-		if parsed, perr := url.Parse(targetURL); perr == nil {
-			scheme := parsed.Scheme
-			if scheme == "" {
-				scheme = "https"
-			}
-			host := parsed.Host
-			if host == "" {
-				host = domain
-			}
-			if !cache.IsAllowed(host, userAgent, scheme, parsed.RequestURI()) {
-				result.Error = "blocked by robots.txt"
-				result.BlockedByRobots = true
-				ensureProfile(&result)
-				result.Profile.Reasons = append(result.Profile.Reasons, "blocked-by-robots")
-				return result
-			}
-		}
-	}
-
-	if opts.RateLimit > 0 && domain != "" {
-		limiter := opts.RateLimiter
-		if limiter == nil {
-			limiter = NewHostRateLimiter()
-		}
-		if err := limiter.Wait(opts.Context, domain, opts.RateLimit); err != nil {
-			result.Error = err.Error()
-			return result
-		}
-	}
-
-	req, err := http.NewRequest("GET", targetURL, nil)
+	req, err := http.NewRequestWithContext(reqCtx, "GET", targetURL, nil)
 	if err != nil {
 		result.Error = err.Error()
 		return result
