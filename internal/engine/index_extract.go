@@ -2,7 +2,6 @@ package engine
 
 import (
 	"net/url"
-	"regexp"
 	"sort"
 	"strings"
 
@@ -375,36 +374,6 @@ func findElementWithClass(n *html.Node, classPattern string) *html.Node {
 	}
 	f(n)
 	return result
-}
-
-func getAttr(n *html.Node, key string) string {
-	for _, attr := range n.Attr {
-		if attr.Key == key {
-			return attr.Val
-		}
-	}
-	return ""
-}
-
-func getTextContent(n *html.Node) string {
-	var sb strings.Builder
-	var f func(*html.Node)
-	f = func(n *html.Node) {
-		if n.Type == html.TextNode {
-			sb.WriteString(n.Data)
-		}
-		for c := n.FirstChild; c != nil; c = c.NextSibling {
-			f(c)
-		}
-	}
-	f(n)
-	return sb.String()
-}
-
-func cleanText(s string) string {
-	re := regexp.MustCompile(`\s+`)
-	s = re.ReplaceAllString(s, " ")
-	return strings.TrimSpace(s)
 }
 
 func formatIndexMarkdown(items []CardItem) string {

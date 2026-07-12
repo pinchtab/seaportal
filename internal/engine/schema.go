@@ -126,33 +126,7 @@ func applySchemaToNode(parent *xhtml.Node, fields map[string]FieldSpec, depth in
 // joined, whitespace-collapsed text of n's descendant text nodes.
 func extractValue(n *xhtml.Node, attr string) string {
 	if attr != "" {
-		for _, a := range n.Attr {
-			if a.Key == attr {
-				return a.Val
-			}
-		}
-		return ""
+		return getAttr(n, attr)
 	}
-	return schemaCollapseWhitespace(textOf(n))
-}
-
-func textOf(n *xhtml.Node) string {
-	var b strings.Builder
-	var walk func(*xhtml.Node)
-	walk = func(node *xhtml.Node) {
-		if node.Type == xhtml.TextNode {
-			b.WriteString(node.Data)
-			b.WriteByte(' ')
-			return
-		}
-		for c := node.FirstChild; c != nil; c = c.NextSibling {
-			walk(c)
-		}
-	}
-	walk(n)
-	return b.String()
-}
-
-func schemaCollapseWhitespace(s string) string {
-	return strings.Join(strings.Fields(s), " ")
+	return collapseUnicodeWhitespace(nodeTextOpts(n, textOptions{spaceJoin: true}))
 }

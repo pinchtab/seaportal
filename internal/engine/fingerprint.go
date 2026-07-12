@@ -88,7 +88,7 @@ func normalizeForFingerprint(content string) string {
 	s = counterPatterns.ReplaceAllString(s, " ")
 	s = relativeTimePatterns.ReplaceAllString(s, " ")
 	s = versionPatterns.ReplaceAllString(s, " ")
-	s = whitespacePattern.ReplaceAllString(s, " ")
+	s = wsRunRE.ReplaceAllString(s, " ")
 	return strings.TrimSpace(strings.ToLower(s))
 }
 
@@ -141,7 +141,4 @@ var (
 
 	// Version numbers
 	versionPatterns = regexp.MustCompile(`\bv?\d+\.\d+(\.\d+)*\b`)
-
-	// Whitespace normalization
-	whitespacePattern = regexp.MustCompile(`\s+`)
 )
