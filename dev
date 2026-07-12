@@ -166,11 +166,12 @@ run_command() {
       FUZZTIME="${2:-30s}"
       echo "  ${MUTED}Duration: $FUZZTIME${NC}"
       echo ""
+      # BSD grep (macOS) has no -P; use -E + sed to extract the target name.
       for f in $(grep -rl 'func Fuzz' --include='*_test.go' . 2>/dev/null | head -20); do
         pkg=$(dirname "$f")
-        for fn in $(grep -oP 'func \KFuzz\w+' "$f"); do
+        for fn in $(grep -oE 'func Fuzz[A-Za-z0-9_]+' "$f" | sed 's/^func //'); do
           echo "  Running $fn in $pkg..."
-          go test "$pkg" -fuzz="$fn" -fuzztime="$FUZZTIME"
+          go test "$pkg" -fuzz="^$fn\$" -fuzztime="$FUZZTIME" -run '^$'
         done
       done
       echo ""
