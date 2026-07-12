@@ -27,6 +27,11 @@ import (
 // few milliseconds so retry-path coverage runs without real-time sleeps.
 var retryBackoffBase = time.Second
 
+// backgroundRefreshTimeout bounds one stale-while-revalidate refresh GET
+// (request context and client timeout). See spawnBackgroundRefresh for why
+// the refresh deliberately ignores the caller's Options.Context.
+const backgroundRefreshTimeout = 30 * time.Second
+
 // fetchState carries the artifacts of a completed fetch stage into the
 // per-content-type pipelines: the response and decoded body, the transport
 // pieces needed for a renegotiation refetch (client, ctx, UA, body cap), and
@@ -547,13 +552,23 @@ func decompressAndRestoreCharsetStage(bodyBytes []byte, resp *http.Response, opt
 // the only effect of a failure is that the entry stays stale for another
 // SWR cycle. Uses a fresh http.Client to avoid sharing transports with the
 // foreground request.
+//
+// Cancellation semantics (T14, by design): the refresh intentionally does NOT
+// inherit the caller's Options.Context — the foreground call has already
+// returned, and tying the refresh to its ctx would cancel it the moment a CLI
+// invocation exits or an MCP request returns, defeating stale-while-
+// revalidate. Instead the goroutine is bounded by its own
+// backgroundRefreshTimeout deadline (mirrored on the client), so an
+// unresponsive origin can never pin it unbounded.
 func spawnBackgroundRefresh(cache *DiskCache, cacheKey, targetURL string, cached *cachedResponse, userAgent string, opts Options) {
 	go func() {
-		req := newGETRequest(targetURL, userAgent, opts.RequestID, opts.SendRequestID)
+		ctx, cancel := context.WithTimeout(context.Background(), backgroundRefreshTimeout)
+		defer cancel()
+		req := newGETRequest(targetURL, userAgent, opts.RequestID, opts.SendRequestID).WithContext(ctx)
 		for k, v := range cached.ConditionalHeaders() {
 			req.Header.Set(k, v)
 		}
-		client := &http.Client{Timeout: 30 * time.Second}
+		client := &http.Client{Timeout: backgroundRefreshTimeout}
 		if sharedC, err := getClientForOptions(opts); err == nil && sharedC != nil && sharedC.Transport != nil {
 			client.Transport = sharedC.Transport
 		}

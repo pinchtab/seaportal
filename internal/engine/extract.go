@@ -116,11 +116,33 @@ func sleepCtx(ctx context.Context, d time.Duration) error {
 	}
 }
 
-// FromURLWithOptions fetches targetURL (fetchDocument: policy gates, cache,
-// retries, decompression) and dispatches on the response content type to the
-// matching extraction pipeline: PDF, raw JSON/XML passthrough, negotiated
-// markdown, or the full HTML pipeline in fromHTMLInternal.
-func FromURLWithOptions(targetURL string, opts Options) (result Result) {
+// FromURLContext is the context-first primary entry point: it fetches
+// targetURL (fetchDocument: policy gates, cache, retries, decompression) and
+// dispatches on the response content type to the matching extraction
+// pipeline: PDF, raw JSON/XML passthrough, negotiated markdown, or the full
+// HTML pipeline in fromHTMLInternal.
+//
+// ctx bounds the whole fetch — the HTTP request, retry backoff waits, and
+// crawl-delay/rate-limit sleeps are all cancellable through it. A nil ctx is
+// treated as context.Background(). ctx takes precedence over any (deprecated)
+// Options.Context value.
+func FromURLContext(ctx context.Context, targetURL string, opts Options) Result {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	opts.Context = ctx
+	return fromURLWithOptions(targetURL, opts)
+}
+
+// FromURLWithOptions is the historical non-ctx entry point, now a shim over
+// FromURLContext: cancellation comes from opts.Context when set (deprecated),
+// else context.Background(). Behaviour for existing callers is unchanged;
+// new code should prefer FromURLContext.
+func FromURLWithOptions(targetURL string, opts Options) Result {
+	return FromURLContext(opts.Context, targetURL, opts)
+}
+
+func fromURLWithOptions(targetURL string, opts Options) (result Result) {
 	if opts.HeadOnly {
 		return fetchHeadOnly(targetURL, opts)
 	}

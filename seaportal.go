@@ -203,7 +203,17 @@ func FromURL(targetURL string) Result {
 	return engine.FromURL(targetURL)
 }
 
+// FromURLContext extracts content from a URL with custom options, bounded by
+// ctx: the HTTP request, retry backoff waits, and politeness sleeps are all
+// cancellable through it. This is the preferred entry point; a nil ctx is
+// treated as context.Background().
+func FromURLContext(ctx context.Context, targetURL string, opts Options) Result {
+	return engine.FromURLContext(ctx, targetURL, opts)
+}
+
 // FromURLWithOptions extracts content from a URL with custom options.
+// Cancellation comes from opts.Context when set (deprecated); prefer
+// FromURLContext.
 func FromURLWithOptions(targetURL string, opts Options) Result {
 	return engine.FromURLWithOptions(targetURL, opts)
 }

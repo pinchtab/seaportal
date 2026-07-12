@@ -85,5 +85,9 @@ type Options struct {
 	// bounds the HTTP request and makes retry backoff / crawl-delay waits
 	// interruptible, so an overall deadline or SIGINT can preempt an in-flight
 	// retry (ALP-043). Nil defaults to context.Background().
+	//
+	// Deprecated: pass the context to FromURLContext instead of embedding it
+	// in Options (T14). Still honoured by FromURLWithOptions for
+	// compatibility; FromURLContext overrides it with its ctx argument.
 	Context context.Context
 }

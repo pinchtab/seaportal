@@ -3,6 +3,7 @@ package engine
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -622,5 +623,37 @@ func TestFromURL_DomainMaxRetryWaitClampsBackoff(t *testing.T) {
 		if w > limit {
 			t.Errorf("wait[%d] = %s exceeds domain cap %s (limit %s) — override not applied to the stage", i, w, capWait, limit)
 		}
+	}
+}
+
+// T14: FromURLContext is the ctx-first primary entry point. Its ctx argument
+// bounds the fetch and takes precedence over the deprecated Options.Context.
+func TestFromURLContext_CtxTakesPrecedence(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Retry-After", "1")
+		w.WriteHeader(http.StatusTooManyRequests)
+	}))
+	defer server.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+
+	start := time.Now()
+	// opts.Context is a live Background ctx; the canceled argument must win.
+	result := FromURLContext(ctx, server.URL, Options{Context: context.Background(), MaxRetries: 3})
+	if elapsed := time.Since(start); elapsed > 800*time.Millisecond {
+		t.Errorf("ctx argument did not bound the fetch: elapsed %s", elapsed)
+	}
+	if !errors.Is(result.Err(), context.DeadlineExceeded) {
+		t.Errorf("result.Err() = %v, want context.DeadlineExceeded in the chain", result.Err())
+	}
+
+	// nil ctx degrades to Background — same behaviour as FromURLWithOptions.
+	okSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte("<html><body><h1>T</h1><p>body text for extraction</p></body></html>"))
+	}))
+	defer okSrv.Close()
+	if res := FromURLContext(nil, okSrv.URL, Options{}); res.Error != "" { //nolint:staticcheck // nil ctx tolerance is part of the contract
+		t.Errorf("FromURLContext(nil, …) errored: %q", res.Error)
 	}
 }
