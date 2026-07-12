@@ -410,31 +410,10 @@ func expandRow(tr *xhtml.Node, pending map[int]pendingSpan) []string {
 	return row
 }
 
-// cellText walks descendant text nodes, joins them with single spaces,
-// decodes HTML entities, trims, and collapses internal whitespace runs.
+// cellText walks descendant text nodes (skipping script/style), joins them
+// with single spaces, decodes HTML entities, trims, and collapses internal
+// whitespace runs.
 func cellText(n *xhtml.Node) string {
-	var b strings.Builder
-	var walk func(node *xhtml.Node)
-	walk = func(node *xhtml.Node) {
-		if node == nil {
-			return
-		}
-		if node.Type == xhtml.ElementNode {
-			switch node.DataAtom {
-			case atom.Script, atom.Style:
-				return
-			}
-		}
-		if node.Type == xhtml.TextNode {
-			if b.Len() > 0 {
-				b.WriteByte(' ')
-			}
-			b.WriteString(node.Data)
-		}
-		for c := node.FirstChild; c != nil; c = c.NextSibling {
-			walk(c)
-		}
-	}
-	walk(n)
-	return collapseWhitespace(html.UnescapeString(b.String()))
+	text := nodeTextOpts(n, textOptions{spaceJoin: true, skipScriptStyle: true})
+	return collapseWhitespace(html.UnescapeString(text))
 }
