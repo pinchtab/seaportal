@@ -22,35 +22,34 @@ package main
 // produced LESS content (more aggressive filtering).
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
 	"math"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 	"time"
 
-	"github.com/pinchtab/seaportal/internal/engine"
+	"github.com/pinchtab/seaportal"
+	"github.com/pinchtab/seaportal/internal/corpus"
 )
 
 // diffModeOrder fixes the canonical mode iteration order independent of map
 // iteration.
 var diffModeOrder = []string{"minimal", "default", "aggressive"}
 
-// diffModeOptions returns the engine.Options for a named diff mode. Centralised
-// so the test and the runner share a single source of truth.
-func diffModeOptions(mode string) engine.Options {
+// diffModeOptions returns the seaportal.Options for a named diff mode.
+// Centralised so the test and the runner share a single source of truth.
+func diffModeOptions(mode string) seaportal.Options {
 	switch mode {
 	case "minimal":
-		return engine.Options{Dedupe: false, NoNearDedupe: true, NoPruneFallback: true}
+		return seaportal.Options{Dedupe: false, NoNearDedupe: true, NoPruneFallback: true}
 	case "default":
-		return engine.Options{}
+		return seaportal.Options{}
 	case "aggressive":
-		return engine.Options{Dedupe: true, NoNearDedupe: false, NoPruneFallback: false}
+		return seaportal.Options{Dedupe: true, NoNearDedupe: false, NoPruneFallback: false}
 	default:
-		return engine.Options{}
+		return seaportal.Options{}
 	}
 }
 
@@ -110,63 +109,38 @@ func runDiff(args []string) {
 		os.Exit(1)
 	}
 
-	if err := os.MkdirAll(*output, 0o755); err != nil {
-		fmt.Fprintln(os.Stderr, "mkdir output:", err)
+	if _, _, err := emitReports(*output, "diff", report, renderDiffMarkdown(report)); err != nil {
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	ts := time.Now().UTC().Format("20060102-150405")
-	jsonPath := filepath.Join(*output, fmt.Sprintf("diff_%s.json", ts))
-	mdPath := filepath.Join(*output, fmt.Sprintf("diff_%s.md", ts))
-
-	if err := writeDiffJSON(jsonPath, report); err != nil {
-		fmt.Fprintln(os.Stderr, "write json:", err)
-		os.Exit(1)
-	}
-	if err := atomicWrite(mdPath, renderDiffMarkdown(report)); err != nil {
-		fmt.Fprintln(os.Stderr, "write markdown:", err)
-		os.Exit(1)
-	}
-	fmt.Println("wrote", jsonPath)
-	fmt.Println("wrote", mdPath)
 }
 
 // diffCorpus loads the corpus, runs every fixture through the three modes,
 // and builds the populated DiffReport. Pure: tests call this directly.
 func diffCorpus(corpusPath string, snippetChars int) (DiffReport, error) {
 	var empty DiffReport
-	entries, err := engine.LoadCorpus(corpusPath)
-	if err != nil {
-		return empty, fmt.Errorf("load corpus: %w", err)
-	}
-	repoRoot := resolveRepoRoot(corpusPath)
 
-	// outputs[path][mode] = result.Content (or "" if read failed / panicked).
-	outputs := make(map[string]map[string]string, len(entries))
-	panics := make(map[string]map[string]string, len(entries))
-	order := make([]string, 0, len(entries))
+	// outputs[path][mode] = result.Content (or "" if the mode panicked).
+	outputs := make(map[string]map[string]string)
+	panics := make(map[string]map[string]string)
+	var order []string
 
-	for _, entry := range entries {
-		path := entry.Path
-		if !filepath.IsAbs(path) {
-			path = filepath.Join(repoRoot, path)
-		}
-		htmlBytes, readErr := os.ReadFile(path)
-		if readErr != nil {
-			return empty, fmt.Errorf("read fixture %s: %w", entry.Path, readErr)
-		}
-		baseURL := "https://corpus.local/" + slugify(entry.Path)
-
+	err := forEachFixture(corpusPath, func(entry corpus.Entry, html, baseURL string) error {
 		outputs[entry.Path] = make(map[string]string, len(diffModeOrder))
 		panics[entry.Path] = make(map[string]string, len(diffModeOrder))
 		order = append(order, entry.Path)
 
 		for _, mode := range diffModeOrder {
-			content, panicMsg := runOneExtract(string(htmlBytes), baseURL, diffModeOptions(mode))
+			content, panicMsg := runOneExtract(html, baseURL, diffModeOptions(mode))
 			outputs[entry.Path][mode] = content
 			if panicMsg != "" {
 				panics[entry.Path][mode] = panicMsg
 			}
 		}
+		return nil
+	})
+	if err != nil {
+		return empty, err
 	}
 
 	comparisons := []DiffComparison{
@@ -188,14 +162,14 @@ func diffCorpus(corpusPath string, snippetChars int) (DiffReport, error) {
 // runOneExtract calls FromHTMLWithOptions inside a recover so a panic in one
 // mode (e.g. a regression in cleanup) does not blow up the whole bench. On
 // panic the content is treated as empty and the recovered value is recorded.
-func runOneExtract(html, baseURL string, opts engine.Options) (content string, panicMsg string) {
+func runOneExtract(html, baseURL string, opts seaportal.Options) (content string, panicMsg string) {
 	defer func() {
 		if r := recover(); r != nil {
 			content = ""
 			panicMsg = fmt.Sprintf("%v", r)
 		}
 	}()
-	res := engine.FromHTMLWithOptions(html, baseURL, opts)
+	res := seaportal.FromHTMLWithOptions(html, baseURL, opts)
 	return res.Content, ""
 }
 
@@ -348,22 +322,13 @@ func absInt(n int) int {
 	return n
 }
 
-func writeDiffJSON(path string, r DiffReport) error {
-	raw, err := json.MarshalIndent(r, "", "  ")
-	if err != nil {
-		return err
-	}
-	return atomicWrite(path, string(raw)+"\n")
-}
-
 func renderDiffMarkdown(r DiffReport) string {
 	var b strings.Builder
-	fmt.Fprintln(&b, "# SeaPortal Cleanup-Diff Report")
-	fmt.Fprintln(&b)
-	fmt.Fprintf(&b, "- Captured: %s\n", r.CapturedAt)
-	fmt.Fprintf(&b, "- Git SHA: `%s`\n", r.GitSHA)
-	fmt.Fprintf(&b, "- Corpus: `%s`\n", r.Corpus)
-	fmt.Fprintf(&b, "- Modes: %s\n", strings.Join(r.Modes, ", "))
+	reportHeader(&b, "SeaPortal Cleanup-Diff Report",
+		"Captured", r.CapturedAt,
+		"Git SHA", "`"+r.GitSHA+"`",
+		"Corpus", "`"+r.Corpus+"`",
+		"Modes", strings.Join(r.Modes, ", "))
 	fmt.Fprintf(&b, "- Snippet window: %d chars\n\n", r.SnippetChars)
 	fmt.Fprintln(&b, "_`char_delta = len(baseline) - len(variant)`. Negative ⇒ variant produced LESS content (more aggressive filtering)._")
 	fmt.Fprintln(&b)

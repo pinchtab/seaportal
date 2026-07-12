@@ -222,7 +222,7 @@ func TestSelftest_HandlesMissingPrior(t *testing.T) {
 		Tasks:      tasks,
 	}
 	out := filepath.Join(dir, "selftest_20260517-100000.json")
-	if err := writeSelftestJSON(out, report); err != nil {
+	if err := writeReportJSON(out, report); err != nil {
 		t.Fatalf("write json: %v", err)
 	}
 	raw, err := os.ReadFile(out)

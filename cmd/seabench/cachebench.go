@@ -39,18 +39,16 @@ package main
 //     Realistic ceiling ≈ hot_share - 5/N ≈ 0.80 - 0.025 = ~0.775.
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
 	"math/rand"
 	"os"
-	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/pinchtab/seaportal/internal/engine"
+	"github.com/pinchtab/seaportal"
 	"github.com/pinchtab/seaportal/internal/testserver/fixture"
 )
 
@@ -114,24 +112,11 @@ func runCacheBench(args []string) {
 
 	report := executeCacheBench(*n, *hotRatio, *hotCount, *coldCount, *seed)
 
-	if err := os.MkdirAll(*output, 0o755); err != nil {
-		fmt.Fprintln(os.Stderr, "mkdir output:", err)
+	_, mdPath, err := emitReports(*output, "cachebench", report, renderCacheBenchMarkdown(report))
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	ts := time.Now().UTC().Format("20060102-150405")
-	jsonPath := filepath.Join(*output, fmt.Sprintf("cachebench_%s.json", ts))
-	mdPath := filepath.Join(*output, fmt.Sprintf("cachebench_%s.md", ts))
-
-	if err := writeCacheBenchJSON(jsonPath, report); err != nil {
-		fmt.Fprintln(os.Stderr, "write json:", err)
-		os.Exit(1)
-	}
-	if err := atomicWrite(mdPath, renderCacheBenchMarkdown(report)); err != nil {
-		fmt.Fprintln(os.Stderr, "write markdown:", err)
-		os.Exit(1)
-	}
-	fmt.Println("wrote", jsonPath)
-	fmt.Println("wrote", mdPath)
 	ttl := report.PerMode["ttl-24h"]
 	swr := report.PerMode["swr-10m"]
 	fmt.Printf("cachebench: ttl-24h hit=%.0f%% p50=%dms, swr-10m hit=%.0f%%. See %s\n",
@@ -200,7 +185,7 @@ func runCacheMode(mode string, sequence []string) CacheModeStats {
 	t0 := time.Now()
 	for i, target := range sequence {
 		iterStart := time.Now()
-		res := engine.FromURLWithOptions(target, opts)
+		res := seaportal.FromURLWithOptions(target, opts)
 		lat[i] = time.Since(iterStart)
 		if res.Error != "" {
 			errors++
@@ -226,31 +211,31 @@ func runCacheMode(mode string, sequence []string) CacheModeStats {
 		HitRate:      float64(hits) / float64(n),
 		Hits:         hits,
 		Requests:     n,
-		P50Ms:        percentileMs(lat, 50),
-		P95Ms:        percentileMs(lat, 95),
+		P50Ms:        percentile(lat, 0.50).Milliseconds(),
+		P95Ms:        percentile(lat, 0.95).Milliseconds(),
 		MeanRSSBytes: meanHeap,
 		TotalMs:      total.Milliseconds(),
 		Errors:       errors,
 	}
 }
 
-// optionsForMode returns the engine.Options for the given cache mode. The
+// optionsForMode returns the seaportal.Options for the given cache mode. The
 // `off` mode forces NoCache=true so the engine bypasses the disk cache
 // entirely; the two cached modes share a per-request CacheDir.
-func optionsForMode(mode, cacheDir string) engine.Options {
+func optionsForMode(mode, cacheDir string) seaportal.Options {
 	switch mode {
 	case "off":
-		return engine.Options{NoCache: true}
+		return seaportal.Options{NoCache: true}
 	case "ttl-24h":
-		return engine.Options{CacheDir: cacheDir, CacheTTL: 24 * time.Hour}
+		return seaportal.Options{CacheDir: cacheDir, CacheTTL: 24 * time.Hour}
 	case "swr-10m":
-		return engine.Options{
+		return seaportal.Options{
 			CacheDir:            cacheDir,
 			CacheTTL:            24 * time.Hour,
 			CacheStaleTolerance: 10 * time.Minute,
 		}
 	default:
-		return engine.Options{NoCache: true}
+		return seaportal.Options{NoCache: true}
 	}
 }
 
@@ -325,19 +310,11 @@ func joinURLs(base string, paths []string) []string {
 	return out
 }
 
-func writeCacheBenchJSON(path string, r CacheBenchReport) error {
-	raw, err := json.MarshalIndent(r, "", "  ")
-	if err != nil {
-		return err
-	}
-	return atomicWrite(path, string(raw)+"\n")
-}
-
 func renderCacheBenchMarkdown(r CacheBenchReport) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "# SeaPortal Cache Bench Report\n\n")
-	fmt.Fprintf(&b, "- Captured: %s\n", r.CapturedAt)
-	fmt.Fprintf(&b, "- Git SHA: `%s`\n", r.GitSHA)
+	reportHeader(&b, "SeaPortal Cache Bench Report",
+		"Captured", r.CapturedAt,
+		"Git SHA", "`"+r.GitSHA+"`")
 	fmt.Fprintf(&b, "- Go: %s, GOMAXPROCS=%d\n", r.GoVersion, r.GOMAXPROCS)
 	fmt.Fprintf(&b, "- N: %d, hot_ratio: %.2f, hot_urls: %d, cold_urls: %d, seed: %d\n\n",
 		r.N, r.HotRatio, r.HotURLs, r.ColdURLs, r.Seed)

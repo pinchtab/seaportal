@@ -12,28 +12,26 @@ package main
 // Observational: emits a JSON + Markdown report; never tweaks the engine.
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
-	"math"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 	"time"
 	"unicode"
 
-	"github.com/pinchtab/seaportal/internal/engine"
+	"github.com/pinchtab/seaportal"
+	"github.com/pinchtab/seaportal/internal/corpus"
 )
 
 // tokenModes is the canonical order for the four LinkRetention modes — used
 // as map iteration order for rendering and for the deterministic per-fixture
 // loop so reports are stable run-to-run.
-var tokenModes = []engine.LinkRetention{
-	engine.LinkRetentionAll,
-	engine.LinkRetentionNone,
-	engine.LinkRetentionText,
-	engine.LinkRetentionFooter,
+var tokenModes = []seaportal.LinkRetention{
+	seaportal.LinkRetentionAll,
+	seaportal.LinkRetentionNone,
+	seaportal.LinkRetentionText,
+	seaportal.LinkRetentionFooter,
 }
 
 // tokenModeNames mirrors tokenModes for JSON/Markdown keys.
@@ -85,24 +83,11 @@ func runTokens(args []string) {
 		os.Exit(1)
 	}
 
-	if err := os.MkdirAll(*output, 0o755); err != nil {
-		fmt.Fprintln(os.Stderr, "mkdir output:", err)
+	_, mdPath, err := emitReports(*output, "tokens", report, renderTokensMarkdown(report))
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	ts := time.Now().UTC().Format("20060102-150405")
-	jsonPath := filepath.Join(*output, fmt.Sprintf("tokens_%s.json", ts))
-	mdPath := filepath.Join(*output, fmt.Sprintf("tokens_%s.md", ts))
-
-	if err := writeTokensJSON(jsonPath, report); err != nil {
-		fmt.Fprintln(os.Stderr, "write json:", err)
-		os.Exit(1)
-	}
-	if err := atomicWrite(mdPath, renderTokensMarkdown(report)); err != nil {
-		fmt.Fprintln(os.Stderr, "write markdown:", err)
-		os.Exit(1)
-	}
-	fmt.Println("wrote", jsonPath)
-	fmt.Println("wrote", mdPath)
 	fmt.Printf("tokens: all-mode mean ratio=%.3f (%d fixtures × %d modes). See %s\n",
 		report.PerMode["all"].MeanRatio, report.TotalFixtures, len(tokenModes), mdPath)
 }
@@ -111,37 +96,18 @@ func runTokens(args []string) {
 // Sequential execution; runtime on the 31-entry corpus is a few seconds.
 func tokensCorpus(corpusPath string) (TokensReport, error) {
 	var empty TokensReport
-	entries, err := engine.LoadCorpus(corpusPath)
-	if err != nil {
-		return empty, fmt.Errorf("load corpus: %w", err)
-	}
 
-	repoRoot := resolveRepoRoot(corpusPath)
-
-	rows := make([]FixtureTokens, 0, len(entries))
+	var rows []FixtureTokens
 	// ratios[modeName] = slice of per-fixture ratios, for aggregate math.
 	ratios := make(map[string][]float64, len(tokenModeNames))
-	for _, name := range tokenModeNames {
-		ratios[name] = make([]float64, 0, len(entries))
-	}
 
-	for _, entry := range entries {
-		path := entry.Path
-		if !filepath.IsAbs(path) {
-			path = filepath.Join(repoRoot, path)
-		}
-		htmlBytes, readErr := os.ReadFile(path)
-		if readErr != nil {
-			return empty, fmt.Errorf("read fixture %s: %w", entry.Path, readErr)
-		}
-		html := string(htmlBytes)
+	err := forEachFixture(corpusPath, func(entry corpus.Entry, html, baseURL string) error {
 		sourceTokens := approxTokenCount(html)
-		baseURL := "https://corpus.local/" + slugify(entry.Path)
 
 		modes := make(map[string]ModeStats, len(tokenModes))
 		for i, mode := range tokenModes {
 			name := tokenModeNames[i]
-			result := engine.FromHTMLWithOptions(html, baseURL, engine.Options{LinkRetention: mode})
+			result := seaportal.FromHTMLWithOptions(html, baseURL, seaportal.Options{LinkRetention: mode})
 			outTokens := approxTokenCount(result.Content)
 			ratio := 0.0
 			if sourceTokens > 0 && outTokens > 0 {
@@ -155,12 +121,16 @@ func tokensCorpus(corpusPath string) (TokensReport, error) {
 			SourceTokens: sourceTokens,
 			Modes:        modes,
 		})
+		return nil
+	})
+	if err != nil {
+		return empty, err
 	}
 
 	perMode := make(map[string]ModeAggregate, len(tokenModeNames))
 	for _, name := range tokenModeNames {
 		perMode[name] = ModeAggregate{
-			MeanRatio:   meanFloat(ratios[name]),
+			MeanRatio:   mean(ratios[name]),
 			MedianRatio: percentile(ratios[name], 0.50),
 			P95Ratio:    percentile(ratios[name], 0.95),
 		}
@@ -207,57 +177,16 @@ func approxTokenCount(s string) int {
 	return words + clusters/4
 }
 
-// meanFloat returns the arithmetic mean. Defined locally so tokens.go is
-// self-contained (eval.go's mean takes a different shape).
-func meanFloat(xs []float64) float64 {
-	if len(xs) == 0 {
-		return 0
-	}
-	sum := 0.0
-	for _, x := range xs {
-		sum += x
-	}
-	return sum / float64(len(xs))
-}
-
-// percentile returns the q-quantile (0..1) of xs using nearest-rank.
-// Stable: sorts a copy so the caller's slice is untouched.
-func percentile(xs []float64, q float64) float64 {
-	if len(xs) == 0 {
-		return 0
-	}
-	cp := make([]float64, len(xs))
-	copy(cp, xs)
-	sort.Float64s(cp)
-	idx := int(math.Ceil(q*float64(len(cp)))) - 1
-	if idx < 0 {
-		idx = 0
-	}
-	if idx >= len(cp) {
-		idx = len(cp) - 1
-	}
-	return cp[idx]
-}
-
-func writeTokensJSON(path string, r TokensReport) error {
-	raw, err := json.MarshalIndent(r, "", "  ")
-	if err != nil {
-		return err
-	}
-	return atomicWrite(path, string(raw)+"\n")
-}
-
 // renderTokensMarkdown produces the human-friendly report:
 //   - per-mode aggregate table (mean / median / p95)
 //   - top-5 worst-compression fixtures per mode
 //   - side-by-side per-fixture ratios across all four modes
 func renderTokensMarkdown(r TokensReport) string {
 	var b strings.Builder
-	fmt.Fprintln(&b, "# SeaPortal Token-Efficiency Report")
-	fmt.Fprintln(&b)
-	fmt.Fprintf(&b, "- Captured: %s\n", r.CapturedAt)
-	fmt.Fprintf(&b, "- Git SHA: `%s`\n", r.GitSHA)
-	fmt.Fprintf(&b, "- Corpus: `%s`\n", r.Corpus)
+	reportHeader(&b, "SeaPortal Token-Efficiency Report",
+		"Captured", r.CapturedAt,
+		"Git SHA", "`"+r.GitSHA+"`",
+		"Corpus", "`"+r.Corpus+"`")
 	fmt.Fprintf(&b, "- Fixtures: %d\n", r.TotalFixtures)
 	fmt.Fprintln(&b)
 

@@ -50,13 +50,11 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"runtime"
-	"sort"
 	"strings"
 	"time"
 
-	"github.com/pinchtab/seaportal/internal/engine"
+	"github.com/pinchtab/seaportal"
 	"github.com/pinchtab/seaportal/internal/testserver/fixture"
 )
 
@@ -128,24 +126,11 @@ func runStress(args []string) {
 
 	report := executeStress(n, *preset, *fixturePath, target)
 
-	if err := os.MkdirAll(*output, 0o755); err != nil {
-		fmt.Fprintln(os.Stderr, "mkdir output:", err)
+	_, mdPath, err := emitReports(*output, "stress", report, renderStressMarkdown(report))
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	ts := time.Now().UTC().Format("20060102-150405")
-	jsonPath := filepath.Join(*output, fmt.Sprintf("stress_%s.json", ts))
-	mdPath := filepath.Join(*output, fmt.Sprintf("stress_%s.md", ts))
-
-	if err := writeJSONReport(jsonPath, report); err != nil {
-		fmt.Fprintln(os.Stderr, "write json:", err)
-		os.Exit(1)
-	}
-	if err := atomicWrite(mdPath, renderStressMarkdown(report)); err != nil {
-		fmt.Fprintln(os.Stderr, "write markdown:", err)
-		os.Exit(1)
-	}
-	fmt.Println("wrote", jsonPath)
-	fmt.Println("wrote", mdPath)
 	fmt.Printf("stress: %.0f urls/s, %.0f%% success, p50=%dms (n=%d, %s). See %s\n",
 		report.URLsPerSec, report.SuccessRate*100, report.LatencyMs.P50, report.N, report.Preset, mdPath)
 
@@ -178,7 +163,7 @@ func executeStress(n int, preset, fixturePath, target string) StressReport {
 	t0 := time.Now()
 	for i := 0; i < n; i++ {
 		iterStart := time.Now()
-		res := engine.FromURL(target)
+		res := seaportal.FromURL(target)
 		lat[i] = time.Since(iterStart)
 		if res.Error != "" {
 			errors++
@@ -212,33 +197,15 @@ func executeStress(n int, preset, fixturePath, target string) StressReport {
 		SuccessRate:    1.0 - float64(errors)/float64(n),
 		Errors:         errors,
 	}
-	r.LatencyMs.P50 = percentileMs(lat, 50)
-	r.LatencyMs.P95 = percentileMs(lat, 95)
-	r.LatencyMs.P99 = percentileMs(lat, 99)
+	r.LatencyMs.P50 = percentile(lat, 0.50).Milliseconds()
+	r.LatencyMs.P95 = percentile(lat, 0.95).Milliseconds()
+	r.LatencyMs.P99 = percentile(lat, 0.99).Milliseconds()
 	r.MemoryBytes.StartHeap = startHeap
 	r.MemoryBytes.EndHeap = endHeap
 	r.MemoryBytes.PeakHeap = peak
 	// int64 cast so a heap that shrunk (negative growth) is representable.
 	r.MemoryBytes.Growth = int64(endHeap) - int64(startHeap)
 	return r
-}
-
-// percentileMs returns the requested percentile of `lat` in whole
-// milliseconds (rounded down). Empty input returns 0. Uses
-// nearest-rank with clamp to len-1 to avoid index overflow on p99 of a
-// short series.
-func percentileMs(lat []time.Duration, p int) int64 {
-	if len(lat) == 0 {
-		return 0
-	}
-	sorted := make([]time.Duration, len(lat))
-	copy(sorted, lat)
-	sort.Slice(sorted, func(i, j int) bool { return sorted[i] < sorted[j] })
-	idx := (p * len(sorted)) / 100
-	if idx >= len(sorted) {
-		idx = len(sorted) - 1
-	}
-	return sorted[idx].Milliseconds()
 }
 
 // evaluateGate compares a fresh report against a committed baseline and
@@ -285,19 +252,11 @@ func loadBaseline(path string) (StressReport, error) {
 	return r, nil
 }
 
-func writeJSONReport(path string, r StressReport) error {
-	raw, err := json.MarshalIndent(r, "", "  ")
-	if err != nil {
-		return err
-	}
-	return atomicWrite(path, string(raw)+"\n")
-}
-
 func renderStressMarkdown(r StressReport) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "# SeaPortal Stress Report\n\n")
-	fmt.Fprintf(&b, "- Captured: %s\n", r.CapturedAt)
-	fmt.Fprintf(&b, "- Git SHA: `%s`\n", r.GitSHA)
+	reportHeader(&b, "SeaPortal Stress Report",
+		"Captured", r.CapturedAt,
+		"Git SHA", "`"+r.GitSHA+"`")
 	fmt.Fprintf(&b, "- Go: %s, GOMAXPROCS=%d\n", r.GoVersion, r.GOMAXPROCS)
 	fmt.Fprintf(&b, "- Preset: `%s` (N=%d)\n", r.Preset, r.N)
 	fmt.Fprintf(&b, "- Fixture: `%s`\n\n", r.Fixture)
