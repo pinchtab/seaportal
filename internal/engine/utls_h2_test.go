@@ -12,16 +12,14 @@ import (
 	utls "github.com/refraction-networking/utls"
 )
 
-// withTestTLSTrust installs a process-wide test hook that trusts srv's
-// self-signed certificate inside dialTLSChrome. The hook is package-internal,
-// nil in production. Returns a cleanup func.
-func withTestTLSTrust(t *testing.T, srv *httptest.Server) func() {
+// testTLSTrust returns a utls.Config trusting srv's self-signed certificate,
+// for injection into a specific chromeTransport instance via its tlsConfig
+// field (T16). No package-global state — no cleanup, t.Parallel()-safe.
+func testTLSTrust(t *testing.T, srv *httptest.Server) *utls.Config {
 	t.Helper()
 	pool := x509.NewCertPool()
 	pool.AddCert(srv.Certificate())
-	prev := testTLSConfig
-	testTLSConfig = &utls.Config{RootCAs: pool}
-	return func() { testTLSConfig = prev }
+	return &utls.Config{RootCAs: pool}
 }
 
 // startTLSServer spins up an httptest TLS server with the given ALPN protocol
@@ -50,10 +48,7 @@ func TestChromeTransport_NegotiatesH2WhenAvailable(t *testing.T) {
 	srv := startTLSServer(t, []string{"h2", "http/1.1"}, func(w http.ResponseWriter, r *http.Request) {
 		_, _ = fmt.Fprintln(w, "hello h2")
 	})
-	cleanup := withTestTLSTrust(t, srv)
-	defer cleanup()
-
-	client := &http.Client{Transport: &chromeTransport{}}
+	client := &http.Client{Transport: &chromeTransport{tlsConfig: testTLSTrust(t, srv)}}
 	resp, err := client.Get(srv.URL)
 	if err != nil {
 		t.Fatalf("Get: %v", err)
@@ -75,10 +70,7 @@ func TestChromeTransport_FallsBackToHTTP1(t *testing.T) {
 	srv := startTLSServer(t, []string{"http/1.1"}, func(w http.ResponseWriter, r *http.Request) {
 		_, _ = fmt.Fprintln(w, "hello h1")
 	})
-	cleanup := withTestTLSTrust(t, srv)
-	defer cleanup()
-
-	client := &http.Client{Transport: &chromeTransport{}}
+	client := &http.Client{Transport: &chromeTransport{tlsConfig: testTLSTrust(t, srv)}}
 	resp, err := client.Get(srv.URL)
 	if err != nil {
 		t.Fatalf("Get: %v", err)
@@ -98,10 +90,9 @@ func TestExtract_ProtocolFieldPopulatedOnHTTPS(t *testing.T) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		_, _ = fmt.Fprintln(w, "<html><head><title>P</title></head><body><p>hi</p></body></html>")
 	})
-	cleanup := withTestTLSTrust(t, srv)
-	defer cleanup()
-
-	result := FromURLWithOptions(srv.URL, Options{})
+	// The trusted transport rides in through the Options.Transport seam; it is
+	// still the real chromeTransport, so ALPN/Protocol behaviour is exercised.
+	result := FromURLWithOptions(srv.URL, Options{Transport: &chromeTransport{tlsConfig: testTLSTrust(t, srv)}})
 	if result.Error != "" {
 		t.Fatalf("extraction error: %s", result.Error)
 	}

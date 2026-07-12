@@ -44,11 +44,8 @@ func TestChromeTransport_H2NoGoroutineLeak(t *testing.T) {
 	srv, conns := startCountingH2Server(t, func(w http.ResponseWriter, r *http.Request) {
 		_, _ = fmt.Fprintln(w, "leak-free")
 	})
-	cleanup := withTestTLSTrust(t, srv)
-	defer cleanup()
-
 	const n = 20
-	client := &http.Client{Transport: &chromeTransport{}, Timeout: 10 * time.Second}
+	client := &http.Client{Transport: &chromeTransport{tlsConfig: testTLSTrust(t, srv)}, Timeout: 10 * time.Second}
 	for i := 0; i < n; i++ {
 		resp, err := client.Get(srv.URL)
 		if err != nil {
@@ -82,10 +79,7 @@ func TestChromeTransport_H2NoGoroutineLeak_Concurrent(t *testing.T) {
 	srv, _ := startCountingH2Server(t, func(w http.ResponseWriter, r *http.Request) {
 		_, _ = fmt.Fprintln(w, "concurrent-ok")
 	})
-	cleanup := withTestTLSTrust(t, srv)
-	defer cleanup()
-
-	client := &http.Client{Transport: &chromeTransport{}, Timeout: 10 * time.Second}
+	client := &http.Client{Transport: &chromeTransport{tlsConfig: testTLSTrust(t, srv)}, Timeout: 10 * time.Second}
 	const workers = 8
 	const perWorker = 5
 	var wg sync.WaitGroup
@@ -123,10 +117,7 @@ func TestChromeTransport_H2EvictsDeadConnAndRedials(t *testing.T) {
 	srv, conns := startCountingH2Server(t, func(w http.ResponseWriter, r *http.Request) {
 		_, _ = fmt.Fprintln(w, "redial-ok")
 	})
-	cleanup := withTestTLSTrust(t, srv)
-	defer cleanup()
-
-	tr := &chromeTransport{}
+	tr := &chromeTransport{tlsConfig: testTLSTrust(t, srv)}
 	client := &http.Client{Transport: tr, Timeout: 10 * time.Second}
 
 	get := func(label string) {
@@ -176,10 +167,7 @@ func TestChromeTransport_CloseIdleConnections_EmptiesCache(t *testing.T) {
 	srv, conns := startCountingH2Server(t, func(w http.ResponseWriter, r *http.Request) {
 		_, _ = fmt.Fprintln(w, "ok")
 	})
-	cleanup := withTestTLSTrust(t, srv)
-	defer cleanup()
-
-	tr := &chromeTransport{}
+	tr := &chromeTransport{tlsConfig: testTLSTrust(t, srv)}
 	client := &http.Client{Transport: tr, Timeout: 10 * time.Second}
 
 	for i := 0; i < 2; i++ {

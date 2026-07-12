@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"fmt"
 	"strings"
 	"time"
 )
@@ -12,7 +13,7 @@ import (
 func extractPDF(result *Result, targetURL string, opts Options, st *fetchState, start time.Time) {
 	md, perr := ExtractPDFText(st.bodyBytes)
 	if perr != nil {
-		result.Error = "pdf extraction failed: " + perr.Error()
+		result.setError(fmt.Errorf("pdf extraction failed: %w", perr))
 		result.StatusCode = st.resp.StatusCode
 		result.ContentLength = int64(len(st.bodyBytes))
 		result.ResponseContentType = st.respContentType

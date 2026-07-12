@@ -8,11 +8,17 @@ package engine
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
-	"time"
 )
+
+// ErrBlockedByRobots is the sentinel recorded on Result when RespectRobots is
+// set and robots.txt disallows the target path. Match with
+// errors.Is(result.Err(), ErrBlockedByRobots); Result.BlockedByRobots carries
+// the same signal as a serialized bool.
+var ErrBlockedByRobots = errors.New("blocked by robots.txt")
 
 // buildFetchClient assembles the http.Client for a fetch: per-domain timeout,
 // redirect tracking (security-checked when a policy is set), the shared pooled
@@ -20,7 +26,13 @@ import (
 // transport override. Returns the proxy-parse error from getClientForOptions
 // unchanged; callers wrap it.
 func buildFetchClient(opts Options, domain string, tracker *redirectTracker) (*http.Client, error) {
-	timeout := 30 * time.Second
+	// Single defaulting site for the per-request timeout (T19):
+	// opts.ClientTimeout when set, overridden per-domain, else
+	// DefaultClientTimeout.
+	timeout := opts.ClientTimeout
+	if timeout <= 0 {
+		timeout = DefaultClientTimeout
+	}
 	if opts.DomainTimeout != nil && domain != "" {
 		if domainTimeout, ok := opts.DomainTimeout[domain]; ok && domainTimeout > 0 {
 			timeout = domainTimeout
@@ -48,7 +60,7 @@ func buildFetchClient(opts Options, domain string, tracker *redirectTracker) (*h
 		}
 	} else {
 		client = &http.Client{
-			Timeout:       sharedC.Timeout,
+			Timeout:       timeout,
 			Transport:     sharedC.Transport,
 			CheckRedirect: checkRedirect,
 		}
@@ -130,7 +142,7 @@ func checkRobotsAllowed(ctx context.Context, opts Options, targetURL, domain, us
 	if cache.IsAllowed(ctx, host, userAgent, scheme, parsed.RequestURI()) {
 		return true
 	}
-	result.Error = "blocked by robots.txt"
+	result.setError(ErrBlockedByRobots)
 	result.BlockedByRobots = true
 	ensureProfile(result)
 	result.Profile.Reasons = append(result.Profile.Reasons, "blocked-by-robots")

@@ -369,11 +369,9 @@ func fetchAndAssemble(ctx context.Context, base *url.URL, urls []string, o Scrap
 				return PageObject{URL: u, Error: err.Error()}
 			}
 		}
-		opts := template
 		// Bound the fetch (including retry backoff waits) by the pool ctx so a
 		// page dispatched just before the deadline can't run past it.
-		opts.Context = ctx
-		return assemblePage(base, u, FromURLWithOptions(u, opts), withPerf)
+		return assemblePage(base, u, FromURLContext(ctx, u, template), withPerf)
 	})
 	return pages, warnings
 }

@@ -13,19 +13,23 @@ import (
 	"testing"
 )
 
-// stubResolver swaps the package DNS hook for a map-backed fake so SSRF/
-// rebinding checks are hermetic. Restored on test cleanup. Tests using it must
-// not call t.Parallel() (the hook is package-global).
-func stubResolver(t *testing.T, m map[string][]net.IP) {
-	t.Helper()
-	orig := resolveHostIPs
-	resolveHostIPs = func(_ context.Context, host string) ([]net.IP, error) {
+// resolverFunc adapts a func to the IPResolver seam.
+type resolverFunc func(ctx context.Context, network, host string) ([]net.IP, error)
+
+func (f resolverFunc) LookupIP(ctx context.Context, network, host string) ([]net.IP, error) {
+	return f(ctx, network, host)
+}
+
+// stubResolver returns a map-backed IPResolver so SSRF/rebinding checks are
+// hermetic. Assign it to SecurityPolicy.Resolver (T16) — no package-global
+// state, so tests using it are t.Parallel()-safe.
+func stubResolver(m map[string][]net.IP) IPResolver {
+	return resolverFunc(func(_ context.Context, _ string, host string) ([]net.IP, error) {
 		if ips, ok := m[host]; ok {
 			return ips, nil
 		}
 		return nil, fmt.Errorf("no stub for %q", host)
-	}
-	t.Cleanup(func() { resolveHostIPs = orig })
+	})
 }
 
 func TestValidatePublicIP_BlocksNonPublic(t *testing.T) {
@@ -55,13 +59,13 @@ func TestValidatePublicIP_BlocksNonPublic(t *testing.T) {
 }
 
 func TestValidateURL_BlocksPrivateResolution(t *testing.T) {
-	stubResolver(t, map[string][]net.IP{
+	p := DefaultSecurityPolicy()
+	p.Resolver = stubResolver(map[string][]net.IP{
 		"internal.example.com": {net.ParseIP("10.0.0.7")},
 		"meta.example.com":     {net.ParseIP("169.254.169.254")},
 		"mixed.example.com":    {net.ParseIP("8.8.8.8"), net.ParseIP("127.0.0.1")}, // one bad ⇒ blocked
 		"public.example.com":   {net.ParseIP("93.184.216.34")},
 	})
-	p := DefaultSecurityPolicy()
 
 	for _, host := range []string{"internal.example.com", "meta.example.com", "mixed.example.com"} {
 		err := p.ValidateURL(context.Background(), "https://"+host+"/x")
@@ -79,10 +83,10 @@ func TestValidateURL_BlocksPrivateResolution(t *testing.T) {
 }
 
 func TestValidateURL_TrustedResolveCIDRAllowsInternal(t *testing.T) {
-	stubResolver(t, map[string][]net.IP{
+	p := DefaultSecurityPolicy()
+	p.Resolver = stubResolver(map[string][]net.IP{
 		"db.internal": {net.ParseIP("10.0.0.7")},
 	})
-	p := DefaultSecurityPolicy()
 	p.TrustedResolveCIDRs = []string{"10.0.0.0/8"}
 	if err := p.ValidateURL(context.Background(), "https://db.internal/x"); err != nil {
 		t.Errorf("with trusted CIDR 10.0.0.0/8, ValidateURL = %v, want nil", err)
@@ -104,8 +108,9 @@ func TestValidateURL_SchemeAndDomainRules(t *testing.T) {
 	}
 
 	// Deny list wins.
-	stubResolver(t, map[string][]net.IP{"evil.com": {net.ParseIP("8.8.8.8")}, "ok.com": {net.ParseIP("8.8.8.8")}})
+	resolver := stubResolver(map[string][]net.IP{"evil.com": {net.ParseIP("8.8.8.8")}, "ok.com": {net.ParseIP("8.8.8.8")}})
 	pd := DefaultSecurityPolicy()
+	pd.Resolver = resolver
 	pd.DeniedDomains = []string{"evil.com"}
 	if err := pd.ValidateURL(context.Background(), "https://sub.evil.com/x"); !errors.Is(err, ErrSecurityDomain) {
 		t.Errorf("denied domain not blocked: %v", err)
@@ -116,6 +121,7 @@ func TestValidateURL_SchemeAndDomainRules(t *testing.T) {
 
 	// Allow list excludes everything else.
 	pa := DefaultSecurityPolicy()
+	pa.Resolver = resolver
 	pa.AllowedDomains = []string{"ok.com"}
 	if err := pa.ValidateURL(context.Background(), "https://evil.com/x"); !errors.Is(err, ErrSecurityDomain) {
 		t.Errorf("host outside allowlist not blocked: %v", err)
@@ -163,8 +169,8 @@ func TestRedirectChecker_MaxRedirects(t *testing.T) {
 }
 
 func TestRedirectChecker_RevalidatesToInternal(t *testing.T) {
-	stubResolver(t, map[string][]net.IP{"evil-redirect.com": {net.ParseIP("10.0.0.9")}})
 	p := DefaultSecurityPolicy() // RevalidateRedirects = true
+	p.Resolver = stubResolver(map[string][]net.IP{"evil-redirect.com": {net.ParseIP("10.0.0.9")}})
 	check := p.redirectChecker(&redirectTracker{})
 	req, _ := http.NewRequest("GET", "https://evil-redirect.com/internal", nil)
 	via, _ := http.NewRequest("GET", "https://start.example.com/", nil)

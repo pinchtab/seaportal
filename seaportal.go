@@ -13,7 +13,34 @@ import (
 )
 
 // Result holds the extraction output for a URL.
+//
+// Failures are reported two ways: Result.Error is the JSON-serialized string,
+// and Result.Err() returns the underlying error with its wrap chain intact —
+// errors.Is / errors.As work against the exported sentinels (ErrPrivateIPBlocked,
+// ErrBlockedByRobots, ErrResponseTooLarge, ErrNeedsBrowser, context.Canceled, …),
+// so callers can branch on failure kind without string matching.
 type Result = engine.Result
+
+// Sentinel errors preserved on Result.Err(). Security sentinels are wrapped
+// with target context at the block site; match with errors.Is.
+var (
+	// ErrSecurityScheme: URL scheme rejected by SecurityPolicy.AllowedSchemes.
+	ErrSecurityScheme = engine.ErrSecurityScheme
+	// ErrSecurityDomain: host rejected by the domain allow/deny lists.
+	ErrSecurityDomain = engine.ErrSecurityDomain
+	// ErrPrivateIPBlocked: target resolves to a private/internal IP (SSRF guard).
+	ErrPrivateIPBlocked = engine.ErrPrivateIPBlocked
+	// ErrSecurityResolve: target host could not be resolved for validation.
+	ErrSecurityResolve = engine.ErrSecurityResolve
+	// ErrResponseTooLarge: raw response body exceeded MaxResponseBytes.
+	ErrResponseTooLarge = engine.ErrResponseTooLarge
+	// ErrDecompressTooLarge: decompressed body exceeded MaxDecompressedBytes.
+	ErrDecompressTooLarge = engine.ErrDecompressTooLarge
+	// ErrBlockedByRobots: robots.txt disallows the target (RespectRobots set).
+	ErrBlockedByRobots = engine.ErrBlockedByRobots
+	// ErrNeedsBrowser: FastMode determined the page needs a real browser.
+	ErrNeedsBrowser = engine.ErrNeedsBrowser
+)
 
 // Result's observability tail is grouped into anonymous embedded sub-structs;
 // field promotion keeps flat access (r.TTFBMs, r.RetryCount, …) working and
@@ -40,6 +67,25 @@ type DedupeStats = engine.DedupeStats
 
 // Options controls extraction behaviour.
 type Options = engine.Options
+
+// Engine fetch defaults, applied by the library when the corresponding
+// Options field is zero (see each field's doc). Exported so CLIs and
+// embedders can reference these values instead of restating them.
+const (
+	// DefaultClientTimeout bounds a whole HTTP exchange (Options.ClientTimeout).
+	DefaultClientTimeout = engine.DefaultClientTimeout
+	// DefaultMaxRetryWait caps one retry backoff wait (Options.MaxRetryWait).
+	DefaultMaxRetryWait = engine.DefaultMaxRetryWait
+	// DefaultTotalRetryTimeout caps cumulative retry waiting (Options.TotalRetryTimeout).
+	DefaultTotalRetryTimeout = engine.DefaultTotalRetryTimeout
+	// DefaultRetryBackoffBase is the exponential backoff unit (2^N × base).
+	DefaultRetryBackoffBase = engine.DefaultRetryBackoffBase
+	// DefaultSitemapMaxDepth / DefaultSitemapMaxURLs bound FlattenSitemap.
+	DefaultSitemapMaxDepth = engine.DefaultSitemapMaxDepth
+	DefaultSitemapMaxURLs  = engine.DefaultSitemapMaxURLs
+	// DefaultFeedMaxItems caps ParseFeed output.
+	DefaultFeedMaxItems = engine.DefaultFeedMaxItems
+)
 
 // SecurityPolicy is the opt-in SSRF / private-IP / redirect / decompression
 // guard threaded through the fetch path. Set it on Options.Security. A nil
@@ -176,7 +222,17 @@ func FromURL(targetURL string) Result {
 	return engine.FromURL(targetURL)
 }
 
+// FromURLContext extracts content from a URL with custom options, bounded by
+// ctx: the HTTP request, retry backoff waits, and politeness sleeps are all
+// cancellable through it. This is the preferred entry point; a nil ctx is
+// treated as context.Background().
+func FromURLContext(ctx context.Context, targetURL string, opts Options) Result {
+	return engine.FromURLContext(ctx, targetURL, opts)
+}
+
 // FromURLWithOptions extracts content from a URL with custom options.
+// Cancellation comes from opts.Context when set (deprecated); prefer
+// FromURLContext.
 func FromURLWithOptions(targetURL string, opts Options) Result {
 	return engine.FromURLWithOptions(targetURL, opts)
 }

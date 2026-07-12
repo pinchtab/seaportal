@@ -22,10 +22,10 @@ import (
 	"time"
 )
 
-// retryBackoffBase is the unit of exponential retry backoff (hop N waits
-// 2^N × base, capped by maxRetryWait). Production is 1s; tests shrink it to a
-// few milliseconds so retry-path coverage runs without real-time sleeps.
-var retryBackoffBase = time.Second
+// backgroundRefreshTimeout bounds one stale-while-revalidate refresh GET
+// (request context and client timeout). See spawnBackgroundRefresh for why
+// the refresh deliberately ignores the caller's Options.Context.
+const backgroundRefreshTimeout = 30 * time.Second
 
 // fetchState carries the artifacts of a completed fetch stage into the
 // per-content-type pipelines: the response and decoded body, the transport
@@ -55,15 +55,19 @@ type retryConfig struct {
 	maxRetries        int
 	maxRetryWait      time.Duration
 	totalRetryTimeout time.Duration
+	backoffBase       time.Duration
 }
 
 // resolveRetryConfig resolves opts-level retry settings plus any per-domain
-// DomainRetryConfig override, applying the 60s wait / 120s total defaults.
+// DomainRetryConfig override. This is the single defaulting site (T19) for
+// the retry budget: DefaultMaxRetryWait / DefaultTotalRetryTimeout apply when
+// the resolved values are still zero.
 func resolveRetryConfig(opts Options, domain string) retryConfig {
 	cfg := retryConfig{
 		maxRetries:        opts.MaxRetries,
 		maxRetryWait:      opts.MaxRetryWait,
 		totalRetryTimeout: opts.TotalRetryTimeout,
+		backoffBase:       opts.RetryBackoffBase,
 	}
 	if opts.DomainRetryConfig != nil && domain != "" {
 		if domainCfg, ok := opts.DomainRetryConfig[domain]; ok {
@@ -76,10 +80,13 @@ func resolveRetryConfig(opts Options, domain string) retryConfig {
 		}
 	}
 	if cfg.maxRetryWait == 0 {
-		cfg.maxRetryWait = 60 * time.Second
+		cfg.maxRetryWait = DefaultMaxRetryWait
 	}
 	if cfg.totalRetryTimeout == 0 {
-		cfg.totalRetryTimeout = 120 * time.Second
+		cfg.totalRetryTimeout = DefaultTotalRetryTimeout
+	}
+	if cfg.backoffBase <= 0 {
+		cfg.backoffBase = DefaultRetryBackoffBase
 	}
 	return cfg
 }
@@ -106,14 +113,14 @@ func fetchDocument(targetURL string, opts Options, start time.Time, result *Resu
 	if strings.HasPrefix(targetURL, "data:") {
 		mime, body, derr := parseDataURL(targetURL)
 		if derr != nil {
-			result.Error = derr.Error()
+			result.setError(derr)
 			return st, false
 		}
 		switch mime {
 		case "text/html", "text/plain":
 			*result = fromHTMLInternal(string(body), targetURL, start, opts)
 		default:
-			result.Error = "data: URL mime not supported: " + mime
+			result.setError(errors.New("data: URL mime not supported: " + mime))
 		}
 		return st, false
 	}
@@ -124,7 +131,7 @@ func fetchDocument(targetURL string, opts Options, start time.Time, result *Resu
 	// Control hook re-checks the resolved IP at connect to close DNS rebinding.
 	if opts.Security != nil {
 		if err := opts.Security.ValidateURL(reqCtx, targetURL); err != nil {
-			result.Error = err.Error()
+			result.setError(err)
 			result.SecurityBlock = err.Error()
 			return st, false
 		}
@@ -134,7 +141,7 @@ func fetchDocument(targetURL string, opts Options, start time.Time, result *Resu
 
 	client, clientErr := buildFetchClient(opts, domain, st.tracker)
 	if clientErr != nil {
-		result.Error = "invalid proxy URL: " + clientErr.Error()
+		result.setError(fmt.Errorf("invalid proxy URL: %w", clientErr))
 		return st, false
 	}
 	st.client = client
@@ -155,7 +162,7 @@ func fetchDocument(targetURL string, opts Options, start time.Time, result *Resu
 			if opts.ContentTypePreflight && st.headPreflightStatus == http.StatusOK {
 				if isBinaryContentType(contentType) {
 					result.HeadPreflightStatus = st.headPreflightStatus
-					result.Error = fmt.Sprintf("skipped binary content: %s", contentType)
+					result.setError(fmt.Errorf("skipped binary content: %s", contentType))
 					return st, false
 				}
 			}
@@ -163,7 +170,7 @@ func fetchDocument(targetURL string, opts Options, start time.Time, result *Resu
 			if opts.HeadPreflight {
 				if st.headPreflightStatus == http.StatusNotFound || st.headPreflightStatus == http.StatusGone {
 					result.HeadPreflightStatus = st.headPreflightStatus
-					result.Error = fmt.Sprintf("HEAD preflight returned %d", st.headPreflightStatus)
+					result.setError(fmt.Errorf("HEAD preflight returned %d", st.headPreflightStatus))
 					return st, false
 				}
 			}
@@ -179,12 +186,12 @@ func fetchDocument(targetURL string, opts Options, start time.Time, result *Resu
 		st.preWarnings = append(st.preWarnings, crawlWarning)
 	}
 	if crawlErr != nil {
-		result.Error = crawlErr.Error()
+		result.setError(crawlErr)
 		return st, false
 	}
 
 	if err := applyRateLimit(reqCtx, opts, domain); err != nil {
-		result.Error = err.Error()
+		result.setError(err)
 		return st, false
 	}
 
@@ -243,7 +250,7 @@ func fetchDocument(targetURL string, opts Options, start time.Time, result *Resu
 	bodyBytes, err := limitedReadAll(resp.Body, st.maxBody, ErrResponseTooLarge)
 	st.downloadMs = time.Since(downloadStart).Milliseconds()
 	if err != nil {
-		result.Error = err.Error()
+		result.setError(err)
 		if errors.Is(err, ErrResponseTooLarge) {
 			result.SecurityBlock = err.Error()
 		}
@@ -274,7 +281,7 @@ func fetchDocument(targetURL string, opts Options, start time.Time, result *Resu
 	ctLower := strings.ToLower(st.respContentType)
 	isPDF := strings.Contains(ctLower, "application/pdf")
 	if isBinaryContentType(st.respContentType) || (isPDF && opts.NoPDF) {
-		result.Error = fmt.Sprintf("skipped binary content: %s", st.respContentType)
+		result.setError(fmt.Errorf("skipped binary content: %s", st.respContentType))
 		result.StatusCode = resp.StatusCode
 		result.ContentLength = int64(len(st.bodyBytes))
 		result.ResponseContentType = st.respContentType
@@ -299,14 +306,14 @@ func renegotiateHTML(targetURL string, opts Options, st *fetchState, result *Res
 	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8")
 	resp, err := st.client.Do(req)
 	if err != nil {
-		result.Error = err.Error()
+		result.setError(err)
 		return false
 	}
 	st.resp = resp
 
 	bodyBytes, err := limitedReadAll(resp.Body, st.maxBody, ErrResponseTooLarge)
 	if err != nil {
-		result.Error = err.Error()
+		result.setError(err)
 		if errors.Is(err, ErrResponseTooLarge) {
 			result.SecurityBlock = err.Error()
 		}
@@ -382,6 +389,7 @@ func fetchWithRetryStage(req *http.Request, targetURL string, opts Options, st *
 	maxRetries := retryCfg.maxRetries
 	maxRetryWait := retryCfg.maxRetryWait
 	totalRetryTimeout := retryCfg.totalRetryTimeout
+	backoffBase := retryCfg.backoffBase
 
 	// The request's context bounds the whole retry loop: backoff sleeps below
 	// select on it so the deadline / SIGINT can interrupt a wait, and rebuilt
@@ -398,7 +406,7 @@ func fetchWithRetryStage(req *http.Request, targetURL string, opts Options, st *
 	// per-domain DomainRetryConfig override, defaulted to 60s); the stage just
 	// clamps to it (ALP-047).
 	expBackoff := func(attempt int) time.Duration {
-		backoff := time.Duration(1<<uint(attempt)) * retryBackoffBase
+		backoff := time.Duration(1<<uint(attempt)) * backoffBase
 		if backoff > maxRetryWait {
 			backoff = maxRetryWait
 		}
@@ -427,7 +435,7 @@ func fetchWithRetryStage(req *http.Request, targetURL string, opts Options, st *
 			event.Error = werr
 			event.Outcome = "canceled"
 			logRetry(event)
-			result.Error = werr.Error()
+			result.setError(werr)
 			return retryCanceled
 		}
 		retryCount++
@@ -444,14 +452,14 @@ func fetchWithRetryStage(req *http.Request, targetURL string, opts Options, st *
 				outcome := waitAndRetry(expBackoff(attempt), RetryEvent{Attempt: attempt + 1, Error: err}, nil)
 				if outcome != retryProceed {
 					if result.Error == "" {
-						result.Error = err.Error()
+						result.setError(err)
 					}
 					return nil
 				}
 				continue
 			}
 			logRetry(RetryEvent{Attempt: attempt + 1, Error: err, Outcome: "exhausted"})
-			result.Error = err.Error()
+			result.setError(err)
 			return nil
 		}
 
@@ -506,7 +514,7 @@ func decompressAndRestoreCharsetStage(bodyBytes []byte, resp *http.Response, opt
 		}
 		decompressed, decompErr := decompressBodyLimited(bodyBytes, contentEncoding, maxDecomp)
 		if errors.Is(decompErr, ErrDecompressTooLarge) {
-			result.Error = decompErr.Error()
+			result.setError(decompErr)
 			result.SecurityBlock = decompErr.Error()
 			return nil, preWarnings, ""
 		}
@@ -515,11 +523,11 @@ func decompressAndRestoreCharsetStage(bodyBytes []byte, resp *http.Response, opt
 				trimmed := bytes.TrimSpace(bodyBytes)
 				if len(trimmed) > 0 && (trimmed[0] == '<' || trimmed[0] == '{') {
 				} else {
-					result.Error = fmt.Sprintf("decompression error (%s): %v", contentEncoding, decompErr)
+					result.setError(fmt.Errorf("decompression error (%s): %w", contentEncoding, decompErr))
 					return nil, preWarnings, ""
 				}
 			} else {
-				result.Error = fmt.Sprintf("decompression error (%s): %v", contentEncoding, decompErr)
+				result.setError(fmt.Errorf("decompression error (%s): %w", contentEncoding, decompErr))
 				return nil, preWarnings, ""
 			}
 		} else {
@@ -547,13 +555,23 @@ func decompressAndRestoreCharsetStage(bodyBytes []byte, resp *http.Response, opt
 // the only effect of a failure is that the entry stays stale for another
 // SWR cycle. Uses a fresh http.Client to avoid sharing transports with the
 // foreground request.
+//
+// Cancellation semantics (T14, by design): the refresh intentionally does NOT
+// inherit the caller's Options.Context — the foreground call has already
+// returned, and tying the refresh to its ctx would cancel it the moment a CLI
+// invocation exits or an MCP request returns, defeating stale-while-
+// revalidate. Instead the goroutine is bounded by its own
+// backgroundRefreshTimeout deadline (mirrored on the client), so an
+// unresponsive origin can never pin it unbounded.
 func spawnBackgroundRefresh(cache *DiskCache, cacheKey, targetURL string, cached *cachedResponse, userAgent string, opts Options) {
 	go func() {
-		req := newGETRequest(targetURL, userAgent, opts.RequestID, opts.SendRequestID)
+		ctx, cancel := context.WithTimeout(context.Background(), backgroundRefreshTimeout)
+		defer cancel()
+		req := newGETRequest(targetURL, userAgent, opts.RequestID, opts.SendRequestID).WithContext(ctx)
 		for k, v := range cached.ConditionalHeaders() {
 			req.Header.Set(k, v)
 		}
-		client := &http.Client{Timeout: 30 * time.Second}
+		client := &http.Client{Timeout: backgroundRefreshTimeout}
 		if sharedC, err := getClientForOptions(opts); err == nil && sharedC != nil && sharedC.Transport != nil {
 			client.Transport = sharedC.Transport
 		}

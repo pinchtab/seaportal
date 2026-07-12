@@ -6,15 +6,12 @@ import (
 	"time"
 )
 
-// TestMain shrinks the exponential retry backoff base for the whole package so
-// retry-path tests exercise the real logic without real-time sleeps (the
-// production default is 1s; 5ms keeps relative growth assertions valid while
-// cutting seconds off the suite). Retry-After-driven waits are unaffected —
-// they sleep the header value, not this base.
-func TestMain(m *testing.M) {
-	retryBackoffBase = 5 * time.Millisecond
-	m.Run()
-}
+// testRetryBackoffBase is the shrunk exponential backoff unit retry-path
+// tests set on Options.RetryBackoffBase (T16 — the former package-global
+// retryBackoffBase/TestMain shrink): real retry logic, no real-time sleeps.
+// 5ms keeps relative growth assertions valid. Retry-After-driven waits are
+// unaffected — they sleep the header value, not this base.
+const testRetryBackoffBase = 5 * time.Millisecond
 
 // isHeavyFixture reports whether name is one of the large (hundreds of KB to
 // >1 MB) real-world fixtures whose single FromHTML pass dominates wall time.

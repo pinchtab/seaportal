@@ -35,7 +35,7 @@ func extractNegotiatedMarkdown(result *Result, opts Options, st *fetchState, htm
 			Trustworthy: true,
 		}
 	} else {
-		result.Confidence = ComputeConfidence(result.Length, result.HeadingCount, result.ParagraphCount, 0, false)
+		result.Confidence = computeConfidence(confidenceInputs{length: result.Length, headingCount: result.HeadingCount, paragraphCount: result.ParagraphCount})
 	}
 
 	result.Validation = ValidateExtraction(result)

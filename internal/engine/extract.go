@@ -5,6 +5,7 @@ import (
 	"compress/flate"
 	"compress/gzip"
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -62,6 +63,12 @@ func extractDomain(rawURL string) string {
 	return u.Hostname()
 }
 
+// ErrNeedsBrowser is the sentinel wrapped into Result errors when FastMode
+// bails early because the page needs a real browser to render. Match with
+// errors.Is(result.Err(), ErrNeedsBrowser); the wrapped message carries the
+// specific reason.
+var ErrNeedsBrowser = errors.New("needs-browser")
+
 // Must match a real browser exactly — Cloudflare blocks truncated/incomplete UAs.
 const DefaultUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
 
@@ -109,11 +116,33 @@ func sleepCtx(ctx context.Context, d time.Duration) error {
 	}
 }
 
-// FromURLWithOptions fetches targetURL (fetchDocument: policy gates, cache,
-// retries, decompression) and dispatches on the response content type to the
-// matching extraction pipeline: PDF, raw JSON/XML passthrough, negotiated
-// markdown, or the full HTML pipeline in fromHTMLInternal.
-func FromURLWithOptions(targetURL string, opts Options) (result Result) {
+// FromURLContext is the context-first primary entry point: it fetches
+// targetURL (fetchDocument: policy gates, cache, retries, decompression) and
+// dispatches on the response content type to the matching extraction
+// pipeline: PDF, raw JSON/XML passthrough, negotiated markdown, or the full
+// HTML pipeline in fromHTMLInternal.
+//
+// ctx bounds the whole fetch — the HTTP request, retry backoff waits, and
+// crawl-delay/rate-limit sleeps are all cancellable through it. A nil ctx is
+// treated as context.Background(). ctx takes precedence over any (deprecated)
+// Options.Context value.
+func FromURLContext(ctx context.Context, targetURL string, opts Options) Result {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	opts.Context = ctx
+	return fromURLWithOptions(targetURL, opts)
+}
+
+// FromURLWithOptions is the historical non-ctx entry point, now a shim over
+// FromURLContext: cancellation comes from opts.Context when set (deprecated),
+// else context.Background(). Behaviour for existing callers is unchanged;
+// new code should prefer FromURLContext.
+func FromURLWithOptions(targetURL string, opts Options) Result {
+	return FromURLContext(opts.Context, targetURL, opts)
+}
+
+func fromURLWithOptions(targetURL string, opts Options) (result Result) {
 	if opts.HeadOnly {
 		return fetchHeadOnly(targetURL, opts)
 	}
@@ -175,7 +204,7 @@ func FromURLWithOptions(targetURL string, opts Options) (result Result) {
 				Confidence:   0.1,
 				Issues:       []string{reason},
 			}
-			result.Error = "needs-browser: " + reason
+			result.setError(fmt.Errorf("%w: %s", ErrNeedsBrowser, reason))
 			applyStatusBlockedProfile(&result, st.resp.StatusCode)
 			return result
 		}
@@ -270,7 +299,7 @@ func FromResponse(resp *http.Response, targetURL string, start time.Time) (resul
 	article, err := readability.FromReader(resp.Body, parsedURL)
 	parseEnd := time.Now()
 	if err != nil {
-		result.Error = err.Error()
+		result.setError(err)
 		return result
 	}
 
@@ -389,7 +418,8 @@ func fromHTMLInternal(html string, targetURL string, start time.Time, opts Optio
 	article, err := readability.FromReader(strings.NewReader(html), parsedURL)
 	parseEnd := time.Now()
 	if err != nil {
-		result = Result{URL: targetURL, Error: err.Error(), SPASignals: spaSignals, IsSPA: isSPA, IsBlocked: isBlocked}
+		result = Result{URL: targetURL, SPASignals: spaSignals, IsSPA: isSPA, IsBlocked: isBlocked}
+		result.setError(err)
 		return result
 	}
 
@@ -418,7 +448,7 @@ func fromHTMLInternal(html string, targetURL string, start time.Time, opts Optio
 		result.Language = DetectLanguage(result.Content)
 	}
 
-	result.Confidence = ComputeConfidence(result.Length, result.HeadingCount, result.ParagraphCount, len(result.SPASignals), result.IsBlocked)
+	result.Confidence = computeConfidence(confidenceInputsFrom(&result))
 
 	applyIndexPageFallback(&result, html)
 
@@ -450,7 +480,7 @@ func fromHTMLInternal(html string, targetURL string, start time.Time, opts Optio
 	applyProbeSearchOverride(&result, opts)
 
 	if opts.FailFast && result.IsSPA && result.Confidence < 30 {
-		result.Error = fmt.Sprintf("SPA detected with low confidence (%d%%), signals: %v", result.Confidence, result.SPASignals)
+		result.setError(fmt.Errorf("SPA detected with low confidence (%d%%), signals: %v", result.Confidence, result.SPASignals))
 	}
 
 	if canonicalPick != "" && canonicalPick != result.URL {
@@ -547,7 +577,7 @@ func processArticle(article readability.Article, targetURL string, start time.Ti
 	markdown, err := convertHTMLToMarkdown(article.Content)
 	convertEnd := time.Now()
 	if err != nil {
-		result.Error = err.Error()
+		result.setError(err)
 		return result
 	}
 
@@ -573,7 +603,7 @@ func processArticle(article readability.Article, targetURL string, start time.Ti
 	}
 	result.ParagraphCount = CountPattern(article.Content, `<p[\s>]`)
 
-	result.Confidence = ComputeConfidence(result.Length, result.HeadingCount, result.ParagraphCount, 0, false)
+	result.Confidence = computeConfidence(confidenceInputs{length: result.Length, headingCount: result.HeadingCount, paragraphCount: result.ParagraphCount})
 
 	result.QualityInfo = ComputeQuality(markdown)
 	result.Quality = result.QualityInfo.Score

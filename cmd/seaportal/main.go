@@ -146,8 +146,8 @@ func runSitemap(ctx context.Context, args []string) {
 		usageLine: "Usage: seaportal sitemap <url> [--json] [--max-urls N] [--max-depth N]",
 		jsonUsage: "Emit JSON array instead of newline-separated URLs",
 		addFlags: func(fs *flag.FlagSet) {
-			maxURLs = fs.Int("max-urls", 50000, "Stop after this many URLs")
-			maxDepth = fs.Int("max-depth", 5, "Max sitemap-index recursion depth")
+			maxURLs = fs.Int("max-urls", seaportal.DefaultSitemapMaxURLs, "Stop after this many URLs")
+			maxDepth = fs.Int("max-depth", seaportal.DefaultSitemapMaxDepth, "Max sitemap-index recursion depth")
 		},
 		fetch: func(ctx context.Context, url string, sec *seaportal.SecurityPolicy) ([]seaportal.SitemapEntry, error) {
 			return seaportal.FlattenSitemap(ctx, url, seaportal.FlattenSitemapOptions{
@@ -168,7 +168,7 @@ func runFeed(ctx context.Context, args []string) {
 		usageLine: "Usage: seaportal feed <url> [--json] [--max-items N]",
 		jsonUsage: "Emit JSON array instead of TSV lines",
 		addFlags: func(fs *flag.FlagSet) {
-			maxItems = fs.Int("max-items", 200, "Stop after this many items")
+			maxItems = fs.Int("max-items", seaportal.DefaultFeedMaxItems, "Stop after this many items")
 		},
 		fetch: func(ctx context.Context, url string, sec *seaportal.SecurityPolicy) ([]seaportal.FeedItem, error) {
 			return seaportal.ParseFeed(ctx, url, seaportal.ParseFeedOptions{

@@ -46,7 +46,7 @@ func fetchHeadOnly(targetURL string, opts Options) (result Result) {
 	// rules still apply to a head-only triage fetch.
 	if opts.Security != nil {
 		if err := opts.Security.ValidateURL(reqCtx, targetURL); err != nil {
-			result.Error = err.Error()
+			result.setError(err)
 			result.SecurityBlock = err.Error()
 			return result
 		}
@@ -58,7 +58,7 @@ func fetchHeadOnly(targetURL string, opts Options) (result Result) {
 
 	client, clientErr := buildFetchClient(opts, domain, tracker)
 	if clientErr != nil {
-		result.Error = "invalid proxy URL: " + clientErr.Error()
+		result.setError(fmt.Errorf("invalid proxy URL: %w", clientErr))
 		return result
 	}
 
@@ -69,13 +69,13 @@ func fetchHeadOnly(targetURL string, opts Options) (result Result) {
 	}
 
 	if err := applyRateLimit(reqCtx, opts, domain); err != nil {
-		result.Error = err.Error()
+		result.setError(err)
 		return result
 	}
 
 	req, err := http.NewRequestWithContext(reqCtx, "GET", targetURL, nil)
 	if err != nil {
-		result.Error = err.Error()
+		result.setError(err)
 		return result
 	}
 	req.Header.Set("User-Agent", userAgent)
@@ -90,7 +90,7 @@ func fetchHeadOnly(targetURL string, opts Options) (result Result) {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		result.Error = err.Error()
+		result.setError(err)
 		return result
 	}
 	defer func() { _ = resp.Body.Close() }()
@@ -100,7 +100,7 @@ func fetchHeadOnly(targetURL string, opts Options) (result Result) {
 	// Cap read at 16 KB even when the server ignores Range.
 	bodyBytes, err := io.ReadAll(io.LimitReader(resp.Body, headOnlyByteCap))
 	if err != nil {
-		result.Error = err.Error()
+		result.setError(err)
 		return result
 	}
 

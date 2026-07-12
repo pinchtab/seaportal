@@ -14,6 +14,20 @@ import (
 	"github.com/pinchtab/seaportal"
 )
 
+// CLI retry-flag defaults (T19). --retries defaults to 3 because an
+// interactive invocation should absorb transient 5xx/429 blips without the
+// user re-running. The wait budgets are deliberately TIGHTER than the library
+// defaults (seaportal.DefaultMaxRetryWait = 60s, DefaultTotalRetryTimeout =
+// 120s, applied when a library caller leaves Options zero): a person at a
+// terminal should get an answer sooner than an embedded batch caller. These
+// three values are CLI-facing contract; changing them is a user-visible
+// change.
+const (
+	cliDefaultRetries      = 3
+	cliDefaultMaxRetryWait = 30 * time.Second
+	cliDefaultRetryTimeout = 90 * time.Second
+)
+
 // extractFlags holds every flag of the default extract verb, grouped by
 // concern. Register with registerExtractFlags; convert to engine Options with
 // buildExtractOptions.
@@ -93,9 +107,9 @@ func registerExtractFlags(cli *flag.FlagSet) *extractFlags {
 	f.snapshotFilter = cli.String("filter", "", "Snapshot filter: 'interactive' to show only interactive elements")
 	f.snapshotFormat = cli.String("format", "json", "Snapshot format: 'json' or 'compact'")
 	f.maxTokens = cli.Int("max-tokens", 0, "Approximate token limit for output (snapshot tree OR Markdown body; 0 = unlimited)")
-	f.retries = cli.Int("retries", 3, "Max retry attempts for transient failures (502/503/504/429)")
-	f.maxRetryWait = cli.Duration("max-retry-wait", 30*time.Second, "Max single backoff wait")
-	f.retryTimeout = cli.Duration("retry-timeout", 90*time.Second, "Total budget for all retries")
+	f.retries = cli.Int("retries", cliDefaultRetries, "Max retry attempts for transient failures (502/503/504/429)")
+	f.maxRetryWait = cli.Duration("max-retry-wait", cliDefaultMaxRetryWait, "Max single backoff wait")
+	f.retryTimeout = cli.Duration("retry-timeout", cliDefaultRetryTimeout, "Total budget for all retries")
 	f.withLinks = cli.Bool("with-links", false, "Emit list of discovered <a> links with text + rel")
 	f.withImages = cli.Bool("with-images", false, "Emit list of discovered <img> entries with src/alt/srcset")
 	f.withTables = cli.Bool("with-tables", false, "Emit structured tables (caption/headers/rows) in result")
@@ -360,7 +374,7 @@ func resolveExtractInput(cli *flag.FlagSet, f *extractFlags) (targetURL, stdinHT
 		fmt.Fprintln(os.Stderr, "warning: --respect-robots ignored in stdin mode")
 		*f.respectRobots = false
 	}
-	if *f.retries != 3 {
+	if *f.retries != cliDefaultRetries {
 		fmt.Fprintln(os.Stderr, "warning: --retries ignored in stdin mode")
 	}
 	return *f.baseURL, string(htmlBytes), true
