@@ -130,6 +130,43 @@ func isVoidElement(tag string) bool {
 	return voidElements[tag]
 }
 
+// rawTextElements hold character data (script/style) or escapable raw text
+// (textarea/title) whose body must never be tokenised as markup.
+// https://html.spec.whatwg.org/multipage/syntax.html#raw-text-elements
+var rawTextElements = map[string]bool{
+	"script":   true,
+	"style":    true,
+	"textarea": true,
+	"title":    true,
+}
+
+// rawTextClose finds the closing tag of a raw-text element whose content
+// begins at contentStart. It returns the index where `</tagName` begins and
+// the index just past that close tag's `>`. The scan is case-insensitive on
+// the tag name and ignores every other byte (raw-text bodies cannot contain
+// nested elements). If no close exists, both returns are len(html) — the rest
+// of the document is treated as the element's content.
+func rawTextClose(html string, contentStart int, tagName string) (closeStart, closeEnd int) {
+	n := len(html)
+	i := contentStart
+	for i < n {
+		lt := strings.IndexByte(html[i:], '<')
+		if lt < 0 {
+			return n, n
+		}
+		i += lt
+		if i+1 < n && html[i+1] == '/' && hasTagPrefix(html[i+2:], tagName) {
+			gt := strings.IndexByte(html[i:], '>')
+			if gt < 0 {
+				return n, n
+			}
+			return i, i + gt + 1
+		}
+		i++
+	}
+	return n, n
+}
+
 // hasHiddenBoolAttr reports whether the attribute string contains a standalone
 // `hidden` boolean attribute. Quoted values are skipped so that class names
 // like "visually-hidden" or "ssrcss-...-VisuallyHidden" are not matched.
@@ -251,6 +288,25 @@ func removeElementsSinglePass(html string, shouldRemove func(tagName, attrs stri
 		}
 
 		tagName := strings.ToLower(html[nameStart:nameEnd])
+
+		// Raw-text elements (script/style/textarea/title) hold character
+		// data, not markup: their inner `<` bytes are NOT tag starts. Skip
+		// straight to the matching close instead of tokenising the body —
+		// otherwise minified JavaScript (full of `<`, `>`, and quotes) is
+		// misparsed into pathological pseudo-tags, and the hidden-attribute
+		// regexes then backtrack catastrophically over the garbage attribute
+		// strings (an O(n^2)+ hang on real-world news pages).
+		if rawTextElements[tagName] && !selfClosing {
+			_, closeEnd := rawTextClose(html, tagEnd, tagName)
+			if shouldRemove(tagName, attrs) {
+				out.WriteString(html[pos:tagStartAbs])
+			} else {
+				out.WriteString(html[pos:closeEnd])
+			}
+			pos = closeEnd
+			continue
+		}
+
 		if !shouldRemove(tagName, attrs) {
 			out.WriteString(html[pos:tagEnd])
 			pos = tagEnd

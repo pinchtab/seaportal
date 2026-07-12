@@ -61,6 +61,9 @@ func FuzzSanitize(f *testing.F) {
 	f.Add("")
 	f.Add("<a href='javascript:alert(1)'>x</a>")
 	f.Add("<div hidden><span aria-hidden='true'>x</span></div>")
+	// Minified JS with `<`/`>`/quotes: raw-text bodies must not be tokenised.
+	f.Add(`<script>for(i=0;i<n;i++){a="<div hidden>"+b>c}</script><p>x</p>`)
+	f.Add(`<style>a{content:"<b>"}</style><textarea><x hidden></textarea>`)
 	for _, path := range []string{
 		"../../testdata/static/article-ldjson.html",
 		"../../testdata/static/github-awesome.html",
