@@ -1,43 +1,18 @@
-// Package engine — eval corpus loader.
+// Package engine — corpus loader forwarding.
 //
-// CorpusEntry mirrors the schema in tests/eval/corpus.yaml. LoadCorpus parses
-// the YAML file and returns the list of entries; no extraction is performed here.
+// The eval-corpus loader moved to internal/corpus: it is a benchmark/eval
+// helper, not part of the extraction engine, and keeping it here froze the
+// engine's exported surface for seabench's sake. These aliases keep the
+// engine test suite (classify_test.go, latency_budget_test.go,
+// eval_corpus_test.go) compiling; new code should import internal/corpus.
 package engine
 
-import (
-	"fmt"
-	"os"
+import "github.com/pinchtab/seaportal/internal/corpus"
 
-	"gopkg.in/yaml.v3"
-)
+// CorpusEntry aliases corpus.Entry for the engine tests.
+type CorpusEntry = corpus.Entry
 
-// CorpusEntry describes a single fixture's extraction-quality expectations.
-//
-//   - Path:        repo-relative path to the HTML fixture.
-//   - MustInclude: substrings that MUST appear in the extracted Markdown.
-//   - MustExclude: substrings that MUST NOT survive extraction (chrome,
-//     signup CTAs, layout debris, etc.).
-//   - ExpectClass: canonical PageClass value
-//     (static|ssr|hydrated|spa|dynamic|blocked).
-//   - ExpectLang:  expected BCP-47 language tag; empty when undefined.
-type CorpusEntry struct {
-	Path        string   `yaml:"path"`
-	MustInclude []string `yaml:"must_include"`
-	MustExclude []string `yaml:"must_exclude"`
-	ExpectClass string   `yaml:"expect_class"`
-	ExpectLang  string   `yaml:"expect_lang"`
-}
-
-// LoadCorpus reads and YAML-decodes a corpus file. Any read or parse error is
-// wrapped for caller context.
+// LoadCorpus forwards to corpus.Load for the engine tests.
 func LoadCorpus(path string) ([]CorpusEntry, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("read corpus: %w", err)
-	}
-	var entries []CorpusEntry
-	if err := yaml.Unmarshal(data, &entries); err != nil {
-		return nil, fmt.Errorf("parse corpus: %w", err)
-	}
-	return entries, nil
+	return corpus.Load(path)
 }
