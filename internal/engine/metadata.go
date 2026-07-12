@@ -43,16 +43,16 @@ func ExtractMetadata(rawHTML string) Metadata {
 	// Per-source slot collectors. Multi-value (authors) accumulate; the rest
 	// keep the first non-empty value to mirror "first wins within a tier".
 	var (
-		ogTitle, ogDesc, ogImage, ogLocale, ogType string
-		twitterImage                               string
-		artAuthors                                 []string
-		artPublished, artSection                   string
-		nameAuthor, nameDesc, nameKeywords         string
-		dcCreator, dcDate, dcLanguage, dcSubject   string
-		dcDescription                              string
-		httpEquivLang                              string
-		itemPropDate                               string
-		citationAuthors                            []string
+		ogDesc, ogImage, ogLocale, ogType        string
+		twitterImage                             string
+		artAuthors                               []string
+		artPublished, artSection                 string
+		nameAuthor, nameDesc, nameKeywords       string
+		dcCreator, dcDate, dcLanguage, dcSubject string
+		dcDescription                            string
+		httpEquivLang                            string
+		itemPropDate                             string
+		citationAuthors                          []string
 	)
 	seenCitation := map[string]struct{}{}
 	seenArt := map[string]struct{}{}
@@ -89,10 +89,6 @@ func ExtractMetadata(rawHTML string) Metadata {
 		}
 
 		switch property {
-		case "og:title":
-			if ogTitle == "" {
-				ogTitle = content
-			}
 		case "og:description":
 			if ogDesc == "" {
 				ogDesc = content
@@ -175,8 +171,6 @@ func ExtractMetadata(rawHTML string) Metadata {
 			itemPropDate = content
 		}
 	}
-
-	_ = ogTitle // OGTitle not yet on Metadata struct; reserved for future use.
 
 	// Author priority: article:author > name=author > DC.creator > citation_author.
 	switch {
