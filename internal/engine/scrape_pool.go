@@ -2,7 +2,9 @@ package engine
 
 import (
 	"context"
+	"net"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 )
@@ -73,4 +75,38 @@ func hostScheme(raw string) (host, scheme string) {
 		scheme = "https"
 	}
 	return u.Host, scheme
+}
+
+// canonicalHost lowercases host and strips the port when it is the scheme's
+// default (80 for http, 443 for https), so "example.com:80" and "example.com"
+// compare equal. A sitemap or link that omits the default port must still be
+// recognised as same-host as a base URL that includes it (and vice versa).
+func canonicalHost(host, scheme string) string {
+	host = strings.ToLower(host)
+	h, port, err := net.SplitHostPort(host)
+	if err != nil {
+		return host // no port present
+	}
+	switch {
+	case scheme == "http" && port == "80":
+		return h
+	case scheme == "https" && port == "443":
+		return h
+	default:
+		return host
+	}
+}
+
+// sameHost reports whether rawURL is on the same host as the base (identified
+// by baseHost/baseScheme), treating default ports as equivalent to no port.
+func sameHost(rawURL, baseHost, baseScheme string) bool {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return false
+	}
+	uScheme := u.Scheme
+	if uScheme == "" {
+		uScheme = baseScheme
+	}
+	return canonicalHost(u.Host, uScheme) == canonicalHost(baseHost, baseScheme)
 }

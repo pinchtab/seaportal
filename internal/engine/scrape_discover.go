@@ -60,8 +60,7 @@ func discover(ctx context.Context, opts ScrapeOptions, robots *CrawlDelayCache, 
 		if !ok || cu == "" {
 			return
 		}
-		pu, perr := url.Parse(cu)
-		if perr != nil || !strings.EqualFold(pu.Host, host) {
+		if !sameHost(cu, host, scheme) {
 			return // drop external hosts
 		}
 		if !allowed(cu) || seen[cu] {
@@ -106,10 +105,21 @@ func discoverSitemapURLs(ctx context.Context, scheme, host string, o ScrapeOptio
 	seen := map[string]bool{}
 	push := func(u string) {
 		u = strings.TrimSpace(u)
-		if u == "" || seen[u] {
+		if u == "" {
 			return
 		}
-		seen[u] = true
+		// Dedup on a port-canonical key so a robots `Sitemap:` directive that
+		// omits the default port and the conventional `/sitemap.xml` built from
+		// a base host that includes it are recognised as the same sitemap and
+		// not fetched (and flattened) twice.
+		key := u
+		if pu, err := url.Parse(u); err == nil {
+			key = canonicalHost(pu.Host, pu.Scheme) + pu.Path
+		}
+		if seen[key] {
+			return
+		}
+		seen[key] = true
 		out = append(out, u)
 	}
 
@@ -141,6 +151,7 @@ func crawlSameHost(ctx context.Context, seed, host string, o ScrapeOptions, robo
 		maxDepth = 0
 	}
 	respectRobots := o.RespectRobots != nil && *o.RespectRobots
+	_, baseScheme := hostScheme(seed)
 
 	type item struct {
 		url   string
@@ -184,12 +195,14 @@ func crawlSameHost(ctx context.Context, seed, host string, o ScrapeOptions, robo
 			if !ok || visited[nu] {
 				continue
 			}
-			pu, perr := url.Parse(nu)
-			if perr != nil || !strings.EqualFold(pu.Host, host) {
+			if !sameHost(nu, host, baseScheme) {
 				continue // same-host only; external excluded
 			}
-			if respectRobots && !robots.IsAllowed(ctx, pu.Host, o.UserAgent, pu.Scheme, pu.Path) {
-				continue
+			if respectRobots {
+				pu, perr := url.Parse(nu)
+				if perr != nil || !robots.IsAllowed(ctx, pu.Host, o.UserAgent, pu.Scheme, pu.Path) {
+					continue
+				}
 			}
 			visited[nu] = true
 			queue = append(queue, item{nu, cur.depth + 1})
