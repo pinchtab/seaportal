@@ -63,7 +63,9 @@ type retryConfig struct {
 }
 
 // resolveRetryConfig resolves opts-level retry settings plus any per-domain
-// DomainRetryConfig override, applying the 60s wait / 120s total defaults.
+// DomainRetryConfig override. This is the single defaulting site (T19) for
+// the retry budget: DefaultMaxRetryWait / DefaultTotalRetryTimeout apply when
+// the resolved values are still zero.
 func resolveRetryConfig(opts Options, domain string) retryConfig {
 	cfg := retryConfig{
 		maxRetries:        opts.MaxRetries,
@@ -81,10 +83,10 @@ func resolveRetryConfig(opts Options, domain string) retryConfig {
 		}
 	}
 	if cfg.maxRetryWait == 0 {
-		cfg.maxRetryWait = 60 * time.Second
+		cfg.maxRetryWait = DefaultMaxRetryWait
 	}
 	if cfg.totalRetryTimeout == 0 {
-		cfg.totalRetryTimeout = 120 * time.Second
+		cfg.totalRetryTimeout = DefaultTotalRetryTimeout
 	}
 	return cfg
 }

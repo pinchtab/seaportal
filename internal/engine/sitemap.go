@@ -55,10 +55,10 @@ type sitemapIndexDoc struct {
 // opts.MaxURLs. Deduplicated by Loc. Handles `.gz` URLs and `Content-Encoding: gzip`.
 func FlattenSitemap(ctx context.Context, sitemapURL string, opts FlattenSitemapOptions) ([]SitemapEntry, error) {
 	if opts.MaxDepth <= 0 {
-		opts.MaxDepth = 5
+		opts.MaxDepth = DefaultSitemapMaxDepth
 	}
 	if opts.MaxURLs <= 0 {
-		opts.MaxURLs = 50_000
+		opts.MaxURLs = DefaultSitemapMaxURLs
 	}
 	visited := map[string]bool{}
 	seen := map[string]bool{}

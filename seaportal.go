@@ -68,6 +68,25 @@ type DedupeStats = engine.DedupeStats
 // Options controls extraction behaviour.
 type Options = engine.Options
 
+// Engine fetch defaults, applied by the library when the corresponding
+// Options field is zero (see each field's doc). Exported so CLIs and
+// embedders can reference these values instead of restating them.
+const (
+	// DefaultClientTimeout bounds a whole HTTP exchange (Options.ClientTimeout).
+	DefaultClientTimeout = engine.DefaultClientTimeout
+	// DefaultMaxRetryWait caps one retry backoff wait (Options.MaxRetryWait).
+	DefaultMaxRetryWait = engine.DefaultMaxRetryWait
+	// DefaultTotalRetryTimeout caps cumulative retry waiting (Options.TotalRetryTimeout).
+	DefaultTotalRetryTimeout = engine.DefaultTotalRetryTimeout
+	// DefaultRetryBackoffBase is the exponential backoff unit (2^N × base).
+	DefaultRetryBackoffBase = engine.DefaultRetryBackoffBase
+	// DefaultSitemapMaxDepth / DefaultSitemapMaxURLs bound FlattenSitemap.
+	DefaultSitemapMaxDepth = engine.DefaultSitemapMaxDepth
+	DefaultSitemapMaxURLs  = engine.DefaultSitemapMaxURLs
+	// DefaultFeedMaxItems caps ParseFeed output.
+	DefaultFeedMaxItems = engine.DefaultFeedMaxItems
+)
+
 // SecurityPolicy is the opt-in SSRF / private-IP / redirect / decompression
 // guard threaded through the fetch path. Set it on Options.Security. A nil
 // policy keeps the historical unguarded behaviour.

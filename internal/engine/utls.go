@@ -41,12 +41,31 @@ const h2IdleConnTimeout = 90 * time.Second
 // readLoop goroutine (and fd) forever.
 const h2DrainTimeout = 5 * time.Second
 
+// maxH2Conns caps the per-host HTTP/2 connection cache. A long-running
+// process (MCP server, large multi-host scrapes) would otherwise grow the
+// map without bound; past the cap the least-recently-used idle connection is
+// evicted and drained (T19). Connections with in-flight streams are never
+// force-evicted by the cap.
+const maxH2Conns = 256
+
+// Dial-layer knobs shared by every connection the transport opens: TCP dial
+// deadline, keep-alive probe interval, and how long an idle pooled plain-HTTP
+// connection may live before self-reaping.
+const (
+	dialTimeout          = 30 * time.Second
+	dialKeepAlive        = 30 * time.Second
+	plainIdleConnTimeout = 90 * time.Second
+)
+
 // getUTLSClient returns a shared HTTP client using utls for Chrome fingerprint impersonation.
 // This bypasses Cloudflare and other bot detection that fingerprint TLS.
 func getUTLSClient() *http.Client {
 	utlsClientOnce.Do(func() {
 		utlsClient = &http.Client{
-			Timeout:   30 * time.Second,
+			// The singleton is shared process-wide, so it carries the engine
+			// default; per-fetch clients built by buildFetchClient honour
+			// Options.ClientTimeout instead (T19).
+			Timeout:   DefaultClientTimeout,
 			Transport: &chromeTransport{},
 			CheckRedirect: func(req *http.Request, via []*http.Request) error {
 				if len(via) >= 10 {
@@ -67,7 +86,7 @@ func getUTLSClient() *http.Client {
 // and SOCKS5.
 func getUTLSClientWithProxy(proxyURL *url.URL) *http.Client {
 	return &http.Client{
-		Timeout:   30 * time.Second,
+		Timeout:   DefaultClientTimeout,
 		Transport: &chromeTransport{proxyURL: proxyURL},
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			if len(via) >= 10 {
@@ -102,6 +121,7 @@ type chromeTransport struct {
 	mu      sync.Mutex
 	h2Trans *http2.Transport             // shared wrapper for dialled h2 conns
 	h2Conns map[string]*http2.ClientConn // keyed by canonical host:port
+	h2Last  map[string]time.Time         // last use per cached conn (cap eviction)
 	plainTr http.RoundTripper            // non-HTTPS path (T09: built once)
 }
 
@@ -182,7 +202,7 @@ func (t *chromeTransport) plainTransport() http.RoundTripper {
 		case t.proxyURL != nil:
 			t.plainTr = &http.Transport{
 				Proxy:           http.ProxyURL(t.proxyURL),
-				IdleConnTimeout: 90 * time.Second,
+				IdleConnTimeout: plainIdleConnTimeout,
 			}
 		default:
 			if ctrl := t.security.dialControl(); ctrl != nil {
@@ -192,11 +212,11 @@ func (t *chromeTransport) plainTransport() http.RoundTripper {
 				// rebind, so reuse is safe.
 				t.plainTr = &http.Transport{
 					DialContext: (&net.Dialer{
-						Timeout:   30 * time.Second,
-						KeepAlive: 30 * time.Second,
+						Timeout:   dialTimeout,
+						KeepAlive: dialKeepAlive,
 						Control:   ctrl,
 					}).DialContext,
-					IdleConnTimeout: 90 * time.Second,
+					IdleConnTimeout: plainIdleConnTimeout,
 				}
 			} else {
 				t.plainTr = http.DefaultTransport
@@ -227,9 +247,13 @@ func (t *chromeTransport) cachedH2Conn(key string) *http2.ClientConn {
 	cc, ok := t.h2Conns[key]
 	if ok && !cc.CanTakeNewRequest() {
 		delete(t.h2Conns, key)
+		delete(t.h2Last, key)
 		t.mu.Unlock()
 		go drainH2Conn(cc)
 		return nil
+	}
+	if ok {
+		t.h2Last[key] = time.Now()
 	}
 	t.mu.Unlock()
 	if !ok {
@@ -245,6 +269,7 @@ func (t *chromeTransport) evictH2Conn(key string, cc *http2.ClientConn) {
 	t.mu.Lock()
 	if t.h2Conns[key] == cc {
 		delete(t.h2Conns, key)
+		delete(t.h2Last, key)
 	}
 	t.mu.Unlock()
 	go drainH2Conn(cc)
@@ -273,10 +298,47 @@ func (t *chromeTransport) cacheH2Conn(key string, tlsConn *utls.UConn) (*http2.C
 	}
 	if t.h2Conns == nil {
 		t.h2Conns = make(map[string]*http2.ClientConn)
+		t.h2Last = make(map[string]time.Time)
 	}
 	t.h2Conns[key] = cc
+	t.h2Last[key] = time.Now()
+	t.evictOverCapLocked()
 	t.mu.Unlock()
 	return cc, nil
+}
+
+// evictOverCapLocked enforces maxH2Conns: while the cache is over the cap, the
+// least-recently-used connection with no in-flight streams is removed and
+// drained. Busy connections are never force-evicted — if every conn is busy
+// the cache is left over-cap and the next insert retries. Caller holds t.mu.
+func (t *chromeTransport) evictOverCapLocked() {
+	for len(t.h2Conns) > maxH2Conns {
+		key := t.lruIdleH2KeyLocked()
+		if key == "" {
+			return
+		}
+		cc := t.h2Conns[key]
+		delete(t.h2Conns, key)
+		delete(t.h2Last, key)
+		go drainH2Conn(cc)
+	}
+}
+
+// lruIdleH2KeyLocked returns the cache key of the least-recently-used cached
+// connection that currently has no active streams, or "" when every cached
+// conn is busy. Caller holds t.mu.
+func (t *chromeTransport) lruIdleH2KeyLocked() string {
+	var lruKey string
+	var lruAt time.Time
+	for k, cc := range t.h2Conns {
+		if cc.State().StreamsActive > 0 {
+			continue
+		}
+		if at := t.h2Last[k]; lruKey == "" || at.Before(lruAt) {
+			lruKey, lruAt = k, at
+		}
+	}
+	return lruKey
 }
 
 // CloseIdleConnections releases every cached HTTP/2 connection and the plain
@@ -287,6 +349,7 @@ func (t *chromeTransport) CloseIdleConnections() {
 	t.mu.Lock()
 	conns := t.h2Conns
 	t.h2Conns = nil
+	t.h2Last = nil
 	plain := t.plainTr
 	t.mu.Unlock()
 
@@ -359,8 +422,8 @@ func canonicalHostPort(host string) string {
 // post-DNS resolved IP before connect, closing the DNS-rebinding window.
 func dialTLSChrome(ctx context.Context, serverName, host string, control func(network, address string, c syscall.RawConn) error) (*utls.UConn, error) {
 	dialer := &net.Dialer{
-		Timeout:   30 * time.Second,
-		KeepAlive: 30 * time.Second,
+		Timeout:   dialTimeout,
+		KeepAlive: dialKeepAlive,
 		Control:   control,
 	}
 
@@ -400,8 +463,8 @@ func dialTLSChromeViaProxy(ctx context.Context, proxyURL *url.URL, serverName, h
 	host = canonicalHostPort(host)
 
 	dialer := &net.Dialer{
-		Timeout:   30 * time.Second,
-		KeepAlive: 30 * time.Second,
+		Timeout:   dialTimeout,
+		KeepAlive: dialKeepAlive,
 	}
 
 	proxyAddr := proxyURL.Host

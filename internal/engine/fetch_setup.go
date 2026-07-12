@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"time"
 )
 
 // ErrBlockedByRobots is the sentinel recorded on Result when RespectRobots is
@@ -27,7 +26,13 @@ var ErrBlockedByRobots = errors.New("blocked by robots.txt")
 // transport override. Returns the proxy-parse error from getClientForOptions
 // unchanged; callers wrap it.
 func buildFetchClient(opts Options, domain string, tracker *redirectTracker) (*http.Client, error) {
-	timeout := 30 * time.Second
+	// Single defaulting site for the per-request timeout (T19):
+	// opts.ClientTimeout when set, overridden per-domain, else
+	// DefaultClientTimeout.
+	timeout := opts.ClientTimeout
+	if timeout <= 0 {
+		timeout = DefaultClientTimeout
+	}
 	if opts.DomainTimeout != nil && domain != "" {
 		if domainTimeout, ok := opts.DomainTimeout[domain]; ok && domainTimeout > 0 {
 			timeout = domainTimeout
@@ -55,7 +60,7 @@ func buildFetchClient(opts Options, domain string, tracker *redirectTracker) (*h
 		}
 	} else {
 		client = &http.Client{
-			Timeout:       sharedC.Timeout,
+			Timeout:       timeout,
 			Transport:     sharedC.Transport,
 			CheckRedirect: checkRedirect,
 		}
