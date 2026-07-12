@@ -10,9 +10,9 @@ require_host "$SCRAPE_SITE_URL/robots.txt" || return 0
 start_test "scrape discovery: sitemap found, groups, counts"
 
 # The scrape pipeline fetches the fixture URLs directly (no SSRF guard), so we
-# invoke the subcommand straight instead of via sp_ok — sp_ok prepends
-# --allow-internal *before* the subcommand, which would break dispatch.
-SP_OUT=$(seaportal scrape "$SCRAPE_SITE_URL/" --output json 2>&1)
+# invoke the subcommand straight instead of via sp_ok — scrape is secure-by-default so --allow-internal goes AFTER the subcommand
+# (sp_ok would prepend it before "scrape", where flag parsing ignores it).
+SP_OUT=$(seaportal scrape "$SCRAPE_SITE_URL/" --allow-internal --output json 2>&1)
 SP_EXIT=$?
 
 if [ "$SP_EXIT" -ne 0 ]; then

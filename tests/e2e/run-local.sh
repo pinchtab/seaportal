@@ -10,10 +10,16 @@ cd "$SCRIPT_DIR"
 echo "🌊 SeaPortal E2E Tests (Local)"
 echo ""
 
-# Build the binary
+# Build the binary. The docker runner is linux, so cross-compile for it
+# unless we're in --no-docker mode (which execs the binary on the host).
 echo "Building seaportal..."
 cd ../..
-go build -o seaportal ./cmd/seaportal
+if [ "${1:-}" = "--no-docker" ]; then
+  go build -o seaportal ./cmd/seaportal
+else
+  GOOS=linux GOARCH="$(docker version --format '{{.Server.Arch}}' 2>/dev/null || uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')" \
+    CGO_ENABLED=0 go build -o seaportal ./cmd/seaportal
+fi
 cd tests/e2e
 echo "✓ Binary built"
 echo ""

@@ -12,10 +12,9 @@ TIME_BUDGET_SECONDS="${SCRAPE_TIME_BUDGET:-30}"
 start_test "horizontal: large sitemap sampled to a bounded, fast fetch"
 
 # Default caps (max-pages 50, max-per-pattern 8). Invoked directly (not via
-# sp_ok): the scrape path needs no SSRF flag and sp_ok's --allow-internal prefix
-# would break subcommand dispatch.
+# sp_ok): scrape is secure-by-default; --allow-internal must follow the subcommand # would break subcommand dispatch.
 t0=$(date +%s)
-SP_OUT=$(seaportal scrape "$SCRAPE_SITE_URL/" --output json 2>&1)
+SP_OUT=$(seaportal scrape "$SCRAPE_SITE_URL/" --allow-internal --output json 2>&1)
 rc=$?
 t1=$(date +%s)
 elapsed=$((t1 - t0))

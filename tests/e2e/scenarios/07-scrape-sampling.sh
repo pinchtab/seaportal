@@ -10,7 +10,7 @@ require_host "$SCRAPE_SITE_URL/robots.txt" || return 0
 # Invoked directly (not via sp_ok) because the scrape path needs no SSRF flag
 # and sp_ok's --allow-internal prefix would break subcommand dispatch.
 scrape_json() {
-  SP_OUT=$(seaportal scrape "$SCRAPE_SITE_URL/" --output json "$@" 2>&1)
+  SP_OUT=$(seaportal scrape "$SCRAPE_SITE_URL/" --allow-internal --output json "$@" 2>&1)
   SP_EXIT=$?
 }
 
