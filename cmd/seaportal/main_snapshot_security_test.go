@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -31,7 +32,7 @@ func TestFetchHTML_RespectsRedirectPolicy(t *testing.T) {
 		RevalidateRedirects: true,
 	}
 
-	_, err := fetchHTML(srv.URL+"/start", sec)
+	_, err := fetchHTML(context.Background(), srv.URL+"/start", sec)
 	if err != nil {
 		t.Fatalf("fetchHTML: %v", err)
 	}
