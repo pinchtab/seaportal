@@ -15,12 +15,14 @@ import (
 // arg parsing, guardrails) lives in internal/mcp/tools; this shim only wires
 // identity and transport. No flags are accepted: configuration flows through
 // MCP tool arguments.
-func runMCP(_ []string) {
+func runMCP(ctx context.Context, _ []string) {
 	srv := mcp.NewServer()
 	srv.SetIdentity("seaportal", version)
 	tools.Register(srv)
 
-	if err := srv.ServeStdio(context.Background()); err != nil && !errors.Is(err, context.Canceled) {
+	// ctx is the process-wide signal context: Ctrl-C / SIGTERM cancels the
+	// serve loop, which is a clean shutdown rather than an error.
+	if err := srv.ServeStdio(ctx); err != nil && !errors.Is(err, context.Canceled) {
 		fmt.Fprintln(os.Stderr, "mcp server error:", err)
 		os.Exit(1)
 	}

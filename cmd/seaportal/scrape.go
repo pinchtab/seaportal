@@ -5,9 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"os/signal"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/pinchtab/seaportal"
@@ -16,7 +14,7 @@ import (
 // runScrape implements `seaportal scrape <base-url> [flags]`: it maps the spec
 // flags onto ScrapeOptions, runs the full pipeline, and emits the result per
 // --output (json | md | directory).
-func runScrape(args []string) {
+func runScrape(ctx context.Context, args []string) {
 	fs := flag.NewFlagSet("scrape", flag.ExitOnError)
 	maxPages := fs.Int("max-pages", 50, "Maximum total pages to process")
 	maxPerPattern := fs.Int("max-per-pattern", 8, "Max samples per URL pattern")
@@ -91,52 +89,40 @@ func runScrape(args []string) {
 		UserAgent:       *userAgent,
 	}
 
-	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer cancel()
-
 	res, err := seaportal.ScrapeSite(ctx, opts)
 	if err != nil {
-		// On cancellation, render partial results if available.
-		if res != nil {
-			switch out {
-			case seaportal.OutputMarkdown:
-				fmt.Print(seaportal.RenderScrapeMarkdown(res))
-			case seaportal.OutputDirectory:
-				files, werr := seaportal.WriteScrapeDirectory(res, *outDir)
-				if werr == nil {
-					fmt.Printf("wrote %d pages to %s (partial: %v)\n", len(files), *outDir, err)
-				} else {
-					fmt.Fprintln(os.Stderr, "scrape error:", werr)
-				}
-			default: // json
-				data, jerr := seaportal.RenderScrapeJSON(res)
-				if jerr == nil {
-					fmt.Println(string(data))
-				} else {
-					fmt.Fprintln(os.Stderr, "scrape error:", jerr)
-				}
-			}
-		}
+		// TODO(audit-T21): when ScrapeSite learns to return (partialResult,
+		// ctx.Err()) on cancellation, render the partial via
+		// renderScrapeResult here before exiting. Today it never returns both
+		// non-nil, so there is nothing to salvage.
 		fmt.Fprintln(os.Stderr, "scrape error:", err)
 		os.Exit(1)
 	}
 
+	if err := renderScrapeResult(res, out, *outDir); err != nil {
+		fmt.Fprintln(os.Stderr, "scrape error:", err)
+		os.Exit(1)
+	}
+}
+
+// renderScrapeResult emits res on stdout in the chosen output format
+// (markdown digest, directory of pages, or JSON — the default).
+func renderScrapeResult(res *seaportal.ScrapeResult, out seaportal.OutputFormat, outDir string) error {
 	switch out {
 	case seaportal.OutputMarkdown:
 		fmt.Print(seaportal.RenderScrapeMarkdown(res))
 	case seaportal.OutputDirectory:
-		files, werr := seaportal.WriteScrapeDirectory(res, *outDir)
-		if werr != nil {
-			fmt.Fprintln(os.Stderr, "scrape error:", werr)
-			os.Exit(1)
+		files, err := seaportal.WriteScrapeDirectory(res, outDir)
+		if err != nil {
+			return err
 		}
-		fmt.Printf("wrote %d pages to %s\n", len(files), *outDir)
+		fmt.Printf("wrote %d pages to %s\n", len(files), outDir)
 	default: // json
-		data, jerr := seaportal.RenderScrapeJSON(res)
-		if jerr != nil {
-			fmt.Fprintln(os.Stderr, "scrape error:", jerr)
-			os.Exit(1)
+		data, err := seaportal.RenderScrapeJSON(res)
+		if err != nil {
+			return err
 		}
 		fmt.Println(string(data))
 	}
+	return nil
 }
