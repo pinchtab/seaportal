@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-func fixtureDir(t *testing.T) string {
+func smokeFixtureDir(t *testing.T) string {
 	t.Helper()
 	dir := filepath.Join("..", "..", "testdata", "fixtures")
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
@@ -18,9 +18,9 @@ func fixtureDir(t *testing.T) string {
 	return dir
 }
 
-func loadFixture(t *testing.T, name string) string {
+func loadSmokeFixture(t *testing.T, name string) string {
 	t.Helper()
-	data, err := os.ReadFile(filepath.Join(fixtureDir(t), name))
+	data, err := os.ReadFile(filepath.Join(smokeFixtureDir(t), name))
 	if err != nil {
 		t.Skipf("fixture %s not found: %v", name, err)
 	}
@@ -132,7 +132,7 @@ var expectations = []expectation{
 func TestFixture_HTMLExtraction(t *testing.T) {
 	for _, exp := range expectations {
 		t.Run(exp.name, func(t *testing.T) {
-			html := loadFixture(t, exp.fixture)
+			html := loadSmokeFixture(t, exp.fixture)
 			result := FromHTML(html, "https://"+exp.name)
 
 			if result.Error != "" {
@@ -213,7 +213,7 @@ func TestFixture_MarkdownNegotiation(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name+"_markdown", func(t *testing.T) {
-			md := loadFixture(t, tc.mdFixture)
+			md := loadSmokeFixture(t, tc.mdFixture)
 			cleaned := CleanupMarkdown(md)
 			mdLen := len(cleaned)
 
@@ -242,7 +242,7 @@ func TestFixture_MarkdownNegotiation(t *testing.T) {
 		})
 
 		t.Run(tc.name+"_html_fallback", func(t *testing.T) {
-			html := loadFixture(t, tc.htmlFixture)
+			html := loadSmokeFixture(t, tc.htmlFixture)
 			result := FromHTML(html, "https://"+tc.name)
 
 			htmlLen := result.Length
@@ -281,14 +281,14 @@ func TestFixture_ComparisonSummary(t *testing.T) {
 	var rows []row
 
 	for _, exp := range expectations {
-		html := loadFixture(t, exp.fixture)
+		html := loadSmokeFixture(t, exp.fixture)
 		result := FromHTML(html, "https://"+exp.name)
 		rows = append(rows, row{name: exp.name, after: result.Length})
 	}
 
 	for _, name := range []string{"docs-openclaw", "cloudflare"} {
 		mdFile := name + "-md.txt"
-		md := loadFixture(t, mdFile)
+		md := loadSmokeFixture(t, mdFile)
 		cleaned := CleanupMarkdown(md)
 		rows = append(rows, row{name: name, after: len(cleaned)})
 	}
@@ -319,7 +319,7 @@ func TestFixture_NoRegression(t *testing.T) {
 
 	for _, exp := range expectations {
 		t.Run(exp.name, func(t *testing.T) {
-			html := loadFixture(t, exp.fixture)
+			html := loadSmokeFixture(t, exp.fixture)
 			result := FromHTML(html, "https://"+exp.name)
 
 			before := baselineBefore[exp.name]

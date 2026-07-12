@@ -1,21 +1,15 @@
 package engine
 
 import (
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 )
 
 func TestExtract_WikipediaLatinPhrases(t *testing.T) {
 	skipHeavyFixture(t)
-	path := filepath.Join("..", "..", "testdata", "static", "wikipedia-latin-phrases.html")
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("read fixture: %v", err)
-	}
+	data := loadFixture(t, "static/wikipedia-latin-phrases.html")
 
-	result := FromHTML(string(data), "https://en.wikipedia.org/wiki/List_of_Latin_phrases_(full)")
+	result := FromHTML(data, "https://en.wikipedia.org/wiki/List_of_Latin_phrases_(full)")
 	if result.Error != "" {
 		t.Fatalf("extraction error: %s", result.Error)
 	}

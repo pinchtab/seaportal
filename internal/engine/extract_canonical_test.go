@@ -1,8 +1,6 @@
 package engine
 
 import (
-	"net/http"
-	"net/http/httptest"
 	"testing"
 )
 
@@ -18,11 +16,7 @@ func TestExtract_CanonicalURLPopulated(t *testing.T) {
 <p>` + longProse() + `</p>
 </article></body></html>`
 
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_, _ = w.Write([]byte(html))
-	}))
-	defer srv.Close()
+	srv := newSiteServer(t, map[string]string{"/messy": html})
 
 	result := FromURL(srv.URL + "/messy?utm_source=twitter&utm_medium=social&id=42")
 	if result.CanonicalURL != "https://example.com/canonical-path" {
@@ -39,11 +33,7 @@ func TestExtract_CanonicalURL_AlgorithmicFallback(t *testing.T) {
 <p>` + longProse() + `</p>
 </article></body></html>`
 
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_, _ = w.Write([]byte(html))
-	}))
-	defer srv.Close()
+	srv := newSiteServer(t, map[string]string{"/post": html})
 
 	result := FromURL(srv.URL + "/post?utm_source=tw&id=42")
 	// Canonical should drop utm_source but keep id=42; differs from raw URL.
