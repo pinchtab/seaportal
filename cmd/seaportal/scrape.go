@@ -29,6 +29,7 @@ func runScrape(ctx context.Context, args []string) {
 	respectRobots := fs.Bool("respect-robots", true, "Respect robots.txt disallow + crawl-delay")
 	timeout := fs.Duration("timeout", 60*time.Second, "Overall scrape timeout")
 	userAgent := fs.String("user-agent", "", "Override the User-Agent header")
+	allowInternal := fs.Bool("allow-internal", false, "Allow private/internal IP targets")
 	fs.Usage = func() {
 		fmt.Fprintln(os.Stderr, "Usage: seaportal scrape <base-url> [flags]")
 		fs.PrintDefaults()
@@ -73,6 +74,13 @@ func runScrape(ctx context.Context, args []string) {
 		os.Exit(2)
 	}
 
+	// Secure-by-default fetch policy, mirroring the sitemap/feed verbs:
+	// --allow-internal lifts only the private-IP block.
+	sec := seaportal.DefaultSecurityPolicy()
+	if *allowInternal {
+		sec.BlockPrivateIPs = false
+	}
+
 	robots := *respectRobots
 	opts := &seaportal.ScrapeOptions{
 		BaseURL:         baseURL,
@@ -87,20 +95,26 @@ func runScrape(ctx context.Context, args []string) {
 		RespectRobots:   &robots,
 		Timeout:         *timeout,
 		UserAgent:       *userAgent,
+		Security:        sec,
 	}
 
 	res, err := seaportal.ScrapeSite(ctx, opts)
-	if err != nil {
-		// TODO(audit-T21): when ScrapeSite learns to return (partialResult,
-		// ctx.Err()) on cancellation, render the partial via
-		// renderScrapeResult here before exiting. Today it never returns both
-		// non-nil, so there is nothing to salvage.
+	if err != nil && res == nil {
 		fmt.Fprintln(os.Stderr, "scrape error:", err)
 		os.Exit(1)
 	}
+	if err != nil {
+		// Interrupted mid-run (Ctrl-C / caller deadline): ScrapeSite returned
+		// the partial result alongside ctx.Err() (audit T21) — render what
+		// was scraped, warn, and exit non-zero to signal the interruption.
+		fmt.Fprintf(os.Stderr, "scrape warning: interrupted (%v); rendering partial results\n", err)
+	}
 
-	if err := renderScrapeResult(res, out, *outDir); err != nil {
-		fmt.Fprintln(os.Stderr, "scrape error:", err)
+	if renderErr := renderScrapeResult(res, out, *outDir); renderErr != nil {
+		fmt.Fprintln(os.Stderr, "scrape error:", renderErr)
+		os.Exit(1)
+	}
+	if err != nil {
 		os.Exit(1)
 	}
 }

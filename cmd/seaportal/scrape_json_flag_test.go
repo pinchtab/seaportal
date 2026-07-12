@@ -15,7 +15,7 @@ func TestCLI_ScrapeJSONFlagAlias(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	out, err := exec.CommandContext(ctx, bin, "scrape", "--json", srv.URL, "--max-pages", "3").Output()
+	out, err := exec.CommandContext(ctx, bin, "scrape", "--json", srv.URL, "--max-pages", "3", "--allow-internal").Output()
 	if err != nil {
 		t.Fatalf("scrape --json failed: %v", err)
 	}

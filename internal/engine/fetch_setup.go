@@ -8,6 +8,7 @@ package engine
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/url"
 	"time"
@@ -84,16 +85,35 @@ func resolveUserAgentFor(opts Options, domain string) string {
 	return userAgent
 }
 
+// robotsFetchOptions builds the robots.txt fetch template from extraction
+// Options so a robots fetch rides the same client path as the page fetch:
+// proxy honoured, security policy applied, and the Transport test seam
+// respected (previously a raw private http.Client bypassed all three).
+func robotsFetchOptions(opts Options) FetchBytesOptions {
+	fo := FetchBytesOptions{Security: opts.Security}
+	if opts.Proxy != "" {
+		if client, err := getClientForOptions(opts); err == nil {
+			c := *client
+			c.Timeout = robotsFetchTimeout
+			fo.Client = &c
+		}
+	}
+	if opts.Transport != nil {
+		fo.Client = &http.Client{Timeout: robotsFetchTimeout, Transport: opts.Transport}
+	}
+	return fo
+}
+
 // checkRobotsAllowed applies the RespectRobots gate. When the target is
 // disallowed it marks result blocked-by-robots and returns false; result is
 // untouched (and fetching may proceed) otherwise.
-func checkRobotsAllowed(opts Options, targetURL, domain, userAgent string, result *Result) bool {
+func checkRobotsAllowed(ctx context.Context, opts Options, targetURL, domain, userAgent string, result *Result) bool {
 	if !opts.RespectRobots || domain == "" {
 		return true
 	}
 	cache := opts.CrawlDelayCache
 	if cache == nil {
-		cache = NewCrawlDelayCache()
+		cache = newCrawlDelayCacheWithFetch(robotsFetchOptions(opts))
 	}
 	parsed, perr := url.Parse(targetURL)
 	if perr != nil {
@@ -107,7 +127,7 @@ func checkRobotsAllowed(opts Options, targetURL, domain, userAgent string, resul
 	if host == "" {
 		host = domain
 	}
-	if cache.IsAllowed(host, userAgent, scheme, parsed.RequestURI()) {
+	if cache.IsAllowed(ctx, host, userAgent, scheme, parsed.RequestURI()) {
 		return true
 	}
 	result.Error = "blocked by robots.txt"
@@ -119,13 +139,15 @@ func checkRobotsAllowed(opts Options, targetURL, domain, userAgent string, resul
 
 // applyCrawlDelay honours a robots.txt Crawl-delay for the target host,
 // waiting ctx-aware so a deadline or SIGINT can preempt the sleep (ALP-043).
-func applyCrawlDelay(ctx context.Context, opts Options, targetURL, domain, userAgent string) error {
+// The effective delay is clamped to maxCrawlDelay; a non-empty warning is
+// returned when the clamp fired so the caller can surface it on the result.
+func applyCrawlDelay(ctx context.Context, opts Options, targetURL, domain, userAgent string) (warning string, err error) {
 	if !opts.RespectCrawlDelay || domain == "" {
-		return nil
+		return "", nil
 	}
 	crawlCache := opts.CrawlDelayCache
 	if crawlCache == nil {
-		crawlCache = NewCrawlDelayCache()
+		crawlCache = newCrawlDelayCacheWithFetch(robotsFetchOptions(opts))
 	}
 	// Use parsed.Host (host[:port]) instead of domain (hostname only) so the
 	// cache fetches robots.txt from the right port and keys per-port. Mirrors
@@ -133,7 +155,7 @@ func applyCrawlDelay(ctx context.Context, opts Options, targetURL, domain, userA
 	// (httptest, local dev, intranet :8080) silently get no delay enforcement.
 	scheme := "https"
 	host := domain
-	if parsedURL, err := url.Parse(targetURL); err == nil {
+	if parsedURL, perr := url.Parse(targetURL); perr == nil {
 		if parsedURL.Scheme != "" {
 			scheme = parsedURL.Scheme
 		}
@@ -141,10 +163,15 @@ func applyCrawlDelay(ctx context.Context, opts Options, targetURL, domain, userA
 			host = parsedURL.Host
 		}
 	}
-	if delay := crawlCache.GetDelayWithScheme(host, userAgent, scheme); delay > 0 {
-		return sleepCtx(ctx, delay)
+	delay := crawlCache.GetDelayWithScheme(ctx, host, userAgent, scheme)
+	if delay <= 0 {
+		return "", nil
 	}
-	return nil
+	if capped, clamped := clampCrawlDelay(delay); clamped {
+		warning = fmt.Sprintf("robots.txt crawl-delay %s for %s clamped to %s", delay, host, maxCrawlDelay)
+		delay = capped
+	}
+	return warning, sleepCtx(ctx, delay)
 }
 
 // applyRateLimit enforces opts.RateLimit spacing for the domain, ctx-aware.

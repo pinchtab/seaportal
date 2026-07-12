@@ -64,7 +64,7 @@ func fetchHeadOnly(targetURL string, opts Options) (result Result) {
 
 	userAgent := resolveUserAgentFor(opts, domain)
 
-	if !checkRobotsAllowed(opts, targetURL, domain, userAgent, &result) {
+	if !checkRobotsAllowed(reqCtx, opts, targetURL, domain, userAgent, &result) {
 		return result
 	}
 
