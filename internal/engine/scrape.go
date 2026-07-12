@@ -10,12 +10,6 @@ import (
 	"time"
 )
 
-// ErrNotImplemented is returned by ScrapeSite until the real discovery,
-// sampling, and extraction pipeline (ALP-002…008) lands. The types and the
-// ScrapeSite signature are stable now so callers (CLI, PinchTab) can compile
-// against them.
-var ErrNotImplemented = errors.New("seaportal: ScrapeSite not implemented")
-
 // ErrMissingBaseURL is returned when ScrapeOptions.BaseURL is empty.
 var ErrMissingBaseURL = errors.New("seaportal: ScrapeOptions.BaseURL is required")
 
@@ -207,6 +201,12 @@ type ScrapeResult struct {
 // ScrapeSite runs the full scrape pipeline for opts.BaseURL: discover candidate
 // URLs, cluster them into pattern groups, sample within budget, fetch + extract
 // + assemble each page concurrently, and roll up a site summary.
+//
+// Cancellation contract (T21): when the CALLER's ctx is cancelled or its
+// deadline fires mid-run, ScrapeSite returns the partial result assembled so
+// far alongside ctx.Err() — both non-nil — instead of dropping the output.
+// The internal opts.Timeout budget elapsing is the documented "scrape for this
+// long, return what you got" behaviour and completes with a nil error.
 func ScrapeSite(ctx context.Context, opts *ScrapeOptions) (*ScrapeResult, error) {
 	if opts == nil {
 		return nil, ErrMissingBaseURL
@@ -219,6 +219,10 @@ func ScrapeSite(ctx context.Context, opts *ScrapeOptions) (*ScrapeResult, error)
 	if err != nil || base.Host == "" {
 		return nil, fmt.Errorf("%w: %q", ErrInvalidBaseURL, o.BaseURL)
 	}
+
+	// callerCtx distinguishes "the caller tore us down" (partial + ctx.Err())
+	// from the internal --timeout budget elapsing (normal completion).
+	callerCtx := ctx
 
 	// One overall wall-clock deadline shared by discovery, fetch, and retries.
 	// The raw (pre-normalization) Timeout is used so an explicit 0 keeps the
@@ -303,12 +307,18 @@ func ScrapeSite(ctx context.Context, opts *ScrapeOptions) (*ScrapeResult, error)
 			fmt.Sprintf("0 of %d discovered URLs were sampled; check --include-patterns/--exclude-patterns and --max-pages", len(disc.URLs)))
 	}
 
-	return &ScrapeResult{
+	res := &ScrapeResult{
 		Site:       site,
 		PageGroups: outGroups,
 		Pages:      pages,
 		Summary:    summary,
-	}, nil
+	}
+	// Caller cancellation mid-run: hand back the partial result WITH the
+	// error so the CLI/MCP layers can render what was scraped (T21).
+	if cerr := callerCtx.Err(); cerr != nil {
+		return res, cerr
+	}
+	return res, nil
 }
 
 // fetchAndAssemble fetches and extracts each URL once through the full

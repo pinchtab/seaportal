@@ -99,17 +99,22 @@ func runScrape(ctx context.Context, args []string) {
 	}
 
 	res, err := seaportal.ScrapeSite(ctx, opts)
-	if err != nil {
-		// TODO(audit-T21): when ScrapeSite learns to return (partialResult,
-		// ctx.Err()) on cancellation, render the partial via
-		// renderScrapeResult here before exiting. Today it never returns both
-		// non-nil, so there is nothing to salvage.
+	if err != nil && res == nil {
 		fmt.Fprintln(os.Stderr, "scrape error:", err)
 		os.Exit(1)
 	}
+	if err != nil {
+		// Interrupted mid-run (Ctrl-C / caller deadline): ScrapeSite returned
+		// the partial result alongside ctx.Err() (audit T21) — render what
+		// was scraped, warn, and exit non-zero to signal the interruption.
+		fmt.Fprintf(os.Stderr, "scrape warning: interrupted (%v); rendering partial results\n", err)
+	}
 
-	if err := renderScrapeResult(res, out, *outDir); err != nil {
-		fmt.Fprintln(os.Stderr, "scrape error:", err)
+	if renderErr := renderScrapeResult(res, out, *outDir); renderErr != nil {
+		fmt.Fprintln(os.Stderr, "scrape error:", renderErr)
+		os.Exit(1)
+	}
+	if err != nil {
 		os.Exit(1)
 	}
 }

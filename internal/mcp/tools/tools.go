@@ -289,9 +289,12 @@ func registerScrapeSite(srv *mcp.Server) {
 			}
 
 			res, err := seaportal.ScrapeSite(ctx, opts)
-			if err != nil {
+			if err != nil && res == nil {
 				return "", fmt.Errorf("scrape site: %w", err)
 			}
+			// A run interrupted by the handler ctx still carries its partial
+			// result (audit T21): return what was scraped instead of dropping
+			// it on the floor.
 			return marshalResult(res, "result")
 		},
 	)
