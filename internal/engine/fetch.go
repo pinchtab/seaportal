@@ -7,8 +7,6 @@ import (
 	"time"
 )
 
-const defaultFetchUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
-
 // FetchBytesOptions controls a raw network fetch with optional security
 // enforcement and size caps.
 type FetchBytesOptions struct {
@@ -38,7 +36,7 @@ func FetchBytes(ctx context.Context, rawURL string, opts FetchBytesOptions) ([]b
 	}
 	ua := strings.TrimSpace(opts.UserAgent)
 	if ua == "" {
-		ua = defaultFetchUserAgent
+		ua = DefaultUserAgent
 	}
 	req.Header.Set("User-Agent", ua)
 

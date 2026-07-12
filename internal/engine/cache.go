@@ -20,10 +20,13 @@
 package engine
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"io/fs"
 	"net/http"
 	"os"
@@ -194,6 +197,19 @@ func (c *DiskCache) TouchByKey(key string) error {
 		return err
 	}
 	return atomicWrite(c.headerPath(key), out)
+}
+
+// toHTTPResponse reconstructs an http.Response from the cached metadata plus
+// the given body so cache replays (fresh hits, SWR serves, 304 revalidations)
+// flow through the same downstream path as a live fetch.
+func (r *cachedResponse) toHTTPResponse(body []byte, req *http.Request) *http.Response {
+	return &http.Response{
+		Status:     fmt.Sprintf("%d %s", r.Status, http.StatusText(r.Status)),
+		StatusCode: r.Status,
+		Header:     r.Headers.Clone(),
+		Body:       io.NopCloser(bytes.NewReader(body)),
+		Request:    req,
+	}
 }
 
 // ConditionalHeaders returns the conditional-GET request headers derived from
