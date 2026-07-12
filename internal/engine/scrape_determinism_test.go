@@ -80,8 +80,8 @@ func TestGroupingByteIdenticalAcrossOrderings(t *testing.T) {
 
 func TestSamplingByteIdenticalAcrossRuns(t *testing.T) {
 	groups := bigCorpus() // 1 home + 20 /blog/*/post + 15 /products/*/detail + 2 flat
-	for _, strat := range []SampleStrategy{SampleRandom, SampleBalanced, SamplePriority} {
-		opts := ScrapeOptions{BaseURL: "https://ex.com", MaxPages: 14, MaxPerPattern: 4, SampleStrategy: strat}
+	for _, strategy := range []SampleStrategy{SampleRandom, SampleBalanced, SamplePriority} {
+		opts := ScrapeOptions{BaseURL: "https://ex.com", MaxPages: 14, MaxPerPattern: 4, SampleStrategy: strategy}
 		first, err := json.Marshal(sample(groups, opts))
 		if err != nil {
 			t.Fatalf("marshal: %v", err)
@@ -89,7 +89,7 @@ func TestSamplingByteIdenticalAcrossRuns(t *testing.T) {
 		for run := 0; run < 5; run++ {
 			got, _ := json.Marshal(sample(groups, opts))
 			if string(got) != string(first) {
-				t.Errorf("[%s] sample not identical on run %d:\n got  %s\n first %s", strat, run, got, first)
+				t.Errorf("[%s] sample not identical on run %d:\n got  %s\n first %s", strategy, run, got, first)
 			}
 		}
 	}
@@ -98,16 +98,16 @@ func TestSamplingByteIdenticalAcrossRuns(t *testing.T) {
 func TestSamplingCapsAllStrategies(t *testing.T) {
 	groups := bigCorpus()
 	const maxPages, maxPer = 9, 2
-	for _, strat := range []SampleStrategy{SampleRandom, SampleBalanced, SamplePriority} {
+	for _, strategy := range []SampleStrategy{SampleRandom, SampleBalanced, SamplePriority} {
 		got := sample(groups, ScrapeOptions{
-			BaseURL: "https://ex.com", MaxPages: maxPages, MaxPerPattern: maxPer, SampleStrategy: strat,
+			BaseURL: "https://ex.com", MaxPages: maxPages, MaxPerPattern: maxPer, SampleStrategy: strategy,
 		})
 		if len(got) > maxPages {
-			t.Errorf("[%s] %d urls > MaxPages %d", strat, len(got), maxPages)
+			t.Errorf("[%s] %d urls > MaxPages %d", strategy, len(got), maxPages)
 		}
 		for pat, n := range patternCounts(got) {
 			if n > maxPer {
-				t.Errorf("[%s] pattern %s: %d > MaxPerPattern %d", strat, pat, n, maxPer)
+				t.Errorf("[%s] pattern %s: %d > MaxPerPattern %d", strategy, pat, n, maxPer)
 			}
 		}
 	}

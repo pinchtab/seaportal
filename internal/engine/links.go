@@ -112,57 +112,10 @@ func buildLinkRef(n *html.Node, base *url.URL) (LinkRef, bool) {
 // collapses whitespace runs, and truncates at linkTextMaxLen (with ellipsis).
 // <script>/<style> subtrees are skipped.
 func extractAnchorText(n *html.Node) string {
-	var b strings.Builder
-	var walk func(n *html.Node)
-	walk = func(n *html.Node) {
-		if n == nil {
-			return
-		}
-		if n.Type == html.ElementNode {
-			switch n.DataAtom {
-			case atom.Script, atom.Style:
-				return
-			}
-		}
-		if n.Type == html.TextNode {
-			b.WriteString(n.Data)
-		}
-		for c := n.FirstChild; c != nil; c = c.NextSibling {
-			walk(c)
-		}
-	}
-	for c := n.FirstChild; c != nil; c = c.NextSibling {
-		walk(c)
-	}
-
-	collapsed := collapseWhitespace(b.String())
+	collapsed := collapseWhitespace(nodeText(n, true))
 	if len([]rune(collapsed)) > linkTextMaxLen {
 		runes := []rune(collapsed)
 		collapsed = string(runes[:linkTextMaxLen]) + "…"
 	}
 	return collapsed
-}
-
-// collapseWhitespace trims leading/trailing whitespace and collapses internal
-// whitespace runs (any mix of spaces/tabs/newlines) into a single space.
-func collapseWhitespace(s string) string {
-	var b strings.Builder
-	b.Grow(len(s))
-	inSpace := false
-	started := false
-	for _, r := range s {
-		if r == ' ' || r == '\t' || r == '\n' || r == '\r' || r == '\f' || r == '\v' {
-			if started {
-				inSpace = true
-			}
-			continue
-		}
-		if inSpace {
-			b.WriteByte(' ')
-			inSpace = false
-		}
-		b.WriteRune(r)
-		started = true
-	}
-	return b.String()
 }

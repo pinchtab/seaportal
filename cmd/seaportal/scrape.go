@@ -5,9 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"os/signal"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/pinchtab/seaportal"
@@ -16,7 +14,7 @@ import (
 // runScrape implements `seaportal scrape <base-url> [flags]`: it maps the spec
 // flags onto ScrapeOptions, runs the full pipeline, and emits the result per
 // --output (json | md | directory).
-func runScrape(args []string) {
+func runScrape(ctx context.Context, args []string) {
 	fs := flag.NewFlagSet("scrape", flag.ExitOnError)
 	maxPages := fs.Int("max-pages", 50, "Maximum total pages to process")
 	maxPerPattern := fs.Int("max-per-pattern", 8, "Max samples per URL pattern")
@@ -31,6 +29,7 @@ func runScrape(args []string) {
 	respectRobots := fs.Bool("respect-robots", true, "Respect robots.txt disallow + crawl-delay")
 	timeout := fs.Duration("timeout", 60*time.Second, "Overall scrape timeout")
 	userAgent := fs.String("user-agent", "", "Override the User-Agent header")
+	allowInternal := fs.Bool("allow-internal", false, "Allow private/internal IP targets")
 	fs.Usage = func() {
 		fmt.Fprintln(os.Stderr, "Usage: seaportal scrape <base-url> [flags]")
 		fs.PrintDefaults()
@@ -75,6 +74,13 @@ func runScrape(args []string) {
 		os.Exit(2)
 	}
 
+	// Secure-by-default fetch policy, mirroring the sitemap/feed verbs:
+	// --allow-internal lifts only the private-IP block.
+	sec := seaportal.DefaultSecurityPolicy()
+	if *allowInternal {
+		sec.BlockPrivateIPs = false
+	}
+
 	robots := *respectRobots
 	opts := &seaportal.ScrapeOptions{
 		BaseURL:         baseURL,
@@ -89,54 +95,48 @@ func runScrape(args []string) {
 		RespectRobots:   &robots,
 		Timeout:         *timeout,
 		UserAgent:       *userAgent,
+		Security:        sec,
 	}
 
-	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer cancel()
-
 	res, err := seaportal.ScrapeSite(ctx, opts)
-	if err != nil {
-		// On cancellation, render partial results if available.
-		if res != nil {
-			switch out {
-			case seaportal.OutputMarkdown:
-				fmt.Print(seaportal.RenderScrapeMarkdown(res))
-			case seaportal.OutputDirectory:
-				files, werr := seaportal.WriteScrapeDirectory(res, *outDir)
-				if werr == nil {
-					fmt.Printf("wrote %d pages to %s (partial: %v)\n", len(files), *outDir, err)
-				} else {
-					fmt.Fprintln(os.Stderr, "scrape error:", werr)
-				}
-			default: // json
-				data, jerr := seaportal.RenderScrapeJSON(res)
-				if jerr == nil {
-					fmt.Println(string(data))
-				} else {
-					fmt.Fprintln(os.Stderr, "scrape error:", jerr)
-				}
-			}
-		}
+	if err != nil && res == nil {
 		fmt.Fprintln(os.Stderr, "scrape error:", err)
 		os.Exit(1)
 	}
+	if err != nil {
+		// Interrupted mid-run (Ctrl-C / caller deadline): ScrapeSite returned
+		// the partial result alongside ctx.Err() (audit T21) — render what
+		// was scraped, warn, and exit non-zero to signal the interruption.
+		fmt.Fprintf(os.Stderr, "scrape warning: interrupted (%v); rendering partial results\n", err)
+	}
 
+	if renderErr := renderScrapeResult(res, out, *outDir); renderErr != nil {
+		fmt.Fprintln(os.Stderr, "scrape error:", renderErr)
+		os.Exit(1)
+	}
+	if err != nil {
+		os.Exit(1)
+	}
+}
+
+// renderScrapeResult emits res on stdout in the chosen output format
+// (markdown digest, directory of pages, or JSON — the default).
+func renderScrapeResult(res *seaportal.ScrapeResult, out seaportal.OutputFormat, outDir string) error {
 	switch out {
 	case seaportal.OutputMarkdown:
 		fmt.Print(seaportal.RenderScrapeMarkdown(res))
 	case seaportal.OutputDirectory:
-		files, werr := seaportal.WriteScrapeDirectory(res, *outDir)
-		if werr != nil {
-			fmt.Fprintln(os.Stderr, "scrape error:", werr)
-			os.Exit(1)
+		files, err := seaportal.WriteScrapeDirectory(res, outDir)
+		if err != nil {
+			return err
 		}
-		fmt.Printf("wrote %d pages to %s\n", len(files), *outDir)
+		fmt.Printf("wrote %d pages to %s\n", len(files), outDir)
 	default: // json
-		data, jerr := seaportal.RenderScrapeJSON(res)
-		if jerr != nil {
-			fmt.Fprintln(os.Stderr, "scrape error:", jerr)
-			os.Exit(1)
+		data, err := seaportal.RenderScrapeJSON(res)
+		if err != nil {
+			return err
 		}
 		fmt.Println(string(data))
 	}
+	return nil
 }

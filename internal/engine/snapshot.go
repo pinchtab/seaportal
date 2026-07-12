@@ -1,7 +1,6 @@
 package engine
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -51,31 +50,7 @@ func BuildSnapshotWithOptions(htmlStr string, opts SnapshotOptions) (*SnapshotNo
 
 	root := &SnapshotNode{Role: "document", Children: []SnapshotNode{}}
 
-	var traverse func(*html.Node, int)
-	traverse = func(n *html.Node, depth int) {
-		if n.Type == html.ElementNode {
-			node := ctx.buildNode(n, depth)
-			if node != nil {
-				for c := n.FirstChild; c != nil; c = c.NextSibling {
-					ctx.traverseInto(c, node, depth+1)
-				}
-				// Filter: only add if interactive or has interactive children
-				if ctx.filterInteractive {
-					if node.Interactive || hasInteractiveChildren(node) {
-						root.Children = append(root.Children, *node)
-					}
-				} else {
-					root.Children = append(root.Children, *node)
-				}
-				return
-			}
-		}
-		for c := n.FirstChild; c != nil; c = c.NextSibling {
-			traverse(c, depth)
-		}
-	}
-
-	traverse(doc, 0)
+	ctx.traverseInto(doc, root, 0)
 
 	// Apply max tokens if specified
 	if opts.MaxTokens > 0 {
@@ -83,45 +58,6 @@ func BuildSnapshotWithOptions(htmlStr string, opts SnapshotOptions) (*SnapshotNo
 	}
 
 	return root, nil
-}
-
-// ToCompact returns a compact text representation of the tree
-func (n *SnapshotNode) ToCompact() string {
-	var lines []string
-	n.toCompactLines(&lines, 0)
-	return strings.Join(lines, "\n")
-}
-
-func (n *SnapshotNode) toCompactLines(lines *[]string, indent int) {
-	prefix := strings.Repeat("  ", indent)
-
-	// Build line: [ref] role "name" (tag) [interactive]
-	var parts []string
-	if n.Ref != "" {
-		parts = append(parts, n.Ref)
-	}
-	parts = append(parts, n.Role)
-	if n.Name != "" {
-		parts = append(parts, fmt.Sprintf("%q", n.Name))
-	}
-	if n.Tag != "" {
-		parts = append(parts, fmt.Sprintf("<%s>", n.Tag))
-	}
-	if n.Interactive {
-		parts = append(parts, "[interactive]")
-	}
-	if n.Href != "" {
-		parts = append(parts, fmt.Sprintf("href=%s", n.Href))
-	}
-	if n.Level > 0 {
-		parts = append(parts, fmt.Sprintf("level=%d", n.Level))
-	}
-
-	*lines = append(*lines, prefix+strings.Join(parts, " "))
-
-	for _, child := range n.Children {
-		child.toCompactLines(lines, indent+1)
-	}
 }
 
 type snapshotContext struct {
@@ -178,15 +114,15 @@ func (ctx *snapshotContext) buildNode(n *html.Node, depth int) *SnapshotNode {
 	case "heading":
 		node.Level = getHeadingLevel(n.Data)
 	case "link":
-		node.Href = snapshotGetAttr(n, "href")
+		node.Href = getAttr(n, "href")
 	case "textbox", "searchbox":
-		node.Value = snapshotGetAttr(n, "value")
+		node.Value = getAttr(n, "value")
 	case "checkbox", "radio":
-		checked := snapshotHasAttr(n, "checked")
+		checked := hasAttr(n, "checked")
 		node.Checked = &checked
 	}
 
-	if snapshotHasAttr(n, "disabled") {
+	if hasAttr(n, "disabled") {
 		node.Disabled = true
 	}
 
@@ -197,12 +133,12 @@ func (ctx *snapshotContext) buildSelector(n *html.Node) string {
 	tag := strings.ToLower(n.Data)
 
 	// Priority 1: ID selector
-	if id := snapshotGetAttr(n, "id"); id != "" {
+	if id := getAttr(n, "id"); id != "" {
 		return "#" + id
 	}
 
 	// Priority 2: Unique class selector
-	if class := snapshotGetAttr(n, "class"); class != "" {
+	if class := getAttr(n, "class"); class != "" {
 		classes := strings.Fields(class)
 		if len(classes) > 0 {
 			// Use first meaningful class
@@ -227,314 +163,4 @@ func hasInteractiveChildren(n *SnapshotNode) bool {
 		}
 	}
 	return false
-}
-
-func truncateToTokens(root *SnapshotNode, maxTokens int) *SnapshotNode {
-	// Rough estimate: 4 chars per token
-	maxChars := maxTokens * 4
-
-	// Serialize to check size
-	data, _ := json.Marshal(root)
-	if len(data) <= maxChars {
-		return root
-	}
-
-	// Truncate by removing children from deepest levels
-	result := *root
-	result.Children = truncateChildren(root.Children, maxChars, len(data))
-	return &result
-}
-
-func truncateChildren(children []SnapshotNode, maxChars, currentSize int) []SnapshotNode {
-	if currentSize <= maxChars || len(children) == 0 {
-		return children
-	}
-
-	// Remove children from the end
-	result := make([]SnapshotNode, 0, len(children))
-	for i, child := range children {
-		childData, _ := json.Marshal(child)
-		childSize := len(childData)
-
-		if currentSize-childSize > maxChars && i > len(children)/2 {
-			currentSize -= childSize
-			continue
-		}
-
-		// Recursively truncate this child's children
-		truncated := child
-		truncated.Children = truncateChildren(child.Children, maxChars/2, childSize)
-		result = append(result, truncated)
-	}
-
-	return result
-}
-
-func getRole(n *html.Node) string {
-	// Explicit ARIA role takes precedence
-	if role := snapshotGetAttr(n, "role"); role != "" {
-		return role
-	}
-
-	// Map tag to implicit role
-	tag := strings.ToLower(n.Data)
-
-	switch tag {
-	// Landmarks
-	case "header":
-		return "banner"
-	case "nav":
-		return "navigation"
-	case "main":
-		return "main"
-	case "footer":
-		return "contentinfo"
-	case "aside":
-		return "complementary"
-	case "section":
-		if snapshotGetAttr(n, "aria-label") != "" || snapshotGetAttr(n, "aria-labelledby") != "" {
-			return "region"
-		}
-		return ""
-	case "article":
-		return "article"
-	case "form":
-		return "form"
-
-	// Headings
-	case "h1", "h2", "h3", "h4", "h5", "h6":
-		return "heading"
-
-	// Links and buttons
-	case "a":
-		if snapshotGetAttr(n, "href") != "" {
-			return "link"
-		}
-		return ""
-	case "button":
-		return "button"
-
-	// Form controls
-	case "input":
-		return getInputRole(n)
-	case "textarea":
-		return "textbox"
-	case "select":
-		return "combobox"
-	case "option":
-		return "option"
-
-	// Lists
-	case "ul", "ol":
-		return "list"
-	case "li":
-		return "listitem"
-	case "dl":
-		return "list"
-	case "dt":
-		return "term"
-	case "dd":
-		return "definition"
-
-	// Tables
-	case "table":
-		return "table"
-	case "tr":
-		return "row"
-	case "th":
-		return "columnheader"
-	case "td":
-		return "cell"
-	case "thead":
-		return "rowgroup"
-	case "tbody":
-		return "rowgroup"
-
-	// Media
-	case "img":
-		if snapshotGetAttr(n, "alt") != "" {
-			return "image"
-		}
-		return "" // decorative image
-	case "figure":
-		return "figure"
-	case "figcaption":
-		return "caption"
-
-	// Text structure
-	case "p":
-		return "paragraph"
-	case "blockquote":
-		return "blockquote"
-	case "pre", "code":
-		return "code"
-
-	// Interactive
-	case "details":
-		return "group"
-	case "summary":
-		return "button"
-	case "dialog":
-		return "dialog"
-
-	default:
-		return ""
-	}
-}
-
-func getInputRole(n *html.Node) string {
-	inputType := strings.ToLower(snapshotGetAttr(n, "type"))
-	if inputType == "" {
-		inputType = "text"
-	}
-
-	switch inputType {
-	case "text", "email", "tel", "url", "password":
-		return "textbox"
-	case "search":
-		return "searchbox"
-	case "number":
-		return "spinbutton"
-	case "range":
-		return "slider"
-	case "checkbox":
-		return "checkbox"
-	case "radio":
-		return "radio"
-	case "button", "submit", "reset":
-		return "button"
-	case "image":
-		return "button"
-	default:
-		return "textbox"
-	}
-}
-
-func computeAccessibleName(n *html.Node) string {
-	// Priority 1: aria-label
-	if label := snapshotGetAttr(n, "aria-label"); label != "" {
-		return truncateName(label)
-	}
-
-	// Priority 2: title attribute
-	if title := snapshotGetAttr(n, "title"); title != "" {
-		return truncateName(title)
-	}
-
-	// Priority 3: Element-specific
-	tag := strings.ToLower(n.Data)
-
-	switch tag {
-	case "img":
-		return truncateName(snapshotGetAttr(n, "alt"))
-	case "input", "textarea":
-		if ph := snapshotGetAttr(n, "placeholder"); ph != "" {
-			return truncateName(ph)
-		}
-	case "a":
-		// Use link text
-		return truncateName(snapshotGetTextContent(n))
-	}
-
-	// Priority 4: Text content
-	return truncateName(snapshotGetTextContent(n))
-}
-
-func isInteractive(n *html.Node) bool {
-	tag := strings.ToLower(n.Data)
-
-	// Inherently interactive elements
-	switch tag {
-	case "a":
-		return snapshotGetAttr(n, "href") != ""
-	case "button", "select", "textarea":
-		return true
-	case "input":
-		inputType := strings.ToLower(snapshotGetAttr(n, "type"))
-		return inputType != "hidden"
-	case "summary", "details":
-		return true
-	}
-
-	// Check for event handlers
-	for _, attr := range n.Attr {
-		if strings.HasPrefix(attr.Key, "on") {
-			return true
-		}
-	}
-
-	// Check tabindex
-	if tabindex := snapshotGetAttr(n, "tabindex"); tabindex != "" && tabindex != "-1" {
-		return true
-	}
-
-	// Check role
-	role := snapshotGetAttr(n, "role")
-	switch role {
-	case "button", "link", "checkbox", "radio", "tab", "menuitem", "option":
-		return true
-	}
-
-	return false
-}
-
-func getHeadingLevel(tag string) int {
-	switch tag {
-	case "h1":
-		return 1
-	case "h2":
-		return 2
-	case "h3":
-		return 3
-	case "h4":
-		return 4
-	case "h5":
-		return 5
-	case "h6":
-		return 6
-	default:
-		return 0
-	}
-}
-
-func snapshotGetAttr(n *html.Node, key string) string {
-	for _, attr := range n.Attr {
-		if attr.Key == key {
-			return attr.Val
-		}
-	}
-	return ""
-}
-
-func snapshotHasAttr(n *html.Node, key string) bool {
-	for _, attr := range n.Attr {
-		if attr.Key == key {
-			return true
-		}
-	}
-	return false
-}
-
-func snapshotGetTextContent(n *html.Node) string {
-	var sb strings.Builder
-	var walk func(*html.Node)
-	walk = func(node *html.Node) {
-		if node.Type == html.TextNode {
-			sb.WriteString(node.Data)
-		}
-		for c := node.FirstChild; c != nil; c = c.NextSibling {
-			walk(c)
-		}
-	}
-	walk(n)
-	return strings.TrimSpace(sb.String())
-}
-
-func truncateName(s string) string {
-	s = strings.TrimSpace(s)
-	s = strings.Join(strings.Fields(s), " ") // normalize whitespace
-	if len(s) > 80 {
-		return s[:77] + "..."
-	}
-	return s
 }

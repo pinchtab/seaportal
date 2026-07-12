@@ -53,7 +53,9 @@ func runDiscover(t *testing.T, build func(base string) map[string]string, respec
 			_, _ = w.Write([]byte(b))
 		})
 	}
-	res, err := discover(context.Background(), ScrapeOptions{BaseURL: srv.URL, RespectRobots: respectRobots})
+	opts := ScrapeOptions{BaseURL: srv.URL, RespectRobots: respectRobots, Security: allowInternalTestPolicy()}
+	robots := newCrawlDelayCacheWithFetch(FetchBytesOptions{Security: opts.Security})
+	res, err := discover(context.Background(), opts, robots, NewHostRateLimiter())
 	if err != nil {
 		t.Fatalf("discover: %v", err)
 	}

@@ -30,19 +30,19 @@ func patternCounts(urls []string) map[string]int {
 
 func TestSampleCapsEnforced(t *testing.T) {
 	groups := bigCorpus()
-	for _, strat := range []SampleStrategy{SampleBalanced, SampleRandom, SamplePriority} {
-		opts := ScrapeOptions{BaseURL: "https://ex.com", MaxPages: 10, MaxPerPattern: 3, SampleStrategy: strat}
+	for _, strategy := range []SampleStrategy{SampleBalanced, SampleRandom, SamplePriority} {
+		opts := ScrapeOptions{BaseURL: "https://ex.com", MaxPages: 10, MaxPerPattern: 3, SampleStrategy: strategy}
 		got := sample(groups, opts)
 		if len(got) > 10 {
-			t.Errorf("[%s] total = %d, want <= MaxPages 10", strat, len(got))
+			t.Errorf("[%s] total = %d, want <= MaxPages 10", strategy, len(got))
 		}
 		for pat, n := range patternCounts(got) {
 			if n > 3 {
-				t.Errorf("[%s] pattern %s has %d, want <= MaxPerPattern 3", strat, pat, n)
+				t.Errorf("[%s] pattern %s has %d, want <= MaxPerPattern 3", strategy, pat, n)
 			}
 		}
 		if hasDup(got) {
-			t.Errorf("[%s] result has duplicates: %v", strat, got)
+			t.Errorf("[%s] result has duplicates: %v", strategy, got)
 		}
 	}
 }
@@ -129,12 +129,12 @@ func TestSamplePriorityHomepageAndSections(t *testing.T) {
 
 func TestSampleDeterministic(t *testing.T) {
 	groups := bigCorpus()
-	for _, strat := range []SampleStrategy{SampleRandom, SampleBalanced, SamplePriority} {
-		opts := ScrapeOptions{BaseURL: "https://ex.com", MaxPages: 12, MaxPerPattern: 4, SampleStrategy: strat}
+	for _, strategy := range []SampleStrategy{SampleRandom, SampleBalanced, SamplePriority} {
+		opts := ScrapeOptions{BaseURL: "https://ex.com", MaxPages: 12, MaxPerPattern: 4, SampleStrategy: strategy}
 		a := sample(groups, opts)
 		b := sample(groups, opts)
 		if !reflect.DeepEqual(a, b) {
-			t.Errorf("[%s] not deterministic:\n a=%v\n b=%v", strat, a, b)
+			t.Errorf("[%s] not deterministic:\n a=%v\n b=%v", strategy, a, b)
 		}
 	}
 }

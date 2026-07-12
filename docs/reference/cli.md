@@ -10,7 +10,7 @@ seaportal help                     # Show usage
 seaportal version                  # Show version (also --version / -v)
 ```
 
-The default verb extracts a URL. It writes the rendered Markdown and JSON to `renders/seaportal/<host>_<timestamp>.{md,json}` and prints the content plus a classification summary. Use `--json`, `--xml`, or `--snapshot` to control the format.
+The default verb extracts a URL and prints the content plus a classification summary to stdout. Pass `--save-dir <dir>` to also write the rendered Markdown and JSON to `<dir>/<host>_<timestamp>.{md,json}`. Use `--json`, `--xml`, or the `snapshot` subcommand to control the format.
 
 ## Input modes
 
@@ -177,6 +177,13 @@ seaportal scrape https://example.com --max-pages 50 --sample-strategy balanced
 | `--respect-robots` | true | Honor robots.txt disallow rules + crawl-delay |
 | `--timeout D` | 60s | Overall scrape timeout |
 | `--user-agent S` | "" | Override the User-Agent header |
+| `--allow-internal` | false | Escape hatch: allow private/internal IP targets |
+
+Every scrape fetch (discovery, robots.txt, sitemaps, pages) runs under the
+secure-by-default policy (private-IP block, http/https only, redirect and
+size caps); `--allow-internal` lifts only the private-IP block. If the run is
+interrupted (Ctrl-C) the partial result is still rendered, with a warning on
+stderr and a non-zero exit code.
 
 Sampling strategies: `balanced` spreads the budget across groups so a large
 group can't starve the others; `priority` takes the homepage and one

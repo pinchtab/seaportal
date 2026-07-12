@@ -40,6 +40,46 @@ const (
 	DecisionUnsupported          BrowserDecision = "unsupported"
 )
 
+// Confidence gates for page classification.
+const (
+	// confHighGate: at/above this the extractor's signal is trusted outright.
+	confHighGate = 80
+	// confMediumGate: entry to the medium-confidence band.
+	confMediumGate = 50
+	// confTrustworthyGate: medium-band results are marked trustworthy at/above this.
+	confTrustworthyGate = 60
+	// confVeryLowGate: below this, extraction quality is too poor to trust at
+	// all (fail fast / flag very-low quality).
+	confVeryLowGate = 30
+)
+
+// Hydrated-SPA thresholds: a SPA bootstrap with this much real prose is
+// server-rendered for first paint and safe to extract.
+const (
+	hydratedMinLength     = 2000
+	hydratedMinHeadings   = 2
+	hydratedMinParagraphs = 3
+)
+
+// Content-shape gates for the medium-confidence static fallbacks.
+const (
+	// fallbackStaticMinLength: default-branch "hasContent" floor — below this
+	// (with no headings/paragraphs) a no-signal page stays dynamic.
+	fallbackStaticMinLength = 500
+	// staticBulkMinLength: a body this long is reliably static even with no
+	// paragraph or heading structure (e.g. index/listing pages).
+	staticBulkMinLength = 2000
+	// staticShortMinConfidence: short-body static needs this confidence so we
+	// don't catch medium-confidence dynamic shells.
+	staticShortMinConfidence = 70
+	// staticShortMinLength: chrome-only listing pages (H=0, P=0) at high-ish
+	// confidence still count as static from this length.
+	staticShortMinLength = 800
+	// staticThinMinLength: thin bodies need at least one paragraph plus this
+	// length to count as static.
+	staticThinMinLength = 300
+)
+
 type PageProfile struct {
 	Class              PageClass         `json:"class"`
 	Outcome            ExtractionOutcome `json:"outcome"`
@@ -77,14 +117,14 @@ func classifyPageInternal(result Result) PageProfile {
 		// `hydrated`, not `spa`, so callers extract instead of escalating to a
 		// browser. Thresholds picked to keep round-1 corpus accuracy at 1.000
 		// while catching real docs/forum pages with hydration markers.
-		if result.Length > 2000 && result.HeadingCount >= 2 && result.ParagraphCount >= 3 {
+		if result.Length > hydratedMinLength && result.HeadingCount >= hydratedMinHeadings && result.ParagraphCount >= hydratedMinParagraphs {
 			profile.Class = PageHydrated
 			profile.Outcome = OutcomeExtract
 			profile.Reasons = append(profile.Reasons, "spa-bootstrap-with-real-content")
 			for _, sig := range result.SPASignals {
 				profile.Reasons = append(profile.Reasons, "spa-signal:"+sig)
 			}
-			profile.Trustworthy = result.Confidence >= 50
+			profile.Trustworthy = result.Confidence >= confMediumGate
 			return profile
 		}
 		profile.Class = PageSPA
@@ -92,7 +132,7 @@ func classifyPageInternal(result Result) PageProfile {
 		for _, sig := range result.SPASignals {
 			profile.Reasons = append(profile.Reasons, "spa-signal:"+sig)
 		}
-		if result.Confidence < 30 {
+		if result.Confidence < confVeryLowGate {
 			profile.Reasons = append(profile.Reasons, "low-confidence-extraction")
 		}
 		profile.Trustworthy = false
@@ -107,7 +147,7 @@ func classifyPageInternal(result Result) PageProfile {
 		return profile
 	}
 
-	if result.Confidence >= 80 {
+	if result.Confidence >= confHighGate {
 		if hasHydrationMarkers(result) { //nolint:gocritic
 			profile.Class = PageHydrated
 			profile.Reasons = append(profile.Reasons, "high-confidence", "hydration-markers-present")
@@ -136,66 +176,8 @@ func classifyPageInternal(result Result) PageProfile {
 		return profile
 	}
 
-	if result.Confidence >= 50 {
-		isExtractClass := true
-		switch {
-		case hasHydrationMarkers(result):
-			profile.Class = PageHydrated
-			profile.Reasons = append(profile.Reasons, "medium-confidence", "hydration-markers")
-			profile.Outcome = OutcomeExtract
-		case hasMediumSSRStructure(result):
-			profile.Class = PageSSR
-			profile.Reasons = append(profile.Reasons, "medium-confidence", "ssr-structure")
-			profile.Outcome = OutcomeExtract
-		case hasMediumStaticIndex(result):
-			profile.Class = PageStatic
-			profile.Reasons = append(profile.Reasons, "medium-confidence", "static-index")
-			profile.Outcome = OutcomeExtract
-		case hasMediumStaticShape(result):
-			profile.Class = PageStatic
-			profile.Reasons = append(profile.Reasons, "medium-confidence", "plain-html", "no-spa-signals")
-			profile.Outcome = OutcomeExtract
-		default:
-			// regression: classifier-round-2-fallback — the prior `default:
-			// PageDynamic` swallowed every unmatched medium-confidence page,
-			// labelling plain SSR/news/forum responses as "personalized".
-			// Only call it dynamic when there's an actual positive signal
-			// (SPA root / hydration scaffolding) or low confidence. Otherwise
-			// treat as best-effort static: agents don't have to escalate, and
-			// the static label still carries the medium-confidence reason
-			// chain so callers can downgrade trust if they want.
-			// Static fallback gate: ONLY downgrade to static when there is
-			// also substantive extracted content (Length>=500 OR ≥1 heading
-			// OR ≥2 paragraphs). Short/thin extractions with no positive
-			// signals are usually login/auth/paywall stubs — honest call is
-			// still `dynamic` because the agent should re-evaluate, not
-			// trust the few bytes that survived extraction.
-			hasContent := result.Length >= 500 || result.HeadingCount >= 1 || result.ParagraphCount >= 2
-			// Error responses (4xx/5xx) must never be promoted to `static`
-			// regardless of body shape — the body may render fine but the
-			// transport said "not OK", and callers rely on the outcome to
-			// avoid trusting error bodies as primary content.
-			isErrorResponse := result.StatusCode >= 400
-			if len(result.SPASignals) > 0 || result.Confidence < 50 || !hasContent || isErrorResponse {
-				profile.Class = PageDynamic
-				profile.Reasons = append(profile.Reasons, "medium-confidence", "possible-personalization")
-				profile.Outcome = OutcomeExtractWarning
-				isExtractClass = false
-			} else {
-				profile.Class = PageStatic
-				profile.Reasons = append(profile.Reasons, "medium-confidence", "fallback-static", "no-positive-signals")
-				profile.Outcome = OutcomeExtract
-			}
-		}
-		profile.Trustworthy = result.Confidence >= 60
-		if isExtractClass {
-			if triggered, reason := detectAuthWallByContent(result); triggered {
-				profile.Outcome = OutcomeNeedsBrowser
-				profile.Reasons = append(profile.Reasons, reason)
-				profile.Trustworthy = false
-			}
-		}
-		return profile
+	if result.Confidence >= confMediumGate {
+		return classifyMediumConfidence(result)
 	}
 
 	profile.Class = PageDynamic
@@ -203,11 +185,82 @@ func classifyPageInternal(result Result) PageProfile {
 	profile.Reasons = append(profile.Reasons, "low-confidence", "content-may-be-incomplete")
 	profile.Trustworthy = false
 
-	if result.Confidence < 30 {
+	if result.Confidence < confVeryLowGate {
 		profile.Outcome = OutcomeFailFast
 		profile.Reasons = append(profile.Reasons, "very-low-extraction-quality")
 	}
 
+	return profile
+}
+
+// classifyMediumConfidence resolves the medium-confidence band
+// (confMediumGate <= confidence < confHighGate): positive hydration/SSR/static
+// signals win; otherwise fall back to static only when there is substantive
+// content, else dynamic. Extract-class outcomes (everything but the dynamic
+// fallback, which emits OutcomeExtractWarning) are re-checked against the
+// auth-wall detector before returning.
+func classifyMediumConfidence(result Result) PageProfile {
+	profile := PageProfile{
+		Confidence: result.Confidence,
+	}
+
+	switch {
+	case hasHydrationMarkers(result):
+		profile.Class = PageHydrated
+		profile.Reasons = append(profile.Reasons, "medium-confidence", "hydration-markers")
+		profile.Outcome = OutcomeExtract
+	case hasMediumSSRStructure(result):
+		profile.Class = PageSSR
+		profile.Reasons = append(profile.Reasons, "medium-confidence", "ssr-structure")
+		profile.Outcome = OutcomeExtract
+	case hasMediumStaticIndex(result):
+		profile.Class = PageStatic
+		profile.Reasons = append(profile.Reasons, "medium-confidence", "static-index")
+		profile.Outcome = OutcomeExtract
+	case hasMediumStaticShape(result):
+		profile.Class = PageStatic
+		profile.Reasons = append(profile.Reasons, "medium-confidence", "plain-html", "no-spa-signals")
+		profile.Outcome = OutcomeExtract
+	default:
+		// regression: classifier-round-2-fallback — the prior `default:
+		// PageDynamic` swallowed every unmatched medium-confidence page,
+		// labelling plain SSR/news/forum responses as "personalized".
+		// Only call it dynamic when there's an actual positive signal
+		// (SPA root / hydration scaffolding) or low confidence. Otherwise
+		// treat as best-effort static: agents don't have to escalate, and
+		// the static label still carries the medium-confidence reason
+		// chain so callers can downgrade trust if they want.
+		// Static fallback gate: ONLY downgrade to static when there is
+		// also substantive extracted content (Length>=500 OR ≥1 heading
+		// OR ≥2 paragraphs). Short/thin extractions with no positive
+		// signals are usually login/auth/paywall stubs — honest call is
+		// still `dynamic` because the agent should re-evaluate, not
+		// trust the few bytes that survived extraction.
+		hasContent := result.Length >= fallbackStaticMinLength || result.HeadingCount >= 1 || result.ParagraphCount >= 2
+		// Error responses (4xx/5xx) must never be promoted to `static`
+		// regardless of body shape — the body may render fine but the
+		// transport said "not OK", and callers rely on the outcome to
+		// avoid trusting error bodies as primary content.
+		isErrorResponse := result.StatusCode >= 400
+		if len(result.SPASignals) > 0 || result.Confidence < confMediumGate || !hasContent || isErrorResponse {
+			profile.Class = PageDynamic
+			profile.Reasons = append(profile.Reasons, "medium-confidence", "possible-personalization")
+			profile.Outcome = OutcomeExtractWarning
+		} else {
+			profile.Class = PageStatic
+			profile.Reasons = append(profile.Reasons, "medium-confidence", "fallback-static", "no-positive-signals")
+			profile.Outcome = OutcomeExtract
+		}
+	}
+
+	profile.Trustworthy = result.Confidence >= confTrustworthyGate
+	if profile.Outcome == OutcomeExtract {
+		if triggered, reason := detectAuthWallByContent(result); triggered {
+			profile.Outcome = OutcomeNeedsBrowser
+			profile.Reasons = append(profile.Reasons, reason)
+			profile.Trustworthy = false
+		}
+	}
 	return profile
 }
 
@@ -395,23 +448,23 @@ func hasMediumStaticShape(result Result) bool {
 	// Bulk-shape static: long body is reliably static even with no paragraph
 	// or heading structure (e.g. index/listing pages). Floor preserved at
 	// 2000 to keep TestClassifyPage_RFC2616Static and friends green.
-	if result.Length >= 2000 {
+	if result.Length >= staticBulkMinLength {
 		return true
 	}
 	// Short-body static needs a stronger confidence gate so we don't catch
 	// medium-confidence dynamic shells. At conf>=70 the extractor has good
 	// enough signal that the absence of SPA markers means it really is
 	// pre-rendered HTML.
-	if result.Confidence >= 70 {
+	if result.Confidence >= staticShortMinConfidence {
 		// hn-frontpage-fragment.html: H=0, P=0, Len=848 — chrome-only listing
 		// page; conf=75; needs to land as static, not dynamic.
 		// github-readme-with-login-example.html: H=0, P=0, Len=1095; conf=75.
-		if result.Length >= 800 {
+		if result.Length >= staticShortMinLength {
 			return true
 		}
 		// article-ldjson.html: H=0, P=2, Len=650; conf=70.
 		// article-og-full.html: H=0, P=1, Len=390; conf=70.
-		if result.Length >= 300 && result.ParagraphCount >= 1 {
+		if result.Length >= staticThinMinLength && result.ParagraphCount >= 1 {
 			return true
 		}
 	}

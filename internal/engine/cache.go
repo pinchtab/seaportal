@@ -20,10 +20,13 @@
 package engine
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"io/fs"
 	"net/http"
 	"os"
@@ -36,6 +39,12 @@ import (
 type DiskCache struct {
 	dir string
 	ttl time.Duration
+
+	// now is the clock used for TTL math and FetchedAt stamps. Defaults to
+	// time.Now; tests substitute a fake clock so TTL/SWR boundaries can be
+	// asserted without real sleeps (same test-seam convention as
+	// retryBackoffBase in fetch_document.go).
+	now func() time.Time
 }
 
 // cachedResponse is the on-disk header/metadata sidecar for a cached body.
@@ -58,7 +67,7 @@ func NewDiskCache(dir string, ttl time.Duration) (*DiskCache, error) {
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return nil, err
 	}
-	return &DiskCache{dir: dir, ttl: ttl}, nil
+	return &DiskCache{dir: dir, ttl: ttl, now: time.Now}, nil
 }
 
 // cacheKey returns the 16-byte hex prefix of the SHA-256 of url + relevant
@@ -103,7 +112,7 @@ func (c *DiskCache) Get(url string, req *http.Request) (*cachedResponse, []byte,
 		return nil, nil, false
 	}
 
-	if time.Since(meta.FetchedAt) > c.ttl {
+	if c.now().Sub(meta.FetchedAt) > c.ttl {
 		return nil, nil, false
 	}
 
@@ -159,7 +168,7 @@ func (c *DiskCache) GetStaleWithTolerance(url string, req *http.Request, toleran
 		return nil, nil, false, false, false
 	}
 
-	age := time.Since(meta.FetchedAt)
+	age := c.now().Sub(meta.FetchedAt)
 	if age <= c.ttl {
 		return &meta, body, true, false, false
 	}
@@ -188,12 +197,25 @@ func (c *DiskCache) TouchByKey(key string) error {
 	if err := json.Unmarshal(metaBytes, &meta); err != nil {
 		return err
 	}
-	meta.FetchedAt = time.Now()
+	meta.FetchedAt = c.now()
 	out, err := json.Marshal(meta)
 	if err != nil {
 		return err
 	}
 	return atomicWrite(c.headerPath(key), out)
+}
+
+// toHTTPResponse reconstructs an http.Response from the cached metadata plus
+// the given body so cache replays (fresh hits, SWR serves, 304 revalidations)
+// flow through the same downstream path as a live fetch.
+func (r *cachedResponse) toHTTPResponse(body []byte, req *http.Request) *http.Response {
+	return &http.Response{
+		Status:     fmt.Sprintf("%d %s", r.Status, http.StatusText(r.Status)),
+		StatusCode: r.Status,
+		Header:     r.Headers.Clone(),
+		Body:       io.NopCloser(bytes.NewReader(body)),
+		Request:    req,
+	}
 }
 
 // ConditionalHeaders returns the conditional-GET request headers derived from
@@ -224,7 +246,7 @@ func (c *DiskCache) Put(url string, req *http.Request, status int, headers http.
 		URL:       url,
 		Status:    status,
 		Headers:   headers,
-		FetchedAt: time.Now(),
+		FetchedAt: c.now(),
 	}
 	metaBytes, err := json.Marshal(meta)
 	if err != nil {

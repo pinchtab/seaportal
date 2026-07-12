@@ -22,6 +22,7 @@ COMMANDS=(
   "test:🔬:Run tests (fast: -short, cached, no race)"
   "test full:🔬:Full tests (race + coverage; pre-push/CI)"
   "test race:🏁:Run tests with race detector"
+  "test integration:🔌:Integration tests (MCP conformance + latency budget)"
   "coverage:📊:Run tests with coverage"
   "lint:🔍:Run golangci-lint"
   "fmt:✨:Format code"
@@ -88,6 +89,15 @@ run_command() {
           echo ""
           exec bash scripts/test.sh
           ;;
+        integration)
+          # The -tags=integration lane: MCP JSON-RPC conformance, MCP
+          # cold-start budget, and the FromURL latency budget (p95 ≤ 1.5s,
+          # p99 ≤ 2.5s). No race detector — the latency gate measures wall
+          # time. Same command CI runs in reusable-go.yml.
+          echo "  ${ACCENT}${BOLD}🔌 Integration tests — MCP conformance + latency budget${NC}"
+          echo ""
+          go test -tags=integration ./cmd/seaportal/ ./internal/engine/ -run 'TestMCP|TestLatencyBudget' -count=1 -timeout 600s
+          ;;
         *)
           # Fast inner-loop lane: no race (~5x faster), -short skips the heavy
           # suites, and the build/test cache is left on (no -count=1) so
@@ -110,6 +120,13 @@ run_command() {
       echo "  ${ACCENT}${BOLD}🔬 Full tests — race + coverage${NC}"
       echo ""
       exec bash scripts/test.sh
+      ;;
+    "test integration")
+      # Menu-picker form of "./dev test integration" (see the shift_args
+      # branch in the "test" case above).
+      echo "  ${ACCENT}${BOLD}🔌 Integration tests — MCP conformance + latency budget${NC}"
+      echo ""
+      go test -tags=integration ./cmd/seaportal/ ./internal/engine/ -run 'TestMCP|TestLatencyBudget' -count=1 -timeout 600s
       ;;
     "coverage")
       echo "  ${ACCENT}${BOLD}📊 Coverage${NC}"
@@ -149,11 +166,12 @@ run_command() {
       FUZZTIME="${2:-30s}"
       echo "  ${MUTED}Duration: $FUZZTIME${NC}"
       echo ""
+      # BSD grep (macOS) has no -P; use -E + sed to extract the target name.
       for f in $(grep -rl 'func Fuzz' --include='*_test.go' . 2>/dev/null | head -20); do
         pkg=$(dirname "$f")
-        for fn in $(grep -oP 'func \KFuzz\w+' "$f"); do
+        for fn in $(grep -oE 'func Fuzz[A-Za-z0-9_]+' "$f" | sed 's/^func //'); do
           echo "  Running $fn in $pkg..."
-          go test "$pkg" -fuzz="$fn" -fuzztime="$FUZZTIME"
+          go test "$pkg" -fuzz="^$fn\$" -fuzztime="$FUZZTIME" -run '^$'
         done
       done
       echo ""

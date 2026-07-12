@@ -25,8 +25,10 @@ var reSitemapDirective = regexp.MustCompile(`(?im)^\s*sitemap:\s*(\S+)`)
 // from robots.txt plus the conventional /sitemap.xml, flatten sitemap indexes
 // via FlattenSitemap, and — if no sitemap yields URLs — fall back to a bounded
 // same-host crawl seeded from the homepage. When RespectRobots is set,
-// disallowed paths are dropped from the candidate set.
-func discover(ctx context.Context, opts ScrapeOptions) (discoveryResult, error) {
+// disallowed paths are dropped from the candidate set. robots and limiter are
+// the run-shared cache/limiter created by ScrapeSite (T03) so robots.txt is
+// fetched once per host across discovery and the fetch phase.
+func discover(ctx context.Context, opts ScrapeOptions, robots *CrawlDelayCache, limiter *HostRateLimiter) (discoveryResult, error) {
 	o := opts.normalized()
 	base, err := url.Parse(strings.TrimSpace(o.BaseURL))
 	if err != nil || base.Host == "" {
@@ -38,7 +40,6 @@ func discover(ctx context.Context, opts ScrapeOptions) (discoveryResult, error) 
 		scheme = "https"
 	}
 
-	robots := NewCrawlDelayCache()
 	respectRobots := o.RespectRobots != nil && *o.RespectRobots
 	allowed := func(rawURL string) bool {
 		if !respectRobots {
@@ -48,7 +49,7 @@ func discover(ctx context.Context, opts ScrapeOptions) (discoveryResult, error) 
 		if perr != nil {
 			return false
 		}
-		return robots.IsAllowed(u.Host, o.UserAgent, u.Scheme, u.Path)
+		return robots.IsAllowed(ctx, u.Host, o.UserAgent, u.Scheme, u.Path)
 	}
 
 	res := discoveryResult{}
@@ -59,8 +60,7 @@ func discover(ctx context.Context, opts ScrapeOptions) (discoveryResult, error) 
 		if !ok || cu == "" {
 			return
 		}
-		pu, perr := url.Parse(cu)
-		if perr != nil || !strings.EqualFold(pu.Host, host) {
+		if !sameHost(cu, host, scheme) {
 			return // drop external hosts
 		}
 		if !allowed(cu) || seen[cu] {
@@ -76,7 +76,7 @@ func discover(ctx context.Context, opts ScrapeOptions) (discoveryResult, error) 
 		if ctx.Err() != nil {
 			break
 		}
-		entries, ferr := FlattenSitemap(ctx, sm, FlattenSitemapOptions{Timeout: o.Timeout})
+		entries, ferr := FlattenSitemap(ctx, sm, FlattenSitemapOptions{Timeout: o.Timeout, Security: o.Security})
 		if ferr != nil || len(entries) == 0 {
 			continue
 		}
@@ -89,7 +89,7 @@ func discover(ctx context.Context, opts ScrapeOptions) (discoveryResult, error) 
 
 	// 3. Crawl fallback when no sitemap produced any URLs.
 	if !res.SitemapFound {
-		for _, u := range crawlSameHost(ctx, scheme+"://"+host+"/", host, o, o.MaxPages, defaultCrawlDepth) {
+		for _, u := range crawlSameHost(ctx, scheme+"://"+host+"/", host, o, robots, limiter, o.MaxPages, defaultCrawlDepth) {
 			add(u)
 		}
 	}
@@ -105,16 +105,28 @@ func discoverSitemapURLs(ctx context.Context, scheme, host string, o ScrapeOptio
 	seen := map[string]bool{}
 	push := func(u string) {
 		u = strings.TrimSpace(u)
-		if u == "" || seen[u] {
+		if u == "" {
 			return
 		}
-		seen[u] = true
+		// Dedup on a port-canonical key so a robots `Sitemap:` directive that
+		// omits the default port and the conventional `/sitemap.xml` built from
+		// a base host that includes it are recognised as the same sitemap and
+		// not fetched (and flattened) twice.
+		key := u
+		if pu, err := url.Parse(u); err == nil {
+			key = canonicalHost(pu.Host, pu.Scheme) + pu.Path
+		}
+		if seen[key] {
+			return
+		}
+		seen[key] = true
 		out = append(out, u)
 	}
 
 	body, _, status, err := FetchBytes(ctx, scheme+"://"+host+"/robots.txt", FetchBytesOptions{
 		Timeout:   o.Timeout,
 		UserAgent: o.UserAgent,
+		Security:  o.Security,
 	})
 	if err == nil && status == 200 {
 		for _, m := range reSitemapDirective.FindAllStringSubmatch(string(body), -1) {
@@ -127,8 +139,11 @@ func discoverSitemapURLs(ctx context.Context, scheme, host string, o ScrapeOptio
 
 // crawlSameHost does a bounded breadth-first crawl from seed, following only
 // same-host links, up to maxURLs pages and maxDepth deep. Disallowed paths are
-// skipped when RespectRobots is set. Returns the visited URLs in BFS order.
-func crawlSameHost(ctx context.Context, seed, host string, o ScrapeOptions, maxURLs, maxDepth int) []string {
+// skipped when RespectRobots is set, and each crawl fetch honours the robots
+// crawl-delay (clamped) through the run-shared limiter — the BFS previously
+// hammered the host with no spacing at all (T03). Returns the visited URLs in
+// BFS order.
+func crawlSameHost(ctx context.Context, seed, host string, o ScrapeOptions, robots *CrawlDelayCache, limiter *HostRateLimiter, maxURLs, maxDepth int) []string {
 	if maxURLs <= 0 {
 		maxURLs = DefaultScrapeMaxPages
 	}
@@ -136,7 +151,7 @@ func crawlSameHost(ctx context.Context, seed, host string, o ScrapeOptions, maxU
 		maxDepth = 0
 	}
 	respectRobots := o.RespectRobots != nil && *o.RespectRobots
-	robots := NewCrawlDelayCache()
+	_, baseScheme := hostScheme(seed)
 
 	type item struct {
 		url   string
@@ -160,9 +175,17 @@ func crawlSameHost(ctx context.Context, seed, host string, o ScrapeOptions, maxU
 		if cur.depth >= maxDepth {
 			continue
 		}
+		if respectRobots {
+			curHost, curScheme := hostScheme(cur.url)
+			delay, _ := clampCrawlDelay(robots.GetDelayWithScheme(ctx, curHost, o.UserAgent, curScheme))
+			if limiter.Wait(ctx, curHost, delay) != nil {
+				break // ctx fired while waiting for the slot
+			}
+		}
 		body, _, status, err := FetchBytes(ctx, cur.url, FetchBytesOptions{
 			Timeout:   o.Timeout,
 			UserAgent: o.UserAgent,
+			Security:  o.Security,
 		})
 		if err != nil || status != 200 {
 			continue
@@ -172,12 +195,14 @@ func crawlSameHost(ctx context.Context, seed, host string, o ScrapeOptions, maxU
 			if !ok || visited[nu] {
 				continue
 			}
-			pu, perr := url.Parse(nu)
-			if perr != nil || !strings.EqualFold(pu.Host, host) {
+			if !sameHost(nu, host, baseScheme) {
 				continue // same-host only; external excluded
 			}
-			if respectRobots && !robots.IsAllowed(pu.Host, o.UserAgent, pu.Scheme, pu.Path) {
-				continue
+			if respectRobots {
+				pu, perr := url.Parse(nu)
+				if perr != nil || !robots.IsAllowed(ctx, pu.Host, o.UserAgent, pu.Scheme, pu.Path) {
+					continue
+				}
 			}
 			visited[nu] = true
 			queue = append(queue, item{nu, cur.depth + 1})

@@ -153,21 +153,10 @@ func runSelftest(args []string) {
 		report.Diff = diffSelftest(prior, &report, priorPath)
 	}
 
-	ts := time.Now().UTC().Format("20060102-150405")
-	jsonOut := filepath.Join(*output, fmt.Sprintf("selftest_%s.json", ts))
-	mdOut := filepath.Join(*output, fmt.Sprintf("selftest_%s.md", ts))
-
-	if err := writeSelftestJSON(jsonOut, report); err != nil {
-		fmt.Fprintln(os.Stderr, "selftest: write json:", err)
+	if _, _, err := emitReports(*output, "selftest", report, renderSelftestMarkdown(report)); err != nil {
+		fmt.Fprintln(os.Stderr, "selftest:", err)
 		os.Exit(1)
 	}
-	if err := atomicWrite(mdOut, renderSelftestMarkdown(report)); err != nil {
-		fmt.Fprintln(os.Stderr, "selftest: write markdown:", err)
-		os.Exit(1)
-	}
-
-	fmt.Println("wrote", jsonOut)
-	fmt.Println("wrote", mdOut)
 	fmt.Printf("selftest: completion=%.3f avg_ops=%.2f escalation=%s\n",
 		metrics.CompletionRate, metrics.AvgOps, formatEscalationRate(metrics))
 }
@@ -468,14 +457,6 @@ func diffSelftest(prior, current *SelftestReport, priorPath string) *SelftestDif
 	return d
 }
 
-func writeSelftestJSON(path string, r SelftestReport) error {
-	raw, err := json.MarshalIndent(r, "", "  ")
-	if err != nil {
-		return err
-	}
-	return atomicWrite(path, string(raw)+"\n")
-}
-
 func formatEscalationRate(m SelftestMetrics) string {
 	if !m.EscalationApplicable {
 		return "N/A"
@@ -485,11 +466,10 @@ func formatEscalationRate(m SelftestMetrics) string {
 
 func renderSelftestMarkdown(r SelftestReport) string {
 	var b strings.Builder
-	fmt.Fprintln(&b, "# SeaPortal Agent Selftest Report")
-	fmt.Fprintln(&b)
-	fmt.Fprintf(&b, "- Captured: %s\n", r.CapturedAt)
-	fmt.Fprintf(&b, "- Git SHA: `%s`\n", r.GitSHA)
-	fmt.Fprintf(&b, "- Input: `%s`\n", r.InputPath)
+	reportHeader(&b, "SeaPortal Agent Selftest Report",
+		"Captured", r.CapturedAt,
+		"Git SHA", "`"+r.GitSHA+"`",
+		"Input", "`"+r.InputPath+"`")
 	if r.GroupPath != "" {
 		fmt.Fprintf(&b, "- Group: `%s`\n", r.GroupPath)
 	}

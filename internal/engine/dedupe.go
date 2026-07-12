@@ -209,8 +209,7 @@ func normalizeBlock(block string, opts DedupeOptions) string {
 	}
 
 	if opts.NormalizeWhitespace {
-		wsRe := regexp.MustCompile(`\s+`)
-		s = wsRe.ReplaceAllString(s, " ")
+		s = wsRunRE.ReplaceAllString(s, " ")
 		s = strings.TrimSpace(s)
 	}
 

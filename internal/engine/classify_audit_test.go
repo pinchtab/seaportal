@@ -103,12 +103,15 @@ func TestClassifyPageAudit(t *testing.T) {
 <div id="root"></div>
 <noscript>You need to enable JavaScript to run this app.</noscript>
 </body></html>`,
-			wantClass:       PageSPA,
-			wantIsSPA:       true,
-			wantOutcome:     OutcomeNeedsBrowser,
-			wantDecision:    DecisionBrowserNeeded,
-			wantBrowserRec:  true,
-			wantContentType: "page",
+			wantClass:      PageSPA,
+			wantIsSPA:      true,
+			wantOutcome:    OutcomeNeedsBrowser,
+			wantDecision:   DecisionBrowserNeeded,
+			wantBrowserRec: true,
+			// T07: with classification reading the extraction Result instead of
+			// raw HTML, an empty SPA shell (nothing extractable) is honestly
+			// "unknown" rather than "page".
+			wantContentType: "unknown",
 		},
 		{
 			// JS-shell whose "enable JavaScript" warning sits in regular DOM, not
@@ -136,9 +139,9 @@ func TestClassifyPageAudit(t *testing.T) {
 			// browser is spent.
 			name: "binary-image-png",
 			seed: &Result{
-				ResponseContentType: "image/png",
-				Error:               "skipped binary content: image/png",
-				StatusCode:          200,
+				TransportInfo: TransportInfo{ResponseContentType: "image/png"},
+				Error:         "skipped binary content: image/png",
+				StatusCode:    200,
 			},
 			wantClass:      PageDynamic,
 			wantIsSPA:      false,
@@ -151,9 +154,9 @@ func TestClassifyPageAudit(t *testing.T) {
 			// binary content-type (ALP-038).
 			name: "binary-octet-stream",
 			seed: &Result{
-				ResponseContentType: "application/octet-stream",
-				Error:               "skipped binary content: application/octet-stream",
-				StatusCode:          200,
+				TransportInfo: TransportInfo{ResponseContentType: "application/octet-stream"},
+				Error:         "skipped binary content: application/octet-stream",
+				StatusCode:    200,
 			},
 			wantClass:      PageDynamic,
 			wantIsSPA:      false,
@@ -167,13 +170,13 @@ func TestClassifyPageAudit(t *testing.T) {
 			// extractable static/ssr document, never unsupported.
 			name: "pdf-extractable",
 			seed: &Result{
-				ResponseContentType: "application/pdf",
-				StatusCode:          200,
-				Content:             "Quarterly Report. Revenue grew twelve percent year over year across all regions.",
-				Length:              1200,
-				Confidence:          85,
-				HeadingCount:        2,
-				ParagraphCount:      3,
+				TransportInfo:  TransportInfo{ResponseContentType: "application/pdf"},
+				StatusCode:     200,
+				Content:        "Quarterly Report. Revenue grew twelve percent year over year across all regions.",
+				Length:         1200,
+				Confidence:     85,
+				HeadingCount:   2,
+				ParagraphCount: 3,
 			},
 			wantClass:      PageSSR,
 			wantIsSPA:      false,
@@ -209,7 +212,9 @@ func TestClassifyPageAudit(t *testing.T) {
 				t.Errorf("browserRecommended = %v, want %v", profile.BrowserRecommended, tc.wantBrowserRec)
 			}
 			if tc.wantContentType != "" {
-				got := classifyContentType(ExtractLDJSON(tc.html), ExtractMetadata(tc.html), tc.url, tc.html)
+				// T07: classifyContentType consumes the extraction Result (the
+				// converged scrape path retains no raw HTML).
+				got := classifyContentType(r, tc.url)
 				if got != tc.wantContentType {
 					t.Errorf("contentType = %q, want %q", got, tc.wantContentType)
 				}

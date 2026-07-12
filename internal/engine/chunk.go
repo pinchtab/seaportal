@@ -1,36 +1,9 @@
 package engine
 
 import (
-	"fmt"
 	"regexp"
-	"strconv"
 	"strings"
 )
-
-// ChunkStrategy selects a chunking algorithm. Default is off.
-type ChunkStrategy int
-
-const (
-	// ChunkOff disables chunking (default — Result.Chunks stays nil).
-	ChunkOff ChunkStrategy = iota
-	// ChunkHeading splits at H2-H6 boundaries, preserving the heading.
-	ChunkHeading
-	// ChunkSentence groups sentences until a ~Size-token threshold.
-	ChunkSentence
-	// ChunkWindow slides a Size-char window with Overlap chars of backstep.
-	ChunkWindow
-)
-
-// ChunkConfig controls how Markdown is split into Chunks.
-type ChunkConfig struct {
-	Strategy ChunkStrategy
-	// Size meaning depends on Strategy:
-	//   sentence: target tokens per group
-	//   window:   chars per window
-	Size int
-	// Overlap is only used by window strategy (chars of overlap).
-	Overlap int
-}
 
 // Chunk is a single piece of a chunked Markdown body.
 type Chunk struct {
@@ -38,102 +11,6 @@ type Chunk struct {
 	Heading string `json:"heading,omitempty"`
 	Text    string `json:"text"`
 	Tokens  int    `json:"tokens"`
-}
-
-// String renders the canonical CLI form of the config (or "" for off).
-func (c ChunkConfig) String() string {
-	switch c.Strategy {
-	case ChunkOff:
-		return ""
-	case ChunkHeading:
-		return "heading"
-	case ChunkSentence:
-		if c.Size == 0 {
-			return "sentence"
-		}
-		return fmt.Sprintf("sentence:%d", c.Size)
-	case ChunkWindow:
-		if c.Size == 0 {
-			return "window"
-		}
-		if c.Overlap == 0 {
-			return fmt.Sprintf("window:%d", c.Size)
-		}
-		return fmt.Sprintf("window:%d:%d", c.Size, c.Overlap)
-	default:
-		return fmt.Sprintf("unknown(%d)", int(c.Strategy))
-	}
-}
-
-// ParseChunkConfig parses the colon-form CLI argument.
-//
-//	""                          -> {ChunkOff, 0, 0}
-//	"heading"                   -> {ChunkHeading, 0, 0}
-//	"sentence" / "sentence:N"   -> {ChunkSentence, N|512, 0}
-//	"window" / "window:N[:O]"   -> {ChunkWindow, N|2000, O|200}
-//
-// Validation:
-//   - overlap must be < size (window strategy)
-//   - unknown names error out
-func ParseChunkConfig(s string) (ChunkConfig, error) {
-	if s == "" {
-		return ChunkConfig{}, nil
-	}
-	parts := strings.Split(s, ":")
-	name := parts[0]
-	switch name {
-	case "heading":
-		if len(parts) > 1 {
-			return ChunkConfig{}, fmt.Errorf("invalid chunk config %q: heading takes no parameters", s)
-		}
-		return ChunkConfig{Strategy: ChunkHeading}, nil
-
-	case "sentence":
-		cfg := ChunkConfig{Strategy: ChunkSentence, Size: 512}
-		if len(parts) >= 2 && parts[1] != "" {
-			n, err := strconv.Atoi(parts[1])
-			if err != nil || n <= 0 {
-				return ChunkConfig{}, fmt.Errorf("invalid chunk size %q: want positive integer", parts[1])
-			}
-			cfg.Size = n
-		}
-		if len(parts) > 2 {
-			return ChunkConfig{}, fmt.Errorf("invalid chunk config %q: sentence accepts at most one parameter", s)
-		}
-		return cfg, nil
-
-	case "window":
-		cfg := ChunkConfig{Strategy: ChunkWindow, Size: 2000, Overlap: 200}
-		if len(parts) >= 2 && parts[1] != "" {
-			n, err := strconv.Atoi(parts[1])
-			if err != nil || n <= 0 {
-				return ChunkConfig{}, fmt.Errorf("invalid window size %q: want positive integer", parts[1])
-			}
-			cfg.Size = n
-			// When the caller specifies size but no overlap, default overlap to 0
-			// rather than 200 — keeps "window:N" unambiguous.
-			if len(parts) < 3 {
-				cfg.Overlap = 0
-			}
-		}
-		if len(parts) >= 3 && parts[2] != "" {
-			o, err := strconv.Atoi(parts[2])
-			if err != nil || o < 0 {
-				return ChunkConfig{}, fmt.Errorf("invalid window overlap %q: want non-negative integer", parts[2])
-			}
-			cfg.Overlap = o
-		}
-		if len(parts) > 3 {
-			return ChunkConfig{}, fmt.Errorf("invalid chunk config %q: window accepts at most two parameters", s)
-		}
-		if cfg.Overlap >= cfg.Size {
-			return ChunkConfig{}, fmt.Errorf("invalid chunk config %q: overlap (%d) must be less than size (%d)", s, cfg.Overlap, cfg.Size)
-		}
-		return cfg, nil
-
-	default:
-		return ChunkConfig{}, fmt.Errorf("unknown chunk strategy %q: want heading|sentence|window", name)
-	}
 }
 
 // ChunkMarkdown applies cfg to md and returns the resulting Chunks. Returns
@@ -202,6 +79,45 @@ type rawChunk struct {
 // deliberately: extracted bodies often retain an article H1 title that
 // shouldn't be treated as a section boundary.
 var h2tohRE = regexp.MustCompile(`(?m)^(#{2,6}) +(.+)$`)
+
+// headingAnchor is the position of a heading-line start plus the full heading
+// line, used to attribute a "most recent heading above" to a byte offset.
+type headingAnchor struct {
+	pos  int
+	line string
+}
+
+// buildHeadingAnchors returns the H2..H6 heading anchors of md in document
+// order (the H2-H6-only rule is deliberate — see h2tohRE).
+func buildHeadingAnchors(md string) []headingAnchor {
+	var anchors []headingAnchor
+	for _, m := range h2tohRE.FindAllStringSubmatchIndex(md, -1) {
+		end := strings.Index(md[m[0]:], "\n")
+		var line string
+		if end < 0 {
+			line = md[m[0]:]
+		} else {
+			line = md[m[0] : m[0]+end]
+		}
+		anchors = append(anchors, headingAnchor{pos: m[0], line: line})
+	}
+	return anchors
+}
+
+// headingAt returns the line of the last anchor at or before pos ("" when
+// none). anchors must be in ascending pos order (as buildHeadingAnchors
+// returns them).
+func headingAt(anchors []headingAnchor, pos int) string {
+	var cur string
+	for _, a := range anchors {
+		if a.pos <= pos {
+			cur = a.line
+		} else {
+			break
+		}
+	}
+	return cur
+}
 
 // chunkByHeading splits the (masked) markdown on H2..H6 boundaries. The
 // preamble before the first heading becomes the first chunk with an empty
@@ -337,14 +253,12 @@ func softSplitChunk(c rawChunk, threshold int) []rawChunk {
 		buf.Reset()
 	}
 
-	headingLineConsumed := false
 	for i, l := range lines {
 		// Keep the chunk's own heading line attached to whatever sub-chunk
 		// comes first (preamble or first boundary).
 		if i == 0 && parentHeading != "" && strings.TrimSpace(l) == parentHeading {
 			buf.WriteString(l)
 			buf.WriteByte('\n')
-			headingLineConsumed = true
 			continue
 		}
 
@@ -386,7 +300,6 @@ func softSplitChunk(c rawChunk, threshold int) []rawChunk {
 	if len(out) == 0 {
 		return []rawChunk{c}
 	}
-	_ = headingLineConsumed
 	return out
 }
 
@@ -468,32 +381,7 @@ func chunkBySentence(md string, sizeTokens int) []rawChunk {
 
 	// Pre-compute heading anchors: positions of each heading-line start and
 	// the heading text itself.
-	type anchor struct {
-		pos  int
-		line string
-	}
-	var anchors []anchor
-	for _, m := range h2tohRE.FindAllStringSubmatchIndex(md, -1) {
-		end := strings.Index(md[m[0]:], "\n")
-		var line string
-		if end < 0 {
-			line = md[m[0]:]
-		} else {
-			line = md[m[0] : m[0]+end]
-		}
-		anchors = append(anchors, anchor{pos: m[0], line: line})
-	}
-	headingFor := func(at int) string {
-		var cur string
-		for _, a := range anchors {
-			if a.pos <= at {
-				cur = a.line
-			} else {
-				break
-			}
-		}
-		return cur
-	}
+	anchors := buildHeadingAnchors(md)
 
 	splits := sentenceSplitRE.FindAllStringIndex(md, -1)
 	type seg struct {
@@ -528,7 +416,7 @@ func chunkBySentence(md string, sizeTokens int) []rawChunk {
 		piece := md[sg.start:sg.end]
 		if bufStart == -1 {
 			bufStart = sg.start
-			curHeading = headingFor(sg.start)
+			curHeading = headingAt(anchors, sg.start)
 		}
 		buf.WriteString(piece)
 		if buf.Len() >= budget {
@@ -562,32 +450,7 @@ func chunkByWindow(md string, sizeChars, overlapChars int) []rawChunk {
 		step = sizeChars
 	}
 
-	type anchor struct {
-		pos  int
-		line string
-	}
-	var anchors []anchor
-	for _, m := range h2tohRE.FindAllStringSubmatchIndex(md, -1) {
-		end := strings.Index(md[m[0]:], "\n")
-		var line string
-		if end < 0 {
-			line = md[m[0]:]
-		} else {
-			line = md[m[0] : m[0]+end]
-		}
-		anchors = append(anchors, anchor{pos: m[0], line: line})
-	}
-	headingFor := func(at int) string {
-		var cur string
-		for _, a := range anchors {
-			if a.pos <= at {
-				cur = a.line
-			} else {
-				break
-			}
-		}
-		return cur
-	}
+	anchors := buildHeadingAnchors(md)
 
 	wordSlack := sizeChars / 4
 	if wordSlack < 1 {
@@ -613,7 +476,7 @@ func chunkByWindow(md string, sizeChars, overlapChars int) []rawChunk {
 			}
 		}
 		piece := md[start:end]
-		out = append(out, rawChunk{heading: headingFor(start), text: piece})
+		out = append(out, rawChunk{heading: headingAt(anchors, start), text: piece})
 		if end == n {
 			break
 		}

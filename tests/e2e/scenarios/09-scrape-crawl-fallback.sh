@@ -6,10 +6,10 @@ source "$(dirname "$0")/common.sh"
 
 require_host "$CRAWL_SITE_URL/index.html" || return 0
 
-# Invoked directly (not via sp_ok): the scrape path needs no SSRF flag and
-# sp_ok's --allow-internal prefix would break subcommand dispatch.
+# Invoked directly (not via sp_ok): scrape is secure-by-default, so --allow-internal goes AFTER the
+# subcommand (sp_ok would prepend it before "scrape", where flag parsing ignores it).
 scrape_json() {
-  SP_OUT=$(seaportal scrape "$CRAWL_SITE_URL/" --output json "$@" 2>&1)
+  SP_OUT=$(seaportal scrape "$CRAWL_SITE_URL/" --allow-internal --output json "$@" 2>&1)
   SP_EXIT=$?
 }
 

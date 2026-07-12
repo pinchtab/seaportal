@@ -7,9 +7,19 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 )
+
+// allowInternalTestPolicy is the default scrape policy with the private-IP
+// block lifted so httptest fixtures (127.0.0.1) pass the secure-by-default
+// gate; every other guard (schemes, redirects, size caps) stays on.
+func allowInternalTestPolicy() *SecurityPolicy {
+	p := DefaultSecurityPolicy()
+	p.BlockPrivateIPs = false
+	return p
+}
 
 func TestScrapeOptionsDefaults(t *testing.T) {
 	got := ScrapeOptions{BaseURL: "https://example.com"}.normalized()
@@ -34,6 +44,11 @@ func TestScrapeOptionsDefaults(t *testing.T) {
 	}
 	if got.UserAgent != DefaultUserAgent {
 		t.Errorf("UserAgent = %q, want %q", got.UserAgent, DefaultUserAgent)
+	}
+	// T01: scrape is secure by default — nil Security resolves to the full
+	// default policy (unlike single-URL extraction, where nil is unguarded).
+	if got.Security == nil || !got.Security.BlockPrivateIPs {
+		t.Errorf("Security = %+v, want DefaultSecurityPolicy() with BlockPrivateIPs", got.Security)
 	}
 }
 
@@ -68,18 +83,20 @@ func TestScrapeSiteEndToEnd(t *testing.T) {
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/":
-			w.Write([]byte(`<html><head><title>Home</title></head><body><h1>Home</h1>` +
+			_, _ = w.Write([]byte(`<html><head><title>Home</title></head><body><h1>Home</h1>` +
 				`<a href="/about">About</a><a href="/blog/1">Post 1</a><a href="/blog/2">Post 2</a></body></html>`))
 		case "/sitemap.xml":
 			http.NotFound(w, r) // force crawl fallback
 		default:
-			w.Write([]byte(`<html><head><title>` + r.URL.Path + `</title></head><body><h1>` + r.URL.Path + `</h1><p>Some body content for extraction here.</p></body></html>`))
+			_, _ = w.Write([]byte(`<html><head><title>` + r.URL.Path + `</title></head><body><h1>` + r.URL.Path + `</h1><p>Some body content for extraction here.</p></body></html>`))
 		}
 	})
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
 
-	res, err := ScrapeSite(context.Background(), &ScrapeOptions{BaseURL: srv.URL, MaxPages: 10})
+	// Security: httptest serves on 127.0.0.1, so the secure-by-default policy
+	// needs its private-IP block lifted (T01 sanctioned behavior change).
+	res, err := ScrapeSite(context.Background(), &ScrapeOptions{BaseURL: srv.URL, MaxPages: 10, Security: allowInternalTestPolicy()})
 	if err != nil {
 		t.Fatalf("ScrapeSite: %v", err)
 	}
@@ -98,6 +115,33 @@ func TestScrapeSiteEndToEnd(t *testing.T) {
 	for _, p := range res.Pages {
 		if p.Status != http.StatusOK || p.Error != "" {
 			t.Errorf("page %s: status=%d err=%q", p.URL, p.Status, p.Error)
+		}
+	}
+}
+
+// T01 regression lock: with no explicit policy, ScrapeSite must refuse to
+// crawl a private/loopback target — every fetch (discovery and pages) is
+// blocked, so no page comes back fetched.
+func TestScrapeSiteSecureByDefaultBlocksPrivateTargets(t *testing.T) {
+	mux := http.NewServeMux()
+	var hits int32
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&hits, 1)
+		_, _ = w.Write([]byte(`<html><body><h1>internal</h1><a href="/a">a</a></body></html>`))
+	})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	res, err := ScrapeSite(context.Background(), &ScrapeOptions{BaseURL: srv.URL, MaxPages: 5})
+	if err != nil {
+		t.Fatalf("ScrapeSite: %v", err)
+	}
+	if got := atomic.LoadInt32(&hits); got != 0 {
+		t.Errorf("default policy let %d requests reach a loopback server", got)
+	}
+	for _, p := range res.Pages {
+		if p.Error == "" {
+			t.Errorf("page %s fetched despite the default private-IP block", p.URL)
 		}
 	}
 }
@@ -162,7 +206,7 @@ func TestScrapeSiteDiscoveryDoesNotStarveFetch(t *testing.T) {
 		case strings.HasPrefix(r.URL.Path, "/s/"):
 			time.Sleep(slow) // slow section pages (fetched during crawl for links)
 			id := strings.TrimPrefix(r.URL.Path, "/s/")
-			fmt.Fprintf(w, `<html><body><h1>Section</h1><a href="/p/%s">Leaf %s</a></body></html>`, id, id)
+			_, _ = fmt.Fprintf(w, `<html><body><h1>Section</h1><a href="/p/%s">Leaf %s</a></body></html>`, id, id)
 		default: // /p/* leaf pages: fast, only fetched in the fetch phase
 			_, _ = w.Write([]byte(`<html><body><h1>Leaf</h1><p>Real leaf content worth extracting here.</p></body></html>`))
 		}
@@ -173,6 +217,7 @@ func TestScrapeSiteDiscoveryDoesNotStarveFetch(t *testing.T) {
 	start := time.Now()
 	res, err := ScrapeSite(context.Background(), &ScrapeOptions{
 		BaseURL: srv.URL, MaxPages: 25, Timeout: 600 * time.Millisecond,
+		Security: allowInternalTestPolicy(),
 	})
 	elapsed := time.Since(start)
 	if err != nil {

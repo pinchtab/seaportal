@@ -2,42 +2,15 @@ package engine
 
 import (
 	"context"
+	"net"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 )
 
 // defaultScrapeConcurrency bounds the fetch/extract worker pool by default.
 const defaultScrapeConcurrency = 8
-
-// poolConfig tunes the fetch/extract worker pool.
-type poolConfig struct {
-	// Concurrency is the number of workers; <= 0 uses defaultScrapeConcurrency.
-	Concurrency int
-	// MinInterval is the minimum spacing between requests to the same host. The
-	// effective spacing is max(MinInterval, robots crawl-delay).
-	MinInterval time.Duration
-}
-
-// fetchAll fetches and extracts every URL in urls concurrently via a bounded
-// worker pool, returning PageObjects in the same order as urls. It honors:
-//   - per-host rate limiting (shared HostRateLimiter) + robots crawl-delay,
-//   - ctx cancellation and opts.Timeout (stops dispatching, returns partial),
-//   - partial failures captured on the page's Error field (never aborts).
-func fetchAll(ctx context.Context, urls []string, opts ScrapeOptions, cfg poolConfig) []PageObject {
-	o := opts.normalized()
-	respectRobots := o.RespectRobots != nil && *o.RespectRobots
-	limiter := NewHostRateLimiter()
-	robots := NewCrawlDelayCache()
-	extractOpts := Options{UserAgent: o.UserAgent}
-
-	return runFetchPool(ctx, urls, o.Timeout, cfg.Concurrency, func(ctx context.Context, u string) PageObject {
-		if err := ctx.Err(); err != nil {
-			return PageObject{URL: u, Error: err.Error()}
-		}
-		return fetchOne(ctx, u, extractOpts, limiter, robots, respectRobots, cfg.MinInterval)
-	})
-}
 
 // runFetchPool maps do over urls with a bounded worker pool, preserving order.
 // It applies timeout to ctx, stops dispatching once ctx is cancelled, and fills
@@ -92,34 +65,6 @@ dispatch:
 	return results
 }
 
-// fetchOne rate-limits, fetches, and extracts a single URL, mapping the extract
-// Result onto a PageObject. Richer page assembly (meta, schema, perf, links) is
-// ALP-006; here we carry the essentials plus any error.
-func fetchOne(ctx context.Context, u string, extractOpts Options, limiter *HostRateLimiter, robots *CrawlDelayCache, respectRobots bool, minInterval time.Duration) PageObject {
-	host, scheme := hostScheme(u)
-	interval := minInterval
-	if respectRobots && host != "" {
-		if d := robots.GetDelayWithScheme(host, extractOpts.UserAgent, scheme); d > interval {
-			interval = d
-		}
-	}
-	if err := limiter.Wait(ctx, host, interval); err != nil {
-		return PageObject{URL: u, Error: err.Error()}
-	}
-
-	// Bound the extract itself by the pool ctx too — a fetch dispatched just
-	// before the deadline must not run past it.
-	extractOpts.Context = ctx
-	r := FromURLWithOptions(u, extractOpts)
-	return PageObject{
-		URL:      u,
-		Title:    r.Title,
-		Status:   r.StatusCode,
-		Markdown: r.Content,
-		Error:    r.Error,
-	}
-}
-
 func hostScheme(raw string) (host, scheme string) {
 	u, err := url.Parse(raw)
 	if err != nil {
@@ -130,4 +75,38 @@ func hostScheme(raw string) (host, scheme string) {
 		scheme = "https"
 	}
 	return u.Host, scheme
+}
+
+// canonicalHost lowercases host and strips the port when it is the scheme's
+// default (80 for http, 443 for https), so "example.com:80" and "example.com"
+// compare equal. A sitemap or link that omits the default port must still be
+// recognised as same-host as a base URL that includes it (and vice versa).
+func canonicalHost(host, scheme string) string {
+	host = strings.ToLower(host)
+	h, port, err := net.SplitHostPort(host)
+	if err != nil {
+		return host // no port present
+	}
+	switch {
+	case scheme == "http" && port == "80":
+		return h
+	case scheme == "https" && port == "443":
+		return h
+	default:
+		return host
+	}
+}
+
+// sameHost reports whether rawURL is on the same host as the base (identified
+// by baseHost/baseScheme), treating default ports as equivalent to no port.
+func sameHost(rawURL, baseHost, baseScheme string) bool {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return false
+	}
+	uScheme := u.Scheme
+	if uScheme == "" {
+		uScheme = baseScheme
+	}
+	return canonicalHost(u.Host, uScheme) == canonicalHost(baseHost, baseScheme)
 }

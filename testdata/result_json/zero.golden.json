@@ -1,0 +1,47 @@
+{
+  "url": "",
+  "title": "",
+  "content": "",
+  "byline": "",
+  "excerpt": "",
+  "sitename": "",
+  "length": 0,
+  "timeMs": 0,
+  "confidence": 0,
+  "isSpa": false,
+  "isBlocked": false,
+  "headingCount": 0,
+  "linkCount": 0,
+  "paragraphCount": 0,
+  "quality": 0,
+  "qualityInfo": {
+    "contentLength": 0,
+    "headingCount": 0,
+    "paragraphCount": 0,
+    "listCount": 0,
+    "codeBlockCount": 0,
+    "linkCount": 0,
+    "textDensity": 0,
+    "score": 0
+  },
+  "profile": {
+    "class": "",
+    "outcome": "",
+    "decision": "",
+    "browserRecommended": false,
+    "reasons": null,
+    "confidence": 0,
+    "trustworthy": false
+  },
+  "pageClass": "",
+  "fingerprint": "",
+  "validation": {
+    "isValid": false,
+    "needsBrowser": false,
+    "confidence": 0,
+    "issues": null,
+    "linkDensity": 0,
+    "skeletonScore": 0,
+    "contentRatio": 0
+  }
+}

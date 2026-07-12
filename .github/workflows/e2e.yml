@@ -9,7 +9,8 @@ on:
     branches: [main]
     paths:
       - 'cmd/**'
-      - 'pkg/**'
+      - 'internal/**'
+      - 'go.mod'
       - 'tests/e2e/**'
       - '.github/workflows/e2e.yml'
 

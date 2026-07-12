@@ -34,10 +34,18 @@ type ViaHop struct {
 	Comment  string `json:"comment,omitempty"`  // Optional comment (e.g., "(squid)", "(Varnish)")
 }
 
-// fingerprintCDN detects the CDN provider based on response header combinations.
-// Returns (provider, signals) where provider is a constant like CDNCloudflare
-// and signals lists the headers/patterns that identified the provider.
-func fingerprintCDN(r Result) (string, []string) {
+// fingerprintCDN detects the CDN provider from the response-header echoes and
+// returns the provider/signals part of CDNInfo. The caller (finalizeTransport)
+// fills in the parsed Via chain (ViaHops/ProxyLayers).
+func fingerprintCDN(r *ResponseHeaders) CDNInfo {
+	provider, signals := detectCDNProvider(r)
+	return CDNInfo{CDNProvider: provider, CDNSignals: signals}
+}
+
+// detectCDNProvider returns (provider, signals) where provider is a constant
+// like CDNCloudflare and signals lists the headers/patterns that identified
+// the provider.
+func detectCDNProvider(r *ResponseHeaders) (string, []string) {
 	var signals []string
 
 	// Priority 1: Cloudflare (very distinctive headers)
@@ -225,5 +233,3 @@ func parseViaHeader(via string) []ViaHop {
 
 	return hops
 }
-
-// extractCDNEdgeLocation extracts the edge location/region from CDN headers.

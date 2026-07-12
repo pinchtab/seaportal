@@ -7,12 +7,12 @@ source "$(dirname "$0")/common.sh"
 require_host "$SCRAPE_SITE_URL/robots.txt" || return 0
 OUT_DIR="$RESULTS_DIR/scrape-out"
 
-# Invoked directly (not via sp_ok): the scrape path needs no SSRF flag and
-# sp_ok's --allow-internal prefix would break subcommand dispatch.
+# Invoked directly (not via sp_ok): scrape is secure-by-default, so --allow-internal goes AFTER the
+# subcommand (sp_ok would prepend it before "scrape", where flag parsing ignores it).
 
 # ─────────────────────────────────────────────────────────────────
 start_test "output: --output json is well-formed with expected top-level keys"
-SP_OUT=$(seaportal scrape "$SCRAPE_SITE_URL/" --output json --max-pages 20 2>&1)
+SP_OUT=$(seaportal scrape "$SCRAPE_SITE_URL/" --allow-internal --output json --max-pages 20 2>&1)
 if [ "$?" -ne 0 ]; then
   fail_test "scrape json failed: ${SP_OUT:0:160}"
 elif echo "$SP_OUT" | jq -e 'has("site") and has("pageGroups") and has("pages") and has("summary")' >/dev/null 2>&1; then
@@ -23,7 +23,7 @@ fi
 
 # ─────────────────────────────────────────────────────────────────
 start_test "output: --output md has a title header and per-page sections"
-SP_OUT=$(seaportal scrape "$SCRAPE_SITE_URL/" --output md --max-pages 20 2>&1)
+SP_OUT=$(seaportal scrape "$SCRAPE_SITE_URL/" --allow-internal --output md --max-pages 20 2>&1)
 if [ "$?" -ne 0 ]; then
   fail_test "scrape md failed"
 else
@@ -42,7 +42,7 @@ fi
 # ─────────────────────────────────────────────────────────────────
 start_test "output: --output directory writes result.json, pages/*.md, index.md"
 rm -rf "$OUT_DIR"
-SP_OUT=$(seaportal scrape "$SCRAPE_SITE_URL/" --output directory --out-dir "$OUT_DIR" --max-pages 20 2>&1)
+SP_OUT=$(seaportal scrape "$SCRAPE_SITE_URL/" --allow-internal --output directory --out-dir "$OUT_DIR" --max-pages 20 2>&1)
 if [ "$?" -ne 0 ]; then
   fail_test "scrape directory failed: ${SP_OUT:0:160}"
 else

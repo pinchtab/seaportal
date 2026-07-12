@@ -1,8 +1,6 @@
 package engine
 
 import (
-	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
 )
@@ -146,11 +144,7 @@ var linksTestPage = `<!doctype html><html><head><title>Links Test</title></head>
 </article></body></html>`
 
 func TestExtract_LinksFlagOn(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_, _ = w.Write([]byte(linksTestPage))
-	}))
-	defer srv.Close()
+	srv := newSiteServer(t, map[string]string{"/": linksTestPage})
 
 	result := FromURLWithOptions(srv.URL+"/", Options{WithLinks: true})
 	if len(result.Links) != 5 {
@@ -178,11 +172,7 @@ func TestExtract_LinksFlagOn(t *testing.T) {
 }
 
 func TestExtract_LinksFlagOffDefault(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_, _ = w.Write([]byte(linksTestPage))
-	}))
-	defer srv.Close()
+	srv := newSiteServer(t, map[string]string{"/": linksTestPage})
 
 	result := FromURL(srv.URL + "/")
 	if result.Links != nil {

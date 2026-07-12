@@ -2,16 +2,12 @@ package engine
 
 import (
 	"context"
-	"os"
 	"testing"
 )
 
 func TestParseFeed_UnclosedCDATA_ReturnsError(t *testing.T) {
-	body, err := os.ReadFile("../../testdata/feeds/rss-unclosed-cdata.xml")
-	if err != nil {
-		t.Fatal(err)
-	}
-	srv := serveBody(t, "application/rss+xml", string(body))
+	body := loadFixture(t, "feeds/rss-unclosed-cdata.xml")
+	srv := serveBody(t, "application/rss+xml", body)
 	defer srv.Close()
 
 	_, parseErr := ParseFeed(context.Background(), srv.URL, ParseFeedOptions{Client: srv.Client()})

@@ -3,11 +3,11 @@ package engine
 import (
 	"errors"
 	"fmt"
+	"io"
 	"math/rand"
 	"net"
 	"net/http"
 	"net/url"
-	"strings"
 	"syscall"
 	"time"
 )
@@ -97,43 +97,48 @@ func addJitter(d time.Duration) time.Duration {
 	return result
 }
 
-// isRetryableError checks if an error is a transient network error that should be retried.
-// Covers connection reset, connection refused, timeouts, and temporary DNS failures.
+// isRetryableError reports whether err is a transient network failure worth
+// another attempt. Matching is strictly typed (errors.Is / errors.As) with no
+// error-string sniffing: a bare "EOF" substring matches unrelated errors, and
+// "no such host" (NXDOMAIN — a permanent answer) would burn the whole retry
+// budget on every typo'd domain (T04).
+//
+// Retryable: dropped/refused/broken connections (ECONNRESET, ECONNREFUSED,
+// EPIPE), truncated reads (io.EOF, io.ErrUnexpectedEOF), any net.Error
+// timeout, and non-NXDOMAIN DNS failures. Not retryable: DNS "no such host",
+// context cancellation, and everything else. HTTP status retries (429/502/
+// 503/504) are decided in fetchWithRetryStage, not here.
 func isRetryableError(err error) bool {
 	if err == nil {
 		return false
 	}
 
-	if errors.Is(err, syscall.ECONNRESET) {
+	// DNS gets first say: IsNotFound (NXDOMAIN) is authoritative and permanent,
+	// while other DNS failures (resolver timeout, SERVFAIL, flaky upstream) are
+	// worth a retry. Checked before the generic timeout branch because
+	// *net.DNSError also implements net.Error.
+	var dnsErr *net.DNSError
+	if errors.As(err, &dnsErr) {
+		return !dnsErr.IsNotFound
+	}
+
+	// Truncated response: the peer (or a middlebox) cut the connection mid-body.
+	if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
 		return true
 	}
 
-	if errors.Is(err, syscall.ECONNREFUSED) {
+	// Connection-level errno failures surface wrapped in *net.OpError /
+	// *os.SyscallError; errors.Is unwraps the chain.
+	if errors.Is(err, syscall.ECONNRESET) ||
+		errors.Is(err, syscall.ECONNREFUSED) ||
+		errors.Is(err, syscall.EPIPE) {
 		return true
 	}
 
+	// Any transport timeout (dial, TLS handshake, response header, deadline).
 	var netErr net.Error
 	if errors.As(err, &netErr) && netErr.Timeout() {
 		return true
-	}
-
-	var dnsErr *net.DNSError
-	if errors.As(err, &dnsErr) && dnsErr.Temporary() {
-		return true
-	}
-
-	errStr := err.Error()
-	retryablePatterns := []string{
-		"connection reset",
-		"connection refused",
-		"no such host", // Temporary DNS failure
-		"i/o timeout",
-		"EOF",
-	}
-	for _, pattern := range retryablePatterns {
-		if strings.Contains(strings.ToLower(errStr), strings.ToLower(pattern)) {
-			return true
-		}
 	}
 
 	return false

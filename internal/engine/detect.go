@@ -190,26 +190,49 @@ func DetectBlocked(html string) bool {
 	return false
 }
 
-func ComputeConfidence(length, headingCount, paragraphCount, spaSignalCount int, isBlocked bool) int {
+// confidenceInputs bundles the extraction signals scored by
+// computeConfidence (T28 — formerly five positional args ending in a bool).
+// Zero values are meaningful: omit spaSignalCount/isBlocked when the caller
+// deliberately scores content structure alone.
+type confidenceInputs struct {
+	length         int
+	headingCount   int
+	paragraphCount int
+	spaSignalCount int
+	isBlocked      bool
+}
+
+// confidenceInputsFrom collects the full confidence signal set from a Result.
+func confidenceInputsFrom(r *Result) confidenceInputs {
+	return confidenceInputs{
+		length:         r.Length,
+		headingCount:   r.HeadingCount,
+		paragraphCount: r.ParagraphCount,
+		spaSignalCount: len(r.SPASignals),
+		isBlocked:      r.IsBlocked,
+	}
+}
+
+func computeConfidence(in confidenceInputs) int {
 	confidence := 100
 
-	if length < 100 {
+	if in.length < 100 {
 		confidence -= 50
-	} else if length < 500 {
+	} else if in.length < 500 {
 		confidence -= 20
 	}
 
-	if headingCount == 0 {
+	if in.headingCount == 0 {
 		confidence -= 10
 	}
 
-	if paragraphCount == 0 {
+	if in.paragraphCount == 0 {
 		confidence -= 15
 	}
 
-	confidence -= spaSignalCount * 20
+	confidence -= in.spaSignalCount * 20
 
-	if isBlocked {
+	if in.isBlocked {
 		confidence -= 30
 	}
 

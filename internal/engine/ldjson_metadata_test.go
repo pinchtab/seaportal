@@ -1,8 +1,6 @@
 package engine
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 )
 
@@ -129,12 +127,8 @@ func TestApplyLDJSONMetadata_SkipsNonArticleBlocks(t *testing.T) {
 }
 
 func TestExtract_LDJSONFixture(t *testing.T) {
-	path := filepath.Join("..", "..", "testdata", "static", "article-ldjson.html")
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("read fixture: %v", err)
-	}
-	result := FromHTML(string(raw), "https://example.com/article")
+	raw := loadFixture(t, "static/article-ldjson.html")
+	result := FromHTML(raw, "https://example.com/article")
 	if result.Byline != "Jane Doe" {
 		t.Errorf("Byline = %q, want Jane Doe", result.Byline)
 	}

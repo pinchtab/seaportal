@@ -56,15 +56,17 @@ const (
 
 // Sentinel errors returned by ScrapeSite.
 var (
-	// ErrNotImplemented is returned by ScrapeSite until the pipeline lands.
-	ErrNotImplemented = engine.ErrNotImplemented
 	// ErrMissingBaseURL is returned when ScrapeOptions.BaseURL is empty.
 	ErrMissingBaseURL = engine.ErrMissingBaseURL
 )
 
-// ScrapeSite discovers, samples, and extracts a whole site starting from
-// opts.BaseURL. It validates options and applies defaults; the extraction
-// pipeline is not yet implemented (returns ErrNotImplemented).
+// ScrapeSite runs the full scrape pipeline starting from opts.BaseURL:
+// discover candidate URLs (robots/sitemap/crawl fallback), cluster them into
+// pattern groups, sample within budget, fetch + extract each page, and roll
+// up a site summary. When the caller's ctx is cancelled mid-run, the partial
+// result is returned alongside ctx.Err() (both non-nil) rather than dropped;
+// the internal opts.Timeout budget elapsing is a normal (nil-error)
+// completion.
 func ScrapeSite(ctx context.Context, opts *ScrapeOptions) (*ScrapeResult, error) {
 	return engine.ScrapeSite(ctx, opts)
 }

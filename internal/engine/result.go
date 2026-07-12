@@ -1,11 +1,25 @@
 package engine
 
 import (
-	"context"
-	"net/http"
+	"errors"
 	"time"
 )
 
+// Result holds the extraction output for a URL.
+//
+// The observability tail is grouped into anonymous embedded sub-structs
+// (TransportInfo, ResponseHeaders, CDNInfo, CacheAnalysis, DedupeStats).
+// Embedding keeps both compatibility guarantees intact:
+//   - Go API: field promotion means r.TTFBMs, r.RetryCount, … still compile
+//     at every existing call site;
+//   - JSON wire format: encoding/json inlines embedded fields at the
+//     embedding position, so the key set AND key order are byte-identical
+//     to the historical flat struct (locked by TestResultJSONWireStability).
+//
+// Because JSON key order follows declaration order, each sub-struct must map
+// to a contiguous run of the historical field order. A few fields therefore
+// live in the sub-struct their wire position dictates rather than the one
+// their meaning suggests; these are marked "wire-order" below.
 type Result struct {
 	URL              string   `json:"url"`
 	CanonicalURL     string   `json:"canonicalUrl,omitempty"`
@@ -48,6 +62,94 @@ type Result struct {
 	Fingerprint string         `json:"fingerprint"`
 	Validation  Validation     `json:"validation"`
 
+	TransportInfo
+
+	IsSoft404    bool     `json:"isSoft404,omitempty"`
+	Soft404Hints []string `json:"soft404Hints,omitempty"`
+
+	ResponseHeaders
+
+	// Normalized cache status derived across CDN cache headers (reserved —
+	// not currently populated). Wire-order keeps them outside CacheAnalysis:
+	// CDNInfo sits between them and the rest of the cache fields.
+	NormalizedCacheStatus string `json:"normalizedCacheStatus,omitempty"`
+	CacheStatusSource     string `json:"cacheStatusSource,omitempty"`
+
+	CDNInfo
+
+	CacheAnalysis
+
+	DedupeStats
+
+	Links    []LinkRef    `json:"links,omitempty"`
+	Images   []ImageRef   `json:"images,omitempty"`
+	Tables   []TableRef   `json:"tables,omitempty"`
+	Comments []CommentRef `json:"comments,omitempty"`
+	Chunks   []Chunk      `json:"chunks,omitempty"`
+
+	SplitFiles []SplitFile `json:"splitFiles,omitempty"`
+
+	RankedSections []RankedSection `json:"rankedSections,omitempty"`
+
+	Schema map[string]interface{} `json:"schema,omitempty"`
+
+	Warnings []string `json:"warnings,omitempty"`
+
+	Truncated bool `json:"truncated,omitempty"`
+
+	PruneFallbackUsed bool `json:"pruneFallbackUsed,omitempty"`
+
+	ExtractionMethod string `json:"extractionMethod,omitempty"`
+
+	// SecurityBlock carries the reason a fetch was refused by the SecurityPolicy
+	// (SSRF / private-IP / blocked-scheme / blocked-domain / size-cap). Empty
+	// when no policy is active or the fetch passed every check.
+	SecurityBlock string `json:"securityBlock,omitempty"`
+
+	// err preserves the sentinel-carrying error chain behind the Error string
+	// (T17). Deliberately unexported with NO json tag: the wire format is
+	// locked by TestResultJSONWireStability and must not change. Set via
+	// setError; read via Err().
+	err error
+}
+
+// setError records e on the result: Error gets the flattened string (exactly
+// what the historical `result.Error = err.Error()` sites produced) and err
+// keeps the chain so callers can errors.Is/errors.As against the engine
+// sentinels. A nil e is a no-op.
+func (r *Result) setError(e error) {
+	if e == nil {
+		return
+	}
+	r.Error = e.Error()
+	r.err = e
+}
+
+// Err returns the error that produced Result.Error with its wrap chain intact,
+// or nil when extraction succeeded. Unlike the JSON-serialized Error string,
+// the returned error preserves sentinel identity, so
+//
+//	errors.Is(result.Err(), engine.ErrPrivateIPBlocked)
+//	errors.Is(result.Err(), engine.ErrBlockedByRobots)
+//	errors.Is(result.Err(), context.Canceled)
+//
+// all work as expected. When Error was assigned as a bare string by code that
+// bypassed setError, Err still returns a non-nil (opaque) error so the
+// "failed ⇔ Err() != nil" invariant holds.
+func (r *Result) Err() error {
+	if r.err != nil {
+		return r.err
+	}
+	if r.Error != "" {
+		return errors.New(r.Error)
+	}
+	return nil
+}
+
+// TransportInfo groups the transport/telemetry fields stamped by
+// finalizeTransport: retry counters, per-phase timings, content length,
+// and redirect tracking.
+type TransportInfo struct {
 	RetryCount          int           `json:"retryCount,omitempty"`
 	TotalRetryWait      time.Duration `json:"totalRetryWait,omitempty"`
 	HeadPreflightStatus int           `json:"headPreflightStatus,omitempty"`
@@ -56,16 +158,21 @@ type Result struct {
 	ParseTimeMs   int64 `json:"parseTimeMs,omitempty"`
 	ConvertTimeMs int64 `json:"convertTimeMs,omitempty"`
 
-	ContentLength       int64  `json:"contentLength,omitempty"`
+	ContentLength int64 `json:"contentLength,omitempty"`
+	// ResponseContentType is a response-header echo kept here for wire-order
+	// (it is declared between ContentLength and RedirectCount on the wire).
 	ResponseContentType string `json:"responseContentType,omitempty"`
 
 	RedirectCount int      `json:"redirectCount,omitempty"`
 	RedirectChain []string `json:"redirectChain,omitempty"`
 	FinalURL      string   `json:"finalUrl,omitempty"`
+}
 
-	IsSoft404    bool     `json:"isSoft404,omitempty"`
-	Soft404Hints []string `json:"soft404Hints,omitempty"`
-
+// ResponseHeaders is the per-header echo of the HTTP response, populated
+// mechanically by (*ResponseHeaders).populate for observability. TraceInfo is
+// embedded mid-struct, and a handful of non-header fields (marked wire-order)
+// live here, because JSON key order pins them to these positions.
+type ResponseHeaders struct {
 	ResponseETag         string `json:"responseEtag,omitempty"`
 	ResponseLastModified string `json:"responseLastModified,omitempty"`
 
@@ -73,8 +180,10 @@ type Result struct {
 	ResponseServer          string `json:"responseServer,omitempty"`
 	ResponseXForwardedFor   string `json:"responseXForwardedFor,omitempty"`
 
+	// RequestAcceptEncoding echoes the request's Accept-Encoding (wire-order).
 	RequestAcceptEncoding string `json:"requestAcceptEncoding,omitempty"`
 
+	// TTFBMs / DownloadMs are transport timings (wire-order).
 	TTFBMs     int64 `json:"ttfbMs,omitempty"`
 	DownloadMs int64 `json:"downloadMs,omitempty"`
 
@@ -114,8 +223,7 @@ type Result struct {
 	ResponseTracestate      string `json:"responseTracestate,omitempty"`
 	ResponseXAmznTraceId    string `json:"responseXAmznTraceId,omitempty"`
 
-	TraceFormats     []string `json:"traceFormats,omitempty"`
-	TraceCorrelation string   `json:"traceCorrelation,omitempty"`
+	TraceInfo
 
 	ResponseNEL string `json:"responseNel,omitempty"`
 
@@ -177,6 +285,8 @@ type Result struct {
 
 	ResponseLink string `json:"responseLink,omitempty"`
 
+	// LLMsTxtURL / LDJSONBlocks / HasLLMContent are extraction-derived, not
+	// header echoes (wire-order).
 	LLMsTxtURL string `json:"llmsTxtUrl,omitempty"`
 
 	LDJSONBlocks []LDJSONBlock `json:"ldJsonBlocks,omitempty"`
@@ -275,16 +385,31 @@ type Result struct {
 	ResponseXGCPRegion string `json:"responseXGcpRegion,omitempty"`
 
 	ResponseXAmzCfId string `json:"responseXAmzCfId,omitempty"`
+}
 
-	NormalizedCacheStatus string `json:"normalizedCacheStatus,omitempty"`
-	CacheStatusSource     string `json:"cacheStatusSource,omitempty"`
+// TraceInfo is the distributed-tracing summary derived from the trace
+// response headers by computeTraceInfo. It is embedded inside
+// ResponseHeaders (not Result) for wire-order.
+type TraceInfo struct {
+	TraceFormats     []string `json:"traceFormats,omitempty"`
+	TraceCorrelation string   `json:"traceCorrelation,omitempty"`
+}
 
+// CDNInfo is the CDN/proxy-chain fingerprint derived from the response
+// headers: the provider identified by fingerprintCDN plus the parsed Via
+// hop chain.
+type CDNInfo struct {
 	CDNProvider string   `json:"cdnProvider,omitempty"`
 	CDNSignals  []string `json:"cdnSignals,omitempty"`
 
 	ViaHops     []ViaHop `json:"viaHops,omitempty"`
 	ProxyLayers int      `json:"proxyLayers,omitempty"`
+}
 
+// CacheAnalysis groups the cache-policy analysis fields (currently reserved —
+// no engine code populates them yet). CDNEdgeLocation, EffectiveCDNTTL,
+// CDNOptimizationIssues, and RequestID sit inside this struct for wire-order.
+type CacheAnalysis struct {
 	CacheAge       int  `json:"cacheAge,omitempty"`
 	CacheMaxAge    int  `json:"cacheMaxAge,omitempty"`
 	CacheSMaxAge   int  `json:"cacheSMaxAge,omitempty"`
@@ -319,12 +444,18 @@ type Result struct {
 	SurrogateNoStore              bool `json:"surrogateNoStore,omitempty"`
 	SurrogateNoStoreRemote        bool `json:"surrogateNoStoreRemote,omitempty"`
 
+	// RequestID is the request-correlation ID (Options.RequestID echo), kept
+	// inside CacheAnalysis for wire-order.
 	RequestID string `json:"requestId,omitempty"`
 
 	CacheHitRateEstimate  string `json:"cacheHitRateEstimate,omitempty"`
 	BandwidthSavingsLevel string `json:"bandwidthSavingsLevel,omitempty"`
 	CacheCostAnalysis     string `json:"cacheCostAnalysis,omitempty"`
+}
 
+// DedupeStats groups the block-deduplication statistics recorded by
+// applyDedupeStage.
+type DedupeStats struct {
 	DedupeApplied         bool     `json:"dedupeApplied,omitempty"`
 	DuplicatesRemoved     int      `json:"duplicatesRemoved,omitempty"`
 	DuplicateSignals      []string `json:"duplicateSignals,omitempty"`
@@ -332,111 +463,4 @@ type Result struct {
 	NearDuplicateSignals  []string `json:"nearDuplicateSignals,omitempty"`
 	OriginalBlockCount    int      `json:"originalBlockCount,omitempty"`
 	UniqueBlockCount      int      `json:"uniqueBlockCount,omitempty"`
-
-	Links    []LinkRef    `json:"links,omitempty"`
-	Images   []ImageRef   `json:"images,omitempty"`
-	Tables   []TableRef   `json:"tables,omitempty"`
-	Comments []CommentRef `json:"comments,omitempty"`
-	Chunks   []Chunk      `json:"chunks,omitempty"`
-
-	SplitFiles []SplitFile `json:"splitFiles,omitempty"`
-
-	RankedSections []RankedSection `json:"rankedSections,omitempty"`
-
-	Schema map[string]interface{} `json:"schema,omitempty"`
-
-	Warnings []string `json:"warnings,omitempty"`
-
-	Truncated bool `json:"truncated,omitempty"`
-
-	PruneFallbackUsed bool `json:"pruneFallbackUsed,omitempty"`
-
-	ExtractionMethod string `json:"extractionMethod,omitempty"`
-
-	// SecurityBlock carries the reason a fetch was refused by the SecurityPolicy
-	// (SSRF / private-IP / blocked-scheme / blocked-domain / size-cap). Empty
-	// when no policy is active or the fetch passed every check.
-	SecurityBlock string `json:"securityBlock,omitempty"`
-}
-
-type RetryEvent struct {
-	Attempt    int
-	StatusCode int
-	WaitTime   time.Duration
-	Error      error
-	Outcome    string
-}
-
-type DomainRetry struct {
-	MaxRetries   int
-	MaxRetryWait time.Duration
-}
-
-type Options struct {
-	FailFast             bool
-	FastMode             bool
-	ProbeSearch          bool
-	NoPooling            bool
-	MaxRetries           int
-	MaxRetryWait         time.Duration
-	TotalRetryTimeout    time.Duration
-	HeadPreflight        bool
-	ContentTypePreflight bool
-	RetryLogger          func(event RetryEvent)
-	DomainRetryConfig    map[string]DomainRetry
-	UserAgent            string
-	DomainUserAgent      map[string]string
-	DomainTimeout        map[string]time.Duration
-	RespectCrawlDelay    bool
-	RespectRobots        bool
-	CrawlDelayCache      *CrawlDelayCache
-	RateLimit            time.Duration
-	RateLimiter          *HostRateLimiter
-	RequestID            string
-	SendRequestID        bool
-	Dedupe               bool
-	NoNearDedupe         bool
-	WithLinks            bool
-	WithImages           bool
-	WithTables           bool
-	WithComments         bool
-	Citations            bool
-	LinkRetention        LinkRetention
-	Chunk                ChunkConfig
-	SelectCSS            string
-	StripCSS             string
-	MaxTokens            int
-	HeadOnly             bool
-	NoPruneFallback      bool
-	Proxy                string
-	CacheDir             string
-	CacheTTL             time.Duration
-	CacheStaleTolerance  time.Duration
-	NoCache              bool
-	NoPDF                bool
-	SchemaPath           string
-	Schema               *Schema
-	Query                string
-	TopN                 int
-	FilterByQuery        bool
-	SplitOut             string
-	SplitBytes           int
-
-	// Transport overrides the default utls Chrome-fingerprint transport when
-	// non-nil. Primary use: tests injecting a record/replay RoundTripper from
-	// internal/engine/mock so HTTP-touching tests stay hermetic. Production
-	// callers should leave this nil; opts.Proxy is independently honoured.
-	Transport http.RoundTripper
-
-	// Security, when non-nil, enforces an SSRF / private-IP / redirect /
-	// decompression policy across the whole fetch path. Nil (the zero value)
-	// keeps the historical unguarded behaviour. Build a safe default with
-	// DefaultSecurityPolicy. Safe to share across concurrent calls.
-	Security *SecurityPolicy
-
-	// Context, when non-nil, is the cancellation context for the fetch: it
-	// bounds the HTTP request and makes retry backoff / crawl-delay waits
-	// interruptible, so an overall deadline or SIGINT can preempt an in-flight
-	// retry (ALP-043). Nil defaults to context.Background().
-	Context context.Context
 }

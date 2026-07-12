@@ -1,8 +1,6 @@
 package engine
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 )
 
@@ -79,20 +77,14 @@ func safeSlice(s string, lo, hi int) string {
 }
 
 func TestIdempotency(t *testing.T) {
-	latin1Bytes, err := os.ReadFile(filepath.Join("..", "..", "testdata", "static", "charset-latin1.html"))
-	if err != nil {
-		t.Fatalf("read latin1 fixture: %v", err)
-	}
-	mdnBytes, err := os.ReadFile(filepath.Join("..", "..", "testdata", "ssr", "mdn-http-methods.html"))
-	if err != nil {
-		t.Fatalf("read mdn fixture: %v", err)
-	}
+	latin1 := loadFixture(t, "static/charset-latin1.html")
+	mdn := loadFixture(t, "ssr/mdn-http-methods.html")
 
 	htmlCases := []struct{ name, in string }{
 		{"empty", ""},
 		{"minimal", "<p>hello</p>"},
-		{"static-fixture", string(latin1Bytes)},
-		{"ssr-fixture", string(mdnBytes)},
+		{"static-fixture", latin1},
+		{"ssr-fixture", mdn},
 	}
 	mdCases := []struct{ name, in string }{
 		{"empty", ""},

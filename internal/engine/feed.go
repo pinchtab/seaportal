@@ -35,7 +35,7 @@ type ParseFeedOptions struct {
 // opts.MaxItems.
 func ParseFeed(ctx context.Context, feedURL string, opts ParseFeedOptions) ([]FeedItem, error) {
 	if opts.MaxItems <= 0 {
-		opts.MaxItems = 200
+		opts.MaxItems = DefaultFeedMaxItems
 	}
 	body, err := fetchFeed(ctx, feedURL, opts)
 	if err != nil {

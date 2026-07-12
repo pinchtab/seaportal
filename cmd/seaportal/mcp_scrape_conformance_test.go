@@ -51,7 +51,7 @@ func TestCLI_MCPScrapeSite(t *testing.T) {
 	requests := []string{
 		`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}`,
 		`{"jsonrpc":"2.0","id":2,"method":"tools/list"}`,
-		fmt.Sprintf(`{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"scrape_site","arguments":{"base_url":%q,"max_pages":3}}}`, srv.URL),
+		fmt.Sprintf(`{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"scrape_site","arguments":{"base_url":%q,"max_pages":3,"allow_internal":true}}}`, srv.URL),
 	}
 	go func() {
 		defer func() { _ = stdin.Close() }()

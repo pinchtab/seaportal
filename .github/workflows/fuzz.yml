@@ -1,0 +1,53 @@
+name: Fuzz
+
+on:
+  schedule:
+    # Weekly, Monday 03:00 UTC.
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fuzz:
+    name: Fuzz Engine Parsers
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Run fuzz targets (2m each)
+        # Go allows a single -fuzz pattern per invocation, so the targets run
+        # sequentially. The list is discovered with -list so new Fuzz* targets
+        # are enrolled automatically. A crasher doesn't stop the loop — every
+        # target still gets its budget — but any failure fails the job at the
+        # end, after the reproducers have been written to
+        # internal/engine/testdata/fuzz/<Target>/ for the artifact upload.
+        run: |
+          targets=$(go test ./internal/engine/ -list '^Fuzz' | grep '^Fuzz')
+          echo "Fuzz targets:" $targets
+          failed=""
+          for target in $targets; do
+            echo "::group::${target}"
+            if ! go test ./internal/engine/ -run '^$' -fuzz="^${target}\$" -fuzztime=2m; then
+              failed="${failed} ${target}"
+            fi
+            echo "::endgroup::"
+          done
+          if [ -n "$failed" ]; then
+            echo "::error title=Fuzzing found crashers::Failing targets:${failed}. Reproducers are in the fuzz-crashers artifact; copy them into internal/engine/testdata/fuzz/ to replay with plain 'go test'."
+            exit 1
+          fi
+
+      - name: Upload crashers
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: fuzz-crashers
+          path: internal/engine/testdata/fuzz/
+          if-no-files-found: ignore
+          retention-days: 30

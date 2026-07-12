@@ -6,14 +6,9 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 )
-
-// ErrNotImplemented is returned by ScrapeSite until the real discovery,
-// sampling, and extraction pipeline (ALP-002…008) lands. The types and the
-// ScrapeSite signature are stable now so callers (CLI, PinchTab) can compile
-// against them.
-var ErrNotImplemented = errors.New("seaportal: ScrapeSite not implemented")
 
 // ErrMissingBaseURL is returned when ScrapeOptions.BaseURL is empty.
 var ErrMissingBaseURL = errors.New("seaportal: ScrapeOptions.BaseURL is required")
@@ -83,6 +78,16 @@ type ScrapeOptions struct {
 	RespectRobots   *bool
 	Timeout         time.Duration
 	UserAgent       string
+
+	// Security is the fetch policy applied to every scrape network call:
+	// discovery (robots.txt, sitemaps, the crawl fallback) and the per-page
+	// fetches. Unlike single-URL extraction — where a nil policy preserves the
+	// historical unguarded behaviour — ScrapeSite is secure by default:
+	// normalized() replaces nil with DefaultSecurityPolicy(). Callers that
+	// must crawl private/internal hosts pass an explicit policy with
+	// BlockPrivateIPs disabled (the CLI --allow-internal / MCP allow_internal
+	// escape hatch).
+	Security *SecurityPolicy
 }
 
 // normalized returns a copy of o with zero-valued fields replaced by the
@@ -110,6 +115,13 @@ func (o ScrapeOptions) normalized() ScrapeOptions {
 	}
 	if n.UserAgent == "" {
 		n.UserAgent = DefaultUserAgent
+	}
+	if n.Security == nil {
+		// Secure by default: ScrapeSite is a crawling entry point fed with
+		// arbitrary base URLs (MCP scrape_site, CLI), so a nil policy gets the
+		// full default guard rather than the extract path's historical
+		// nil-means-unguarded semantics.
+		n.Security = DefaultSecurityPolicy()
 	}
 	return n
 }
@@ -172,6 +184,9 @@ type ScrapeSummary struct {
 	// sampled page (filtered out or over budget) and are therefore omitted
 	// from pageGroups.
 	UnsampledPatterns int `json:"unsampledPatterns,omitempty"`
+	// Warnings carries non-fatal politeness/safety notices from the run,
+	// e.g. a hostile robots.txt Crawl-delay clamped to maxCrawlDelay.
+	Warnings []string `json:"warnings,omitempty"`
 }
 
 // ScrapeResult is the structured output of ScrapeSite, matching the scrape
@@ -186,6 +201,12 @@ type ScrapeResult struct {
 // ScrapeSite runs the full scrape pipeline for opts.BaseURL: discover candidate
 // URLs, cluster them into pattern groups, sample within budget, fetch + extract
 // + assemble each page concurrently, and roll up a site summary.
+//
+// Cancellation contract (T21): when the CALLER's ctx is cancelled or its
+// deadline fires mid-run, ScrapeSite returns the partial result assembled so
+// far alongside ctx.Err() — both non-nil — instead of dropping the output.
+// The internal opts.Timeout budget elapsing is the documented "scrape for this
+// long, return what you got" behaviour and completes with a nil error.
 func ScrapeSite(ctx context.Context, opts *ScrapeOptions) (*ScrapeResult, error) {
 	if opts == nil {
 		return nil, ErrMissingBaseURL
@@ -199,6 +220,10 @@ func ScrapeSite(ctx context.Context, opts *ScrapeOptions) (*ScrapeResult, error)
 		return nil, fmt.Errorf("%w: %q", ErrInvalidBaseURL, o.BaseURL)
 	}
 
+	// callerCtx distinguishes "the caller tore us down" (partial + ctx.Err())
+	// from the internal --timeout budget elapsing (normal completion).
+	callerCtx := ctx
+
 	// One overall wall-clock deadline shared by discovery, fetch, and retries.
 	// The raw (pre-normalization) Timeout is used so an explicit 0 keeps the
 	// no-overall-deadline escape; normalized o.Timeout still caps each request.
@@ -207,6 +232,12 @@ func ScrapeSite(ctx context.Context, opts *ScrapeOptions) (*ScrapeResult, error)
 		ctx, cancel = context.WithTimeout(ctx, opts.Timeout)
 		defer cancel()
 	}
+
+	// One robots cache + one host rate limiter for the whole run (T03):
+	// previously discovery, the crawl fallback, and the fetch phase each built
+	// their own cache, re-fetching robots.txt up to 3× per run.
+	robots := newCrawlDelayCacheWithFetch(FetchBytesOptions{Security: o.Security})
+	limiter := NewHostRateLimiter()
 
 	// Sub-budget discovery so a link-dense crawl-fallback can't consume the
 	// whole deadline and starve fetching (ALP-040). discover() returns whatever
@@ -220,13 +251,13 @@ func ScrapeSite(ctx context.Context, opts *ScrapeOptions) (*ScrapeResult, error)
 		defer discCancel()
 	}
 
-	disc, err := discover(discCtx, o)
+	disc, err := discover(discCtx, o, robots, limiter)
 	if err != nil {
 		return nil, err
 	}
 	groups := groupByPattern(disc.URLs)
 	sampled := sample(groups, o)
-	pages := fetchAndAssemble(ctx, base, sampled, o)
+	pages, fetchWarnings := fetchAndAssemble(ctx, base, sampled, o, robots, limiter)
 
 	sampledSet := make(map[string]bool, len(sampled))
 	for _, u := range sampled {
@@ -270,52 +301,79 @@ func ScrapeSite(ctx context.Context, opts *ScrapeOptions) (*ScrapeResult, error)
 
 	summary := summarize(pages, disc.TotalURLsInSitemap, len(groups))
 	summary.UnsampledPatterns = unsampled
+	summary.Warnings = fetchWarnings
 	if len(pages) == 0 && len(disc.URLs) > 0 {
 		summary.Recommendations = append(summary.Recommendations,
 			fmt.Sprintf("0 of %d discovered URLs were sampled; check --include-patterns/--exclude-patterns and --max-pages", len(disc.URLs)))
 	}
 
-	return &ScrapeResult{
+	res := &ScrapeResult{
 		Site:       site,
 		PageGroups: outGroups,
 		Pages:      pages,
 		Summary:    summary,
-	}, nil
+	}
+	// Caller cancellation mid-run: hand back the partial result WITH the
+	// error so the CLI/MCP layers can render what was scraped (T21).
+	if cerr := callerCtx.Err(); cerr != nil {
+		return res, cerr
+	}
+	return res, nil
 }
 
-// fetchAndAssemble fetches each URL's HTML once and assembles a full PageObject
-// (ALP-006), concurrently with per-host rate limiting and robots crawl-delay.
+// fetchAndAssemble fetches and extracts each URL once through the full
+// FromURLWithOptions pipeline (retries, disk cache, redirect tracking, charset
+// recovery, security policy — T07; the raw FetchBytes+FromHTMLWithOptions
+// shortcut bypassed all of those) and assembles a PageObject per URL,
+// concurrently with per-host rate limiting and robots crawl-delay via the
+// run-shared robots cache and limiter (T03). A hostile Crawl-delay is clamped
+// to maxCrawlDelay and reported once per host in the returned warnings (T05).
 // Partial failures are captured on the page's Error field.
-func fetchAndAssemble(ctx context.Context, base *url.URL, urls []string, o ScrapeOptions) []PageObject {
+func fetchAndAssemble(ctx context.Context, base *url.URL, urls []string, o ScrapeOptions, robots *CrawlDelayCache, limiter *HostRateLimiter) ([]PageObject, []string) {
 	respectRobots := o.RespectRobots != nil && *o.RespectRobots
 	withPerf := o.WithPerformance
-	limiter := NewHostRateLimiter()
-	robots := NewCrawlDelayCache()
 
-	return runFetchPool(ctx, urls, o.Timeout, defaultScrapeConcurrency, func(ctx context.Context, u string) PageObject {
+	// WithLinks feeds assemblePage's internal/external link counts; the shared
+	// CrawlDelayCache keeps the in-pipeline robots gate one-fetch-per-host.
+	// RespectCrawlDelay stays off — spacing is enforced by limiter.Wait below,
+	// which reserves per-host slots instead of sleeping per request.
+	template := Options{
+		UserAgent:       o.UserAgent,
+		Security:        o.Security,
+		WithLinks:       true,
+		RespectRobots:   respectRobots,
+		CrawlDelayCache: robots,
+	}
+
+	var warnMu sync.Mutex
+	var warnings []string
+	clampWarned := map[string]bool{}
+
+	pages := runFetchPool(ctx, urls, o.Timeout, defaultScrapeConcurrency, func(ctx context.Context, u string) PageObject {
 		if err := ctx.Err(); err != nil {
 			return PageObject{URL: u, Error: err.Error()}
 		}
 		host, scheme := hostScheme(u)
 		if respectRobots && host != "" {
-			if err := limiter.Wait(ctx, host, robots.GetDelayWithScheme(host, o.UserAgent, scheme)); err != nil {
+			delay := robots.GetDelayWithScheme(ctx, host, o.UserAgent, scheme)
+			if capped, clamped := clampCrawlDelay(delay); clamped {
+				warnMu.Lock()
+				if !clampWarned[host] {
+					clampWarned[host] = true
+					warnings = append(warnings, fmt.Sprintf("robots.txt crawl-delay %s for %s clamped to %s", delay, host, maxCrawlDelay))
+				}
+				warnMu.Unlock()
+				delay = capped
+			}
+			if err := limiter.Wait(ctx, host, delay); err != nil {
 				return PageObject{URL: u, Error: err.Error()}
 			}
 		}
-		// TTFB here is the whole FetchBytes round-trip (headers + body):
-		// FetchBytes exposes no first-byte hook, and > 0 beats the structural 0
-		// this path used to report.
-		fetchStart := time.Now()
-		body, _, status, err := FetchBytes(ctx, u, FetchBytesOptions{Timeout: o.Timeout, UserAgent: o.UserAgent})
-		fetchMs := time.Since(fetchStart).Milliseconds()
-		if err != nil {
-			return PageObject{URL: u, Status: status, Error: err.Error()}
-		}
-		r := FromHTMLWithOptions(string(body), u, Options{UserAgent: o.UserAgent})
-		r.StatusCode = status
-		r.TTFBMs = fetchMs
-		return assemblePage(base, u, string(body), r, withPerf)
+		// Bound the fetch (including retry backoff waits) by the pool ctx so a
+		// page dispatched just before the deadline can't run past it.
+		return assemblePage(base, u, FromURLContext(ctx, u, template), withPerf)
 	})
+	return pages, warnings
 }
 
 // siteTitle picks the homepage title when present, else the first non-empty

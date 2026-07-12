@@ -3,12 +3,13 @@ name: CI
 on:
   push:
     branches: [main]
+    # testdata/** is deliberately NOT ignored: goldens are byte-compared by
+    # the test suite, so a golden-only commit must still run the Go job.
     paths-ignore:
       - '**.md'
       - 'docs/**'
       - 'LICENSE'
       - '.gitignore'
-      - 'testdata/**'
   pull_request:
     branches: [main]
     paths-ignore:
@@ -16,7 +17,6 @@ on:
       - 'docs/**'
       - 'LICENSE'
       - '.gitignore'
-      - 'testdata/**'
   workflow_dispatch:
 
 permissions:
@@ -28,3 +28,20 @@ jobs:
     uses: ./.github/workflows/reusable-go.yml
     with:
       ref: ${{ github.sha }}
+
+  npm:
+    name: npm Package Tests
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+
+      - name: Test npm package
+        working-directory: npm
+        run: |
+          npm ci --ignore-scripts
+          npm test

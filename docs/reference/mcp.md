@@ -92,6 +92,11 @@ enrichment. Wraps `ScrapeSite`. Server-side guardrails cap `max_pages` (≤200),
 | `respect_robots` | boolean | Respect robots.txt + crawl-delay (default true) |
 | `timeout_seconds` | integer | Overall timeout (default 60, capped at 180) |
 | `user_agent` | string | Override the User-Agent header |
+| `allow_internal` | boolean | Allow private/internal IP targets |
+
+Like `fetch_url`, every scrape fetch (discovery, robots.txt, sitemaps, pages)
+runs under the secure-by-default policy; `allow_internal` lifts only the
+private-IP block.
 
 ## Errors
 

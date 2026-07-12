@@ -378,30 +378,7 @@ func findCommentText(n *xhtml.Node) string {
 }
 
 // textContent walks descendant text nodes, joining with single spaces; skips
-// script/style.
+// script/style/noscript.
 func textContent(n *xhtml.Node) string {
-	var b strings.Builder
-	var walk func(c *xhtml.Node)
-	walk = func(c *xhtml.Node) {
-		if c == nil {
-			return
-		}
-		if c.Type == xhtml.ElementNode {
-			switch c.DataAtom {
-			case atom.Script, atom.Style, atom.Noscript:
-				return
-			}
-		}
-		if c.Type == xhtml.TextNode {
-			if b.Len() > 0 {
-				b.WriteByte(' ')
-			}
-			b.WriteString(c.Data)
-		}
-		for k := c.FirstChild; k != nil; k = k.NextSibling {
-			walk(k)
-		}
-	}
-	walk(n)
-	return b.String()
+	return nodeTextOpts(n, textOptions{spaceJoin: true, skipScriptStyle: true, skipNoscript: true})
 }

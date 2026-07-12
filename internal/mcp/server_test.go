@@ -221,7 +221,7 @@ func TestMCPServer_Cancellation(t *testing.T) {
 	var out bytes.Buffer
 
 	go func() {
-		s.serve(ctx, in, &out)
+		_ = s.serve(ctx, in, &out)
 	}()
 
 	time.Sleep(10 * time.Millisecond)

@@ -23,11 +23,9 @@ package main
 // `--scheme` prefix (https by default).
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
-	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -142,29 +140,11 @@ func runSweep(args []string) {
 	results := executeSweep(targets, *concurrency, *timeout, *fast)
 	report := buildSweepReport(*sitesPath, *concurrency, *timeout, *fast, results)
 
-	if err := os.MkdirAll(*output, 0o755); err != nil {
-		fmt.Fprintln(os.Stderr, "mkdir output:", err)
-		os.Exit(1)
-	}
-	ts := time.Now().UTC().Format("20060102-150405")
-	jsonPath := filepath.Join(*output, fmt.Sprintf("sweep_%s.json", ts))
-	mdPath := filepath.Join(*output, fmt.Sprintf("sweep_%s.md", ts))
-
-	raw, err := json.MarshalIndent(report, "", "  ")
+	_, mdPath, err := emitReports(*output, "sweep", report, renderSweepMarkdown(report))
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "marshal json:", err)
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	if err := atomicWrite(jsonPath, string(raw)+"\n"); err != nil {
-		fmt.Fprintln(os.Stderr, "write json:", err)
-		os.Exit(1)
-	}
-	if err := atomicWrite(mdPath, renderSweepMarkdown(report)); err != nil {
-		fmt.Fprintln(os.Stderr, "write markdown:", err)
-		os.Exit(1)
-	}
-	fmt.Println("wrote", jsonPath)
-	fmt.Println("wrote", mdPath)
 	fmt.Printf("sweep: %d/%d ok, %d blocked, %d errors, %d timed out; p50=%dms p95=%dms. See %s\n",
 		report.OK, report.Total, report.Blocked, report.Errors, report.TimedOut,
 		report.Latency.P50, report.Latency.P95, mdPath)
@@ -426,31 +406,19 @@ func latencyStats(xs []int64) LatencyStats {
 	}
 	stats.Mean = sum / int64(len(sorted))
 	stats.Max = sorted[len(sorted)-1]
-	stats.P50 = percentileInt64(sorted, 0.50)
-	stats.P90 = percentileInt64(sorted, 0.90)
-	stats.P95 = percentileInt64(sorted, 0.95)
-	stats.P99 = percentileInt64(sorted, 0.99)
+	stats.P50 = percentile(sorted, 0.50)
+	stats.P90 = percentile(sorted, 0.90)
+	stats.P95 = percentile(sorted, 0.95)
+	stats.P99 = percentile(sorted, 0.99)
 	return stats
-}
-
-func percentileInt64(sorted []int64, p float64) int64 {
-	if len(sorted) == 0 {
-		return 0
-	}
-	idx := int(p * float64(len(sorted)))
-	if idx >= len(sorted) {
-		idx = len(sorted) - 1
-	}
-	return sorted[idx]
 }
 
 func renderSweepMarkdown(r SweepReport) string {
 	var b strings.Builder
-	fmt.Fprintln(&b, "# SeaPortal Live Sweep")
-	fmt.Fprintln(&b)
-	fmt.Fprintf(&b, "- Captured: %s\n", r.CapturedAt)
-	fmt.Fprintf(&b, "- Git SHA: `%s`\n", r.GitSHA)
-	fmt.Fprintf(&b, "- Sites file: `%s`\n", r.SitesFile)
+	reportHeader(&b, "SeaPortal Live Sweep",
+		"Captured", r.CapturedAt,
+		"Git SHA", "`"+r.GitSHA+"`",
+		"Sites file", "`"+r.SitesFile+"`")
 	fmt.Fprintf(&b, "- Total: %d (concurrency=%d, timeout=%.0fs, fast=%v)\n", r.Total, r.Concurrency, r.TimeoutSec, r.Fast)
 	fmt.Fprintln(&b)
 

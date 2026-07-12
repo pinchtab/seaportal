@@ -95,6 +95,7 @@ type fataler interface {
 // or malformed; this is the desired behaviour so missing fixtures surface
 // loudly rather than silently passing.
 func Replay(t *testing.T, slug string) http.RoundTripper {
+	t.Helper()
 	return replay(t, slug)
 }
 

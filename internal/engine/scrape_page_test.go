@@ -43,12 +43,14 @@ func mustBase(t *testing.T, s string) *url.URL {
 	return u
 }
 
+// T07: assemblePage consumes the extraction Result (the converged fetch path
+// keeps no raw HTML), so the extraction runs with WithLinks like production.
 func TestAssemblePageArticle(t *testing.T) {
 	base := mustBase(t, "https://ex.com")
 	target := "https://ex.com/blog/my-article"
-	r := FromHTMLWithOptions(articleHTML, target, Options{})
+	r := FromHTMLWithOptions(articleHTML, target, Options{WithLinks: true})
 
-	p := assemblePage(base, target, articleHTML, r, false)
+	p := assemblePage(base, target, r, false)
 
 	if p.URL != target {
 		t.Errorf("URL = %s, want %s", p.URL, target)
@@ -59,8 +61,8 @@ func TestAssemblePageArticle(t *testing.T) {
 	if p.Meta["title"] == "" || p.Meta["description"] == "" {
 		t.Errorf("meta under-populated: %v", p.Meta)
 	}
-	if p.Meta["ogType"] != "article" {
-		t.Errorf("meta ogType = %q, want article", p.Meta["ogType"])
+	if p.Meta["author"] != "Jane Doe" {
+		t.Errorf("meta author = %q, want Jane Doe (JSON-LD via Result)", p.Meta["author"])
 	}
 	if len(p.Schema) == 0 {
 		t.Error("schema (JSON-LD) not captured")
@@ -82,9 +84,13 @@ func TestAssemblePageArticle(t *testing.T) {
 func TestAssemblePageProduct(t *testing.T) {
 	base := mustBase(t, "https://ex.com")
 	target := "https://ex.com/widget"
-	r := FromHTMLWithOptions(productHTML, target, Options{})
+	r := FromHTMLWithOptions(productHTML, target, Options{WithLinks: true})
+	// The fetch stage stamps ContentLength on a live fetch; simulate it here
+	// since FromHTMLWithOptions never sees the wire bytes.
+	r.ContentLength = int64(len(productHTML))
+	r.TTFBMs = 12
 
-	p := assemblePage(base, target, productHTML, r, true)
+	p := assemblePage(base, target, r, true)
 
 	if p.ContentType != "product" {
 		t.Errorf("contentType = %q, want product", p.ContentType)
@@ -102,7 +108,10 @@ func TestAssemblePageProduct(t *testing.T) {
 		t.Errorf("performance.Requests = %d, want 1", p.Performance.Requests)
 	}
 	if p.Performance.TotalBytes != int64(len(productHTML)) {
-		t.Errorf("performance.TotalBytes = %d, want %d", p.Performance.TotalBytes, len(productHTML))
+		t.Errorf("performance.TotalBytes = %d, want %d (Result.ContentLength)", p.Performance.TotalBytes, len(productHTML))
+	}
+	if p.Performance.TTFBMillis != 12 {
+		t.Errorf("performance.TTFBMillis = %d, want 12 (Result.TTFBMs)", p.Performance.TTFBMillis)
 	}
 }
 
@@ -111,44 +120,45 @@ func TestAssemblePageFailedStillPopulatesStatusAndError(t *testing.T) {
 	target := "https://ex.com/gone"
 	r := Result{StatusCode: 500, Error: "server error"}
 
-	p := assemblePage(base, target, "", r, false)
+	p := assemblePage(base, target, r, false)
 
 	if p.Status != 500 || p.Error != "server error" {
 		t.Errorf("failed page = {status:%d error:%q}, want {500, server error}", p.Status, p.Error)
 	}
 	if p.ContentType != "unknown" {
-		t.Errorf("contentType = %q, want unknown for empty html", p.ContentType)
+		t.Errorf("contentType = %q, want unknown for an empty extraction", p.ContentType)
 	}
 }
 
-func TestClassifyContentTypeFallback(t *testing.T) {
+func TestClassifyContentTypeFromResult(t *testing.T) {
 	// Structured metadata still wins (no regression).
-	if got := classifyContentType(nil, Metadata{OGType: "website"}, "", ""); got != "page" {
-		t.Errorf("og website = %q, want page", got)
-	}
-	if got := classifyContentType([]LDJSONBlock{{Type: "NewsArticle"}}, Metadata{}, "", ""); got != "article" {
+	if got := classifyContentType(Result{ResponseHeaders: ResponseHeaders{LDJSONBlocks: []LDJSONBlock{{Type: "NewsArticle"}}}, Content: "x"}, ""); got != "article" {
 		t.Errorf("NewsArticle = %q, want article", got)
 	}
-	// Empty body stays "unknown" even with no metadata.
-	if got := classifyContentType(nil, Metadata{}, "https://ex.com/x", ""); got != "unknown" {
-		t.Errorf("empty body = %q, want unknown", got)
+	if got := classifyContentType(Result{ResponseHeaders: ResponseHeaders{LDJSONBlocks: []LDJSONBlock{{Type: "Product"}}}, Content: "x"}, "https://ex.com/w"); got != "product" {
+		t.Errorf("Product = %q, want product", got)
+	}
+	// Empty extraction stays "unknown" even with URL hints.
+	if got := classifyContentType(Result{}, "https://ex.com/docs/x"); got != "unknown" {
+		t.Errorf("empty content = %q, want unknown", got)
 	}
 }
 
 func TestStructuralContentTypeFallback(t *testing.T) {
-	body := "<html><body><p>text</p></body></html>"
 	cases := []struct {
-		name, url, html, want string
+		name string
+		url  string
+		r    Result
+		want string
 	}{
-		{"mdn-docs-url", "https://developer.mozilla.org/en-US/docs/Web/JavaScript", body, "article"},
-		{"blog-url", "https://ex.com/blog/hello", body, "article"},
-		{"article-element", "https://ex.com/x", "<html><body><article><h1>T</h1><p>a</p></article></body></html>", "article"},
-		{"prose-density", "https://ex.com/x", "<h1>T</h1><p>1</p><p>2</p><p>3</p><p>4</p><p>5</p>", "article"},
-		{"plain-page", "https://ex.com/", "<html><body><nav>menu</nav><p>hi</p></body></html>", "page"},
-		{"empty-body", "https://ex.com/docs/x", "", "unknown"},
+		{"mdn-docs-url", "https://developer.mozilla.org/en-US/docs/Web/JavaScript", Result{Content: "text"}, "article"},
+		{"blog-url", "https://ex.com/blog/hello", Result{Content: "text"}, "article"},
+		{"prose-density", "https://ex.com/x", Result{Content: "text", HeadingCount: 1, ParagraphCount: 5}, "article"},
+		{"plain-page", "https://ex.com/", Result{Content: "hi", ParagraphCount: 1}, "page"},
+		{"empty-body", "https://ex.com/docs/x", Result{}, "unknown"},
 	}
 	for _, c := range cases {
-		if got := classifyContentType(nil, Metadata{}, c.url, c.html); got != c.want {
+		if got := classifyContentType(c.r, c.url); got != c.want {
 			t.Errorf("%s: classify = %q, want %q", c.name, got, c.want)
 		}
 	}

@@ -24,7 +24,7 @@ func scrapeTestServer(t *testing.T) *httptest.Server {
 			body += `<a href="/about">About</a><a href="/blog/1">Post</a>`
 		}
 		body += `<p>Body content for extraction.</p></body></html>`
-		w.Write([]byte(body))
+		_, _ = w.Write([]byte(body))
 	})
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
@@ -35,7 +35,7 @@ func TestCLI_ScrapeHelp(t *testing.T) {
 	bin := buildBinary(t)
 	out, _ := exec.Command(bin, "scrape", "--help").CombinedOutput()
 	s := string(out)
-	for _, want := range []string{"-max-pages", "-max-per-pattern", "-sample-strategy", "-output", "-with-performance", "-respect-robots", "-timeout", "-user-agent", "-full"} {
+	for _, want := range []string{"-max-pages", "-max-per-pattern", "-sample-strategy", "-output", "-with-performance", "-respect-robots", "-timeout", "-user-agent", "-full", "-allow-internal"} {
 		if !strings.Contains(s, want) {
 			t.Errorf("scrape --help missing flag %s\n%s", want, s)
 		}
@@ -48,7 +48,7 @@ func TestCLI_ScrapeHappyPath(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	out, err := exec.CommandContext(ctx, bin, "scrape", srv.URL, "--max-pages", "5").Output()
+	out, err := exec.CommandContext(ctx, bin, "scrape", srv.URL, "--max-pages", "5", "--allow-internal").Output()
 	if err != nil {
 		t.Fatalf("scrape happy path failed: %v", err)
 	}

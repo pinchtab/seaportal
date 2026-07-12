@@ -61,6 +61,20 @@ type SecurityPolicy struct {
 	// stop gzip/br/deflate/zstd decompression bombs; 0 = unbounded.
 	MaxResponseBytes     int64
 	MaxDecompressedBytes int64
+
+	// Resolver overrides DNS resolution for the BlockPrivateIPs checks; nil
+	// uses net.DefaultResolver. Injection seam (T16) — tests supply a
+	// map-backed fake so SSRF/rebinding checks stay hermetic; production
+	// callers may supply a custom resolver (e.g. DoH). Replaces the former
+	// package-global resolveHostIPs hook.
+	Resolver IPResolver
+}
+
+// IPResolver resolves a hostname to its IP addresses for SecurityPolicy's
+// private-IP validation. net.DefaultResolver satisfies it; network is one of
+// "ip", "ip4", "ip6" (the policy always asks for "ip" — both families).
+type IPResolver interface {
+	LookupIP(ctx context.Context, network, host string) ([]net.IP, error)
 }
 
 // Security sentinel errors. All are wrapped with target context at the call
@@ -74,10 +88,13 @@ var (
 	ErrDecompressTooLarge = errors.New("decompressed body exceeds the configured size cap")
 )
 
-// resolveHostIPs is the DNS resolver hook. Overridable in tests to make
-// SSRF/rebinding checks hermetic without touching the network.
-var resolveHostIPs = func(ctx context.Context, host string) ([]net.IP, error) {
-	return net.DefaultResolver.LookupIP(ctx, "ip", host)
+// resolver returns the policy's DNS resolver: p.Resolver when injected, else
+// net.DefaultResolver.
+func (p *SecurityPolicy) resolver() IPResolver {
+	if p != nil && p.Resolver != nil {
+		return p.Resolver
+	}
+	return net.DefaultResolver
 }
 
 // DefaultSecurityPolicy returns the recommended secure-by-default posture:
@@ -172,7 +189,7 @@ func (p *SecurityPolicy) checkResolvedHost(ctx context.Context, host string) err
 	if ip := net.ParseIP(host); ip != nil {
 		return validateIPWithTrusted(ip, trusted)
 	}
-	ips, err := resolveHostIPs(ctx, host)
+	ips, err := p.resolver().LookupIP(ctx, "ip", host)
 	if err != nil || len(ips) == 0 {
 		return fmt.Errorf("%w: %s", ErrSecurityResolve, host)
 	}

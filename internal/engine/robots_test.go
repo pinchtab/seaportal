@@ -1,14 +1,17 @@
 package engine
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 )
 
 const testUA = "seaportal-test/1.0"
@@ -94,12 +97,129 @@ func TestParseRobots_WildcardFallback(t *testing.T) {
 	body := "User-agent: googlebot\nAllow: /\n\nUser-agent: *\nDisallow: /private/\n"
 	_, rawRules := parseRobotsTxt(body)
 	rules := compileRules(rawRules)
-	picked := pickRules(rules, "Mozilla/5.0 (non-matching)")
+	picked := pickRules(rules, "SomeOther/5.0 (non-matching)")
 	if evaluate(picked, "/private/x") {
 		t.Fatalf("non-matching UA should fall back to * rules and be blocked on /private/")
 	}
 	if !evaluate(picked, "/public") {
 		t.Fatalf("non-matching UA should be allowed elsewhere via * fallback")
+	}
+}
+
+// ---- RFC 9309 product-token matching (T08) ----
+
+func TestProductToken(t *testing.T) {
+	cases := []struct{ ua, want string }{
+		{"seaportal-test/1.0", "seaportal-test"},
+		{DefaultUserAgent, "mozilla"},
+		{"Googlebot", "googlebot"},
+		{"  My_Bot/2.1 (+https://example.com)", "my_bot"},
+		{"123nonsense", ""},
+		{"", ""},
+	}
+	for _, c := range cases {
+		if got := productToken(c.ua); got != c.want {
+			t.Errorf("productToken(%q) = %q, want %q", c.ua, got, c.want)
+		}
+	}
+}
+
+// A section named "bot" must not bind a UA that merely CONTAINS "bot"
+// somewhere (the old substring matching); token-prefix semantics apply.
+func TestPickRules_NoSubstringMatch(t *testing.T) {
+	body := "User-agent: bot\nDisallow: /\n\nUser-agent: *\nAllow: /\n"
+	_, rawRules := parseRobotsTxt(body)
+	rules := compileRules(rawRules)
+	// "Mozilla/5.0 ... Googlebot/2.1" contains "bot" but its product token is
+	// "mozilla" — the "bot" section must not bind.
+	picked := pickRules(rules, "Mozilla/5.0 (compatible; Googlebot/2.1)")
+	if !evaluate(picked, "/anything") {
+		t.Fatal("section 'bot' bound a UA whose product token is 'mozilla' (substring matching regression)")
+	}
+}
+
+// A `User-agent: seaportal` section must NOT bind when the configured UA
+// impersonates Chrome: self-identification must not leak through an
+// impersonated UA (T08 sanctioned behavior change).
+func TestPickRules_NoUnconditionalSelfMatch(t *testing.T) {
+	body := "User-agent: seaportal\nDisallow: /\n\nUser-agent: *\nAllow: /\n"
+	_, rawRules := parseRobotsTxt(body)
+	rules := compileRules(rawRules)
+	picked := pickRules(rules, DefaultUserAgent) // Chrome impersonation
+	if !evaluate(picked, "/anything") {
+		t.Fatal("'seaportal' section bound an impersonated Chrome UA")
+	}
+	// But it does bind when the caller identifies as seaportal.
+	picked = pickRules(rules, ResolveUserAgent("seaportal"))
+	if evaluate(picked, "/anything") {
+		t.Fatal("'seaportal' section should bind the seaportal persona UA")
+	}
+}
+
+// Longest token-prefix wins: googlebot-news picks its own section over the
+// shorter googlebot one; plain googlebot still binds googlebot.
+func TestPickRules_LongestTokenPrefixWins(t *testing.T) {
+	body := "User-agent: googlebot\nDisallow: /a\n\nUser-agent: googlebot-news\nDisallow: /b\n"
+	_, rawRules := parseRobotsTxt(body)
+	rules := compileRules(rawRules)
+
+	newsPicked := pickRules(rules, "Googlebot-News/1.0")
+	if evaluate(newsPicked, "/b/x") || !evaluate(newsPicked, "/a/x") {
+		t.Fatalf("googlebot-news should bind its own section only, got rules %+v", newsPicked)
+	}
+	basePicked := pickRules(rules, "Googlebot/2.1")
+	if evaluate(basePicked, "/a/x") || !evaluate(basePicked, "/b/x") {
+		t.Fatalf("googlebot should bind the googlebot section only, got rules %+v", basePicked)
+	}
+}
+
+func TestPickDelay_TokenPrefixAndWildcard(t *testing.T) {
+	delays, _ := parseRobotsTxt("User-agent: seaportal\nCrawl-delay: 7\n\nUser-agent: *\nCrawl-delay: 2\n")
+	if got := pickDelay(delays, "seaportal-test/1.0"); got != 7*time.Second {
+		t.Errorf("seaportal-test delay = %s, want 7s (token-prefix bind)", got)
+	}
+	if got := pickDelay(delays, DefaultUserAgent); got != 2*time.Second {
+		t.Errorf("Chrome UA delay = %s, want 2s wildcard (no self-match leak)", got)
+	}
+}
+
+// ---- Crawl-delay clamp (T05) ----
+
+func TestClampCrawlDelay(t *testing.T) {
+	if d, clamped := clampCrawlDelay(86400 * time.Second); d != maxCrawlDelay || !clamped {
+		t.Errorf("clampCrawlDelay(86400s) = (%s, %v), want (%s, true)", d, clamped, maxCrawlDelay)
+	}
+	if d, clamped := clampCrawlDelay(2 * time.Second); d != 2*time.Second || clamped {
+		t.Errorf("clampCrawlDelay(2s) = (%s, %v), want (2s, false)", d, clamped)
+	}
+	if d, clamped := clampCrawlDelay(maxCrawlDelay); d != maxCrawlDelay || clamped {
+		t.Errorf("clampCrawlDelay(max) = (%s, %v), want (%s, false)", d, clamped, maxCrawlDelay)
+	}
+}
+
+// A hostile Crawl-delay is clamped at the consumption point and surfaced as a
+// warning; the parser keeps the truthful value. The wait itself is preempted
+// with a cancelled ctx so the test never sleeps the clamped 30s.
+func TestApplyCrawlDelay_ClampsHostileDelayWithWarning(t *testing.T) {
+	srv := newRobotsServer(t, "User-agent: *\nCrawl-delay: 86400\n")
+	defer srv.Close()
+	u, _ := url.Parse(srv.URL)
+
+	cache := NewCrawlDelayCache()
+	// The parsed value stays truthful (clamp is not in the parser).
+	if got := cache.GetDelayWithScheme(context.Background(), u.Host, testUA, "http"); got != 86400*time.Second {
+		t.Fatalf("GetDelayWithScheme = %s, want the unclamped 86400s", got)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	opts := Options{RespectCrawlDelay: true, CrawlDelayCache: cache}
+	warning, err := applyCrawlDelay(ctx, opts, srv.URL+"/page", u.Hostname(), testUA)
+	if err == nil {
+		t.Fatal("expected ctx cancellation to preempt the (clamped) wait")
+	}
+	if !strings.Contains(warning, "clamped") || !strings.Contains(warning, "30s") {
+		t.Fatalf("warning = %q, want a clamped-to-30s notice", warning)
 	}
 }
 
@@ -118,15 +238,82 @@ func TestIsAllowed_FetchesAndCaches(t *testing.T) {
 	cache := NewCrawlDelayCache()
 	u, _ := url.Parse(srv.URL)
 	domain := u.Host
+	ctx := context.Background()
 
-	if cache.IsAllowed(domain, testUA, "http", "/private/foo") {
+	if cache.IsAllowed(ctx, domain, testUA, "http", "/private/foo") {
 		t.Fatal("expected /private/foo to be blocked")
 	}
-	if !cache.IsAllowed(domain, testUA, "http", "/public/foo") {
+	if !cache.IsAllowed(ctx, domain, testUA, "http", "/public/foo") {
 		t.Fatal("expected /public/foo to be allowed")
 	}
 	if got := atomic.LoadInt32(&hits); got != 1 {
 		t.Fatalf("expected single robots.txt fetch (cache hit on 2nd call); got %d", got)
+	}
+}
+
+// Concurrent callers for one domain must coalesce into a single robots.txt
+// fetch (per-domain singleflight) instead of stampeding — and, since the
+// fetch now runs outside the cache lock, callers for OTHER domains must not
+// be blocked behind a slow fetch.
+func TestIsAllowed_SingleflightAcrossGoroutines(t *testing.T) {
+	var hits int32
+	release := make(chan struct{})
+	mux := http.NewServeMux()
+	mux.HandleFunc("/robots.txt", func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&hits, 1)
+		<-release // hold the fetch so every caller piles up on it
+		_, _ = fmt.Fprint(w, "User-agent: *\nDisallow: /private/\n")
+	})
+	slow := httptest.NewServer(mux)
+	defer slow.Close()
+
+	fastMux := http.NewServeMux()
+	fastMux.HandleFunc("/robots.txt", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = fmt.Fprint(w, "User-agent: *\nDisallow: /x/\n")
+	})
+	fast := httptest.NewServer(fastMux)
+	defer fast.Close()
+
+	cache := NewCrawlDelayCache()
+	slowHost := strings.TrimPrefix(slow.URL, "http://")
+	fastHost := strings.TrimPrefix(fast.URL, "http://")
+	ctx := context.Background()
+
+	var wg sync.WaitGroup
+	blocked := make([]bool, 8)
+	for i := 0; i < 8; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			blocked[i] = !cache.IsAllowed(ctx, slowHost, testUA, "http", "/private/x")
+		}(i)
+	}
+
+	// While the slow domain's fetch is parked, another domain must be served
+	// promptly — the old implementation held the cache mutex across the
+	// network call and would deadlock this until `release` fired.
+	otherDone := make(chan bool, 1)
+	go func() {
+		otherDone <- cache.IsAllowed(ctx, fastHost, testUA, "http", "/x/secret")
+	}()
+	select {
+	case allowed := <-otherDone:
+		if allowed {
+			t.Error("fast domain should have blocked /x/secret")
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("lookup for an unrelated domain blocked behind an in-flight fetch")
+	}
+
+	close(release)
+	wg.Wait()
+	if got := atomic.LoadInt32(&hits); got != 1 {
+		t.Errorf("expected 1 coalesced robots.txt fetch for the slow domain, got %d", got)
+	}
+	for i, b := range blocked {
+		if !b {
+			t.Errorf("goroutine %d: expected /private/x blocked", i)
+		}
 	}
 }
 
@@ -140,7 +327,7 @@ func TestIsAllowed_FailsOpenOn404(t *testing.T) {
 
 	cache := NewCrawlDelayCache()
 	u, _ := url.Parse(srv.URL)
-	if !cache.IsAllowed(u.Host, testUA, "http", "/anything") {
+	if !cache.IsAllowed(context.Background(), u.Host, testUA, "http", "/anything") {
 		t.Fatal("expected fail-open on 404")
 	}
 }
@@ -155,7 +342,7 @@ func TestIsAllowed_FailsOpenOnError(t *testing.T) {
 	_ = ln.Close()
 
 	cache := NewCrawlDelayCache()
-	if !cache.IsAllowed(addr, testUA, "http", "/anything") {
+	if !cache.IsAllowed(context.Background(), addr, testUA, "http", "/anything") {
 		t.Fatal("expected fail-open on network error")
 	}
 }
