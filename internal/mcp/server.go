@@ -121,6 +121,14 @@ func (s *Server) serve(ctx context.Context, in io.Reader, out io.Writer) error {
 	scanner.Buffer(make([]byte, 1<<20), 1<<24)
 	enc := json.NewEncoder(out)
 	for scanner.Scan() {
+		// Cancellation check per iteration so a cancelled ctx (client
+		// shutdown, SIGINT) stops the server instead of handling more
+		// requests. A read blocked in scanner.Scan still has to return
+		// first — stdio has no ctx-aware read — but no new request is
+		// dispatched after cancellation.
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		line := scanner.Bytes()
 		if len(line) == 0 {
 			continue
