@@ -38,7 +38,7 @@ func discover(ctx context.Context, opts ScrapeOptions) (discoveryResult, error) 
 		scheme = "https"
 	}
 
-	robots := NewCrawlDelayCache()
+	robots := newCrawlDelayCacheWithFetch(FetchBytesOptions{Security: o.Security})
 	respectRobots := o.RespectRobots != nil && *o.RespectRobots
 	allowed := func(rawURL string) bool {
 		if !respectRobots {
@@ -76,7 +76,7 @@ func discover(ctx context.Context, opts ScrapeOptions) (discoveryResult, error) 
 		if ctx.Err() != nil {
 			break
 		}
-		entries, ferr := FlattenSitemap(ctx, sm, FlattenSitemapOptions{Timeout: o.Timeout})
+		entries, ferr := FlattenSitemap(ctx, sm, FlattenSitemapOptions{Timeout: o.Timeout, Security: o.Security})
 		if ferr != nil || len(entries) == 0 {
 			continue
 		}
@@ -115,6 +115,7 @@ func discoverSitemapURLs(ctx context.Context, scheme, host string, o ScrapeOptio
 	body, _, status, err := FetchBytes(ctx, scheme+"://"+host+"/robots.txt", FetchBytesOptions{
 		Timeout:   o.Timeout,
 		UserAgent: o.UserAgent,
+		Security:  o.Security,
 	})
 	if err == nil && status == 200 {
 		for _, m := range reSitemapDirective.FindAllStringSubmatch(string(body), -1) {
@@ -136,7 +137,7 @@ func crawlSameHost(ctx context.Context, seed, host string, o ScrapeOptions, maxU
 		maxDepth = 0
 	}
 	respectRobots := o.RespectRobots != nil && *o.RespectRobots
-	robots := NewCrawlDelayCache()
+	robots := newCrawlDelayCacheWithFetch(FetchBytesOptions{Security: o.Security})
 
 	type item struct {
 		url   string
@@ -163,6 +164,7 @@ func crawlSameHost(ctx context.Context, seed, host string, o ScrapeOptions, maxU
 		body, _, status, err := FetchBytes(ctx, cur.url, FetchBytesOptions{
 			Timeout:   o.Timeout,
 			UserAgent: o.UserAgent,
+			Security:  o.Security,
 		})
 		if err != nil || status != 200 {
 			continue

@@ -47,6 +47,7 @@ func TestScrapeSiteTimeoutBoundsWallClock(t *testing.T) {
 		BaseURL:  srv.URL,
 		MaxPages: 30,
 		Timeout:  timeout,
+		Security: allowInternalTestPolicy(), // httptest is loopback (T01)
 	})
 	elapsed := time.Since(start)
 
@@ -80,7 +81,8 @@ func TestScrapeSiteZeroTimeoutStillCompletes(t *testing.T) {
 	res, err := ScrapeSite(context.Background(), &ScrapeOptions{
 		BaseURL:  srv.URL,
 		MaxPages: 3,
-		Timeout:  0, // escape: no overall deadline; per-request default still applies
+		Timeout:  0,                         // escape: no overall deadline; per-request default still applies
+		Security: allowInternalTestPolicy(), // httptest is loopback (T01)
 	})
 	if err != nil {
 		t.Fatalf("ScrapeSite: %v", err)

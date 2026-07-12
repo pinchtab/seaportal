@@ -25,7 +25,12 @@ func TestScrapeSiteIntegration(t *testing.T) {
 	srv := fixture.MultiPageSite()
 	defer srv.Close()
 
-	opts := &seaportal.ScrapeOptions{BaseURL: srv.URL(), MaxPages: 20, MaxPerPattern: 8}
+	// The fixture serves on loopback: lift the private-IP block of the
+	// secure-by-default scrape policy (T01 sanctioned behavior change).
+	sec := seaportal.DefaultSecurityPolicy()
+	sec.BlockPrivateIPs = false
+
+	opts := &seaportal.ScrapeOptions{BaseURL: srv.URL(), MaxPages: 20, MaxPerPattern: 8, Security: sec}
 	res, err := seaportal.ScrapeSite(context.Background(), opts)
 	if err != nil {
 		t.Fatalf("ScrapeSite: %v", err)
@@ -78,7 +83,7 @@ func TestScrapeSiteIntegration(t *testing.T) {
 	}
 
 	// Sampling determinism: same options, forced sub-sampling, identical set.
-	det := &seaportal.ScrapeOptions{BaseURL: srv.URL(), MaxPages: 20, MaxPerPattern: 1}
+	det := &seaportal.ScrapeOptions{BaseURL: srv.URL(), MaxPages: 20, MaxPerPattern: 1, Security: sec}
 	a, err := seaportal.ScrapeSite(context.Background(), det)
 	if err != nil {
 		t.Fatalf("ScrapeSite (run a): %v", err)

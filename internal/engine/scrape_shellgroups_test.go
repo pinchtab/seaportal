@@ -46,6 +46,7 @@ func TestScrapeFilterDropsEmptyShellGroups(t *testing.T) {
 		BaseURL:         srv.URL,
 		MaxPages:        20,
 		IncludePatterns: []string{"/docs/*"},
+		Security:        allowInternalTestPolicy(), // httptest is loopback (T01)
 	})
 	if err != nil {
 		t.Fatalf("ScrapeSite: %v", err)
@@ -70,6 +71,7 @@ func TestScrapeNoMatchFilterYieldsEmptyGroups(t *testing.T) {
 		BaseURL:         srv.URL,
 		MaxPages:        20,
 		IncludePatterns: []string{"/nothing-matches/*"},
+		Security:        allowInternalTestPolicy(), // httptest is loopback (T01)
 	})
 	if err != nil {
 		t.Fatalf("ScrapeSite: %v", err)
@@ -97,6 +99,7 @@ func TestScrapeBudgetSkippedPatternsSummarized(t *testing.T) {
 	res, err := ScrapeSite(context.Background(), &ScrapeOptions{
 		BaseURL:  srv.URL,
 		MaxPages: 2,
+		Security: allowInternalTestPolicy(), // httptest is loopback (T01)
 	})
 	if err != nil {
 		t.Fatalf("ScrapeSite: %v", err)
@@ -114,6 +117,7 @@ func TestScrapeUnfilteredGroupsUnchanged(t *testing.T) {
 	res, err := ScrapeSite(context.Background(), &ScrapeOptions{
 		BaseURL:  srv.URL,
 		MaxPages: 20,
+		Security: allowInternalTestPolicy(), // httptest is loopback (T01)
 	})
 	if err != nil {
 		t.Fatalf("ScrapeSite: %v", err)

@@ -6,7 +6,6 @@ import (
 	"context"
 	"encoding/xml"
 	"fmt"
-	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -161,7 +160,14 @@ func fetchSitemap(ctx context.Context, sitemapURL string, opts FlattenSitemapOpt
 			return nil, fmt.Errorf("gunzip sitemap %s: %w", sitemapURL, err)
 		}
 		defer func() { _ = gz.Close() }()
-		body, err = io.ReadAll(gz)
+		// Cap the gunzip output with the policy's decompression budget: a
+		// tiny .gz sitemap can otherwise expand into a decompression bomb
+		// even when MaxResponseBytes capped the wire bytes (T01).
+		var maxDecomp int64
+		if opts.Security != nil {
+			maxDecomp = opts.Security.MaxDecompressedBytes
+		}
+		body, err = limitedReadAll(gz, maxDecomp, ErrDecompressTooLarge)
 		if err != nil {
 			return nil, fmt.Errorf("read sitemap %s: %w", sitemapURL, err)
 		}

@@ -29,6 +29,7 @@ func runScrape(ctx context.Context, args []string) {
 	respectRobots := fs.Bool("respect-robots", true, "Respect robots.txt disallow + crawl-delay")
 	timeout := fs.Duration("timeout", 60*time.Second, "Overall scrape timeout")
 	userAgent := fs.String("user-agent", "", "Override the User-Agent header")
+	allowInternal := fs.Bool("allow-internal", false, "Allow private/internal IP targets")
 	fs.Usage = func() {
 		fmt.Fprintln(os.Stderr, "Usage: seaportal scrape <base-url> [flags]")
 		fs.PrintDefaults()
@@ -73,6 +74,13 @@ func runScrape(ctx context.Context, args []string) {
 		os.Exit(2)
 	}
 
+	// Secure-by-default fetch policy, mirroring the sitemap/feed verbs:
+	// --allow-internal lifts only the private-IP block.
+	sec := seaportal.DefaultSecurityPolicy()
+	if *allowInternal {
+		sec.BlockPrivateIPs = false
+	}
+
 	robots := *respectRobots
 	opts := &seaportal.ScrapeOptions{
 		BaseURL:         baseURL,
@@ -87,6 +95,7 @@ func runScrape(ctx context.Context, args []string) {
 		RespectRobots:   &robots,
 		Timeout:         *timeout,
 		UserAgent:       *userAgent,
+		Security:        sec,
 	}
 
 	res, err := seaportal.ScrapeSite(ctx, opts)

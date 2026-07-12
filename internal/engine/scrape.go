@@ -83,6 +83,16 @@ type ScrapeOptions struct {
 	RespectRobots   *bool
 	Timeout         time.Duration
 	UserAgent       string
+
+	// Security is the fetch policy applied to every scrape network call:
+	// discovery (robots.txt, sitemaps, the crawl fallback) and the per-page
+	// fetches. Unlike single-URL extraction — where a nil policy preserves the
+	// historical unguarded behaviour — ScrapeSite is secure by default:
+	// normalized() replaces nil with DefaultSecurityPolicy(). Callers that
+	// must crawl private/internal hosts pass an explicit policy with
+	// BlockPrivateIPs disabled (the CLI --allow-internal / MCP allow_internal
+	// escape hatch).
+	Security *SecurityPolicy
 }
 
 // normalized returns a copy of o with zero-valued fields replaced by the
@@ -110,6 +120,13 @@ func (o ScrapeOptions) normalized() ScrapeOptions {
 	}
 	if n.UserAgent == "" {
 		n.UserAgent = DefaultUserAgent
+	}
+	if n.Security == nil {
+		// Secure by default: ScrapeSite is a crawling entry point fed with
+		// arbitrary base URLs (MCP scrape_site, CLI), so a nil policy gets the
+		// full default guard rather than the extract path's historical
+		// nil-means-unguarded semantics.
+		n.Security = DefaultSecurityPolicy()
 	}
 	return n
 }
@@ -290,7 +307,7 @@ func fetchAndAssemble(ctx context.Context, base *url.URL, urls []string, o Scrap
 	respectRobots := o.RespectRobots != nil && *o.RespectRobots
 	withPerf := o.WithPerformance
 	limiter := NewHostRateLimiter()
-	robots := NewCrawlDelayCache()
+	robots := newCrawlDelayCacheWithFetch(FetchBytesOptions{Security: o.Security})
 
 	return runFetchPool(ctx, urls, o.Timeout, defaultScrapeConcurrency, func(ctx context.Context, u string) PageObject {
 		if err := ctx.Err(); err != nil {
@@ -306,7 +323,7 @@ func fetchAndAssemble(ctx context.Context, base *url.URL, urls []string, o Scrap
 		// FetchBytes exposes no first-byte hook, and > 0 beats the structural 0
 		// this path used to report.
 		fetchStart := time.Now()
-		body, _, status, err := FetchBytes(ctx, u, FetchBytesOptions{Timeout: o.Timeout, UserAgent: o.UserAgent})
+		body, _, status, err := FetchBytes(ctx, u, FetchBytesOptions{Timeout: o.Timeout, UserAgent: o.UserAgent, Security: o.Security})
 		fetchMs := time.Since(fetchStart).Milliseconds()
 		if err != nil {
 			return PageObject{URL: u, Status: status, Error: err.Error()}

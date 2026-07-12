@@ -27,6 +27,7 @@ func TestScrapeSitePopulatesTTFB(t *testing.T) {
 		BaseURL:         srv.URL,
 		MaxPages:        2,
 		WithPerformance: true,
+		Security:        allowInternalTestPolicy(), // httptest is loopback (T01)
 	})
 	if err != nil {
 		t.Fatalf("ScrapeSite: %v", err)

@@ -28,7 +28,7 @@ func TestFetchAllOrderedAndComplete(t *testing.T) {
 	srv := poolFixture(t)
 	urls := []string{srv.URL + "/", srv.URL + "/a", srv.URL + "/b", srv.URL + "/c", srv.URL + "/d"}
 
-	got := fetchAll(context.Background(), urls, ScrapeOptions{BaseURL: srv.URL}, poolConfig{Concurrency: 3})
+	got := fetchAll(context.Background(), urls, ScrapeOptions{BaseURL: srv.URL, Security: allowInternalTestPolicy()}, poolConfig{Concurrency: 3})
 
 	if len(got) != len(urls) {
 		t.Fatalf("got %d pages, want %d", len(got), len(urls))
@@ -54,7 +54,7 @@ func TestFetchAllRateLimitAcrossWorkers(t *testing.T) {
 	interval := 40 * time.Millisecond
 
 	start := time.Now()
-	got := fetchAll(context.Background(), urls, ScrapeOptions{BaseURL: srv.URL}, poolConfig{Concurrency: 3, MinInterval: interval})
+	got := fetchAll(context.Background(), urls, ScrapeOptions{BaseURL: srv.URL, Security: allowInternalTestPolicy()}, poolConfig{Concurrency: 3, MinInterval: interval})
 	elapsed := time.Since(start)
 
 	if len(got) != 3 {
@@ -71,7 +71,7 @@ func TestFetchAllPartialFailure(t *testing.T) {
 	// A bogus host fails DNS/connection; the good URLs must still succeed.
 	urls := []string{srv.URL + "/", "http://nonexistent.invalid/x", srv.URL + "/ok"}
 
-	got := fetchAll(context.Background(), urls, ScrapeOptions{BaseURL: srv.URL}, poolConfig{Concurrency: 2})
+	got := fetchAll(context.Background(), urls, ScrapeOptions{BaseURL: srv.URL, Security: allowInternalTestPolicy()}, poolConfig{Concurrency: 2})
 
 	if len(got) != 3 {
 		t.Fatalf("got %d pages, want 3", len(got))
@@ -98,7 +98,7 @@ func TestFetchAllContextCancelled(t *testing.T) {
 	cancel() // cancelled up front
 
 	start := time.Now()
-	got := fetchAll(ctx, urls, ScrapeOptions{BaseURL: srv.URL}, poolConfig{Concurrency: 3})
+	got := fetchAll(ctx, urls, ScrapeOptions{BaseURL: srv.URL, Security: allowInternalTestPolicy()}, poolConfig{Concurrency: 3})
 	elapsed := time.Since(start)
 
 	if len(got) != len(urls) {

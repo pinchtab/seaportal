@@ -228,6 +228,7 @@ func registerScrapeSite(srv *mcp.Server) {
 				"respect_robots":   map[string]interface{}{"type": "boolean", "description": "Respect robots.txt disallow + crawl-delay (default true)"},
 				"timeout_seconds":  map[string]interface{}{"type": "integer", "description": "Overall timeout in seconds (default 60, capped at 180)"},
 				"user_agent":       map[string]interface{}{"type": "string"},
+				"allow_internal":   map[string]interface{}{"type": "boolean", "description": "Allow private/internal IP targets"},
 			},
 			"required": []string{"base_url"},
 		},
@@ -276,6 +277,9 @@ func registerScrapeSite(srv *mcp.Server) {
 				RespectRobots:   &respectRobots,
 				Timeout:         time.Duration(timeoutSec) * time.Second,
 				UserAgent:       argString(args, "user_agent"),
+				// Secure by default like fetch_url; allow_internal lifts only
+				// the private-IP block (size caps and redirect rules stay).
+				Security: securityFromArgs(args),
 			}
 			if v, ok := args["full"].(bool); ok {
 				opts.Full = v

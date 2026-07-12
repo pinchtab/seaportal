@@ -53,7 +53,7 @@ func runDiscover(t *testing.T, build func(base string) map[string]string, respec
 			_, _ = w.Write([]byte(b))
 		})
 	}
-	res, err := discover(context.Background(), ScrapeOptions{BaseURL: srv.URL, RespectRobots: respectRobots})
+	res, err := discover(context.Background(), ScrapeOptions{BaseURL: srv.URL, RespectRobots: respectRobots, Security: allowInternalTestPolicy()})
 	if err != nil {
 		t.Fatalf("discover: %v", err)
 	}
