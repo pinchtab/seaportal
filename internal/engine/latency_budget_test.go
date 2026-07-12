@@ -73,15 +73,22 @@ func TestLatencyBudget(t *testing.T) {
 	srv := fixture.New()
 	defer srv.Close()
 
+	// The corpus may list the same fixture path under multiple entries;
+	// ServeMux panics on duplicate patterns, so register each route once
+	// while still sampling every entry.
 	routes := make([]string, 0, len(entries))
+	registered := make(map[string]bool, len(entries))
 	for _, entry := range entries {
-		absPath := filepath.Join(repoRoot, entry.Path)
-		body, err := os.ReadFile(absPath)
-		if err != nil {
-			t.Fatalf("read fixture %s: %v", entry.Path, err)
-		}
 		route := "/" + entry.Path
-		srv.Route("GET", route, fixture.Body(body, "text/html; charset=utf-8"))
+		if !registered[route] {
+			absPath := filepath.Join(repoRoot, entry.Path)
+			body, err := os.ReadFile(absPath)
+			if err != nil {
+				t.Fatalf("read fixture %s: %v", entry.Path, err)
+			}
+			srv.Route("GET", route, fixture.Body(body, "text/html; charset=utf-8"))
+			registered[route] = true
+		}
 		routes = append(routes, route)
 	}
 
