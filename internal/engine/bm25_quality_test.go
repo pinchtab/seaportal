@@ -2,7 +2,6 @@ package engine
 
 import (
 	"fmt"
-	"os"
 	"strings"
 	"testing"
 )
@@ -34,10 +33,7 @@ import (
 //     spec-links). But a chunk whose heading is literally "...· DELETE" now
 //     exists and ranks top-3 — assert exactly that.
 func TestBM25Quality_MDNHTTPMethods_DeleteQueryRanksDeleteSection(t *testing.T) {
-	html, err := os.ReadFile("../../testdata/ssr/mdn-http-methods.html")
-	if err != nil {
-		t.Fatalf("read fixture: %v", err)
-	}
+	html := loadFixture(t, "ssr/mdn-http-methods.html")
 	r := FromHTMLWithOptions(string(html), "https://example.com/methods",
 		Options{Query: "DELETE method semantics", TopN: 5})
 	if r.Error != "" {
@@ -69,10 +65,7 @@ func TestBM25Quality_MDNHTTPMethods_DeleteQueryRanksDeleteSection(t *testing.T) 
 // the top-3 results.
 func TestBM25Quality_WikipediaLatinPhrases_CarpeDiemRanksCSection(t *testing.T) {
 	skipHeavyFixture(t)
-	html, err := os.ReadFile("../../testdata/static/wikipedia-latin-phrases.html")
-	if err != nil {
-		t.Fatalf("read fixture: %v", err)
-	}
+	html := loadFixture(t, "static/wikipedia-latin-phrases.html")
 	r := FromHTMLWithOptions(string(html), "https://example.com/latin",
 		Options{Query: "carpe diem", TopN: 3})
 	if r.Error != "" {

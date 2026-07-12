@@ -1,20 +1,14 @@
 package engine
 
 import (
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 )
 
 func TestExtract_ArxivAuthors(t *testing.T) {
-	path := filepath.Join("..", "..", "testdata", "ssr", "arxiv-attention.html")
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("read fixture: %v", err)
-	}
+	raw := loadFixture(t, "ssr/arxiv-attention.html")
 
-	result := FromHTML(string(raw), "https://arxiv.org/abs/1706.03762")
+	result := FromHTML(raw, "https://arxiv.org/abs/1706.03762")
 
 	if !strings.Contains(result.Byline, "Vaswani") {
 		t.Errorf("Byline should contain 'Vaswani', got %q", result.Byline)

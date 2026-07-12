@@ -1,20 +1,14 @@
 package engine
 
 import (
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 )
 
 func TestIndexFallback_TextNPR(t *testing.T) {
-	path := filepath.Join("..", "..", "testdata", "index", "text-npr.html")
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("read fixture: %v", err)
-	}
+	data := loadFixture(t, "index/text-npr.html")
 
-	result := FromHTML(string(data), "https://text.npr.org/")
+	result := FromHTML(data, "https://text.npr.org/")
 
 	if len(result.Content) < 500 {
 		t.Errorf("Content length = %d, want > 500 (was 57 before fix). First 200 chars: %q",

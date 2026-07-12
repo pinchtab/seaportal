@@ -2,7 +2,6 @@ package engine
 
 import (
 	"context"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -88,41 +87,25 @@ func TestAdversarial_Inputs(t *testing.T) {
 		{
 			name: "billion-laughs",
 			htmlFn: func() string {
-				b, err := os.ReadFile("../../testdata/adversarial/billion-laughs.html")
-				if err != nil {
-					t.Fatalf("read fixture: %v", err)
-				}
-				return string(b)
+				return loadFixture(t, "adversarial/billion-laughs.html")
 			},
 		},
 		{
 			name: "malformed-utf8",
 			htmlFn: func() string {
-				b, err := os.ReadFile("../../testdata/adversarial/malformed-utf8.html")
-				if err != nil {
-					t.Fatalf("read fixture: %v", err)
-				}
-				return string(b)
+				return loadFixture(t, "adversarial/malformed-utf8.html")
 			},
 		},
 		{
 			name: "mixed-encodings",
 			htmlFn: func() string {
-				b, err := os.ReadFile("../../testdata/adversarial/mixed-encodings.html")
-				if err != nil {
-					t.Fatalf("read fixture: %v", err)
-				}
-				return string(b)
+				return loadFixture(t, "adversarial/mixed-encodings.html")
 			},
 		},
 		{
 			name: "broken-tables",
 			htmlFn: func() string {
-				b, err := os.ReadFile("../../testdata/adversarial/broken-tables.html")
-				if err != nil {
-					t.Fatalf("read fixture: %v", err)
-				}
-				return string(b)
+				return loadFixture(t, "adversarial/broken-tables.html")
 			},
 		},
 	}

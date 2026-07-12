@@ -93,7 +93,7 @@ func extractFixture(t *testing.T, st siteTest) extractResult {
 	var extractMs int64
 
 	if st.mdFixture != "" {
-		md := loadFixture(t, st.mdFixture)
+		md := loadSmokeFixture(t, st.mdFixture)
 		start := time.Now()
 		cleaned := CleanupMarkdown(md)
 		extractMs = time.Since(start).Milliseconds()
@@ -107,7 +107,7 @@ func extractFixture(t *testing.T, st siteTest) extractResult {
 		title = extractMarkdownTitle(cleaned)
 		quality = float64(ComputeQuality(cleaned).Score)
 	} else {
-		html := loadFixture(t, st.fixture)
+		html := loadSmokeFixture(t, st.fixture)
 		start := time.Now()
 		result := FromHTML(html, st.url)
 		extractMs = time.Since(start).Milliseconds()
@@ -165,7 +165,7 @@ func TestExtended_AllSites(t *testing.T) {
 			}
 			for _, s := range st.mustContain {
 				if !strings.Contains(r.contentPreview+"..."+r.title, s) {
-					html := loadFixture(t, st.fixture)
+					html := loadSmokeFixture(t, st.fixture)
 					result := FromHTML(html, st.url)
 					if !strings.Contains(result.Content, s) && !strings.Contains(result.Title, s) {
 						t.Errorf("missing %q in content or title", s)
@@ -244,7 +244,7 @@ func TestExtended_PerformanceBenchmark(t *testing.T) {
 		if st.mdFixture != "" {
 			fixture = st.mdFixture
 		}
-		raw := loadFixture(t, fixture)
+		raw := loadSmokeFixture(t, fixture)
 		htmlBytes := len(raw)
 
 		var times []int64

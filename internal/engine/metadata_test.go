@@ -1,8 +1,6 @@
 package engine
 
 import (
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -189,12 +187,8 @@ func TestApplyMetadata_AuthorsPrependIdempotent(t *testing.T) {
 }
 
 func TestExtract_OGFullFixture(t *testing.T) {
-	path := filepath.Join("..", "..", "testdata", "static", "article-og-full.html")
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("read fixture: %v", err)
-	}
-	result := FromHTML(string(raw), "https://example.com/og-demo")
+	raw := loadFixture(t, "static/article-og-full.html")
+	result := FromHTML(raw, "https://example.com/og-demo")
 
 	if !strings.Contains(result.Byline, "Alice Smith") || !strings.Contains(result.Byline, "Bob Jones") {
 		t.Errorf("Byline missing article:author values: %q", result.Byline)
