@@ -76,7 +76,7 @@ func discover(ctx context.Context, opts ScrapeOptions, robots *CrawlDelayCache, 
 		if ctx.Err() != nil {
 			break
 		}
-		entries, ferr := FlattenSitemap(ctx, sm, FlattenSitemapOptions{Timeout: o.Timeout, Security: o.Security})
+		entries, ferr := FlattenSitemap(ctx, sm, FlattenSitemapOptions{Timeout: o.Timeout, Security: o.Security, Since: o.Since})
 		if ferr != nil || len(entries) == 0 {
 			continue
 		}

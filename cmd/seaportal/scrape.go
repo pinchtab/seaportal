@@ -30,6 +30,8 @@ func runScrape(ctx context.Context, args []string) {
 	timeout := fs.Duration("timeout", 60*time.Second, "Overall scrape timeout")
 	userAgent := fs.String("user-agent", "", "Override the User-Agent header")
 	allowInternal := fs.Bool("allow-internal", false, "Allow private/internal IP targets")
+	recentDays := fs.Int("recent-days", 0, "Only discover sitemap URLs modified within the last N days (0 = no limit). Essential for large news archives.")
+	preview := fs.Bool("preview", false, "Preview the site tree: 1 sample per URL pattern with per-group counts, scoped to recent content, so you can decide which branches to expand")
 	fs.Usage = func() {
 		fmt.Fprintln(os.Stderr, "Usage: seaportal scrape <base-url> [flags]")
 		fs.PrintDefaults()
@@ -52,6 +54,25 @@ func runScrape(ctx context.Context, args []string) {
 	if *jsonOut && *output != "json" {
 		fmt.Fprintf(os.Stderr, "scrape error: --json conflicts with --output %s\n", *output)
 		os.Exit(2)
+	}
+
+	// Preview mode is a preset: one representative sample per URL pattern
+	// (never a full fetch) scoped to a recent window, so the per-group counts
+	// reveal the site tree cheaply. Explicit --recent-days still wins.
+	if *preview {
+		*maxPerPattern = 1
+		*full = false
+		if *recentDays == 0 {
+			*recentDays = 7
+		}
+	}
+	if *recentDays < 0 {
+		fmt.Fprintln(os.Stderr, "scrape error: --recent-days must be >= 0")
+		os.Exit(2)
+	}
+	var since time.Time
+	if *recentDays > 0 {
+		since = time.Now().AddDate(0, 0, -*recentDays)
 	}
 
 	strategy := seaportal.SampleStrategy(*sampleStrategy)
@@ -96,6 +117,7 @@ func runScrape(ctx context.Context, args []string) {
 		Timeout:         *timeout,
 		UserAgent:       *userAgent,
 		Security:        sec,
+		Since:           since,
 	}
 
 	res, err := seaportal.ScrapeSite(ctx, opts)

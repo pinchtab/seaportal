@@ -26,6 +26,51 @@ type FlattenSitemapOptions struct {
 	Timeout  time.Duration   // per-fetch timeout (used when Client is nil)
 	Client   *http.Client    // optional; falls back to engine getClient()
 	Security *SecurityPolicy // optional fetch guard (SSRF, redirects, size caps)
+	// Since, when non-zero, drops `<url>` entries whose `<lastmod>` is older
+	// than it, and — crucially for large news archives — skips recursing into
+	// child sitemaps in an index whose own `<lastmod>` is older than it. This
+	// keeps a date-partitioned archive (e.g. monthly `.gz` sitemaps going back
+	// years) from being downloaded and flattened in full. Entries and index
+	// children without a parseable `<lastmod>` are kept (fail-open).
+	Since time.Time
+}
+
+// parseSitemapTime parses a sitemap `<lastmod>` value. Sitemaps use the W3C
+// datetime profile of ISO 8601: a full timestamp (RFC 3339) or a date, with
+// month- and year-only forms also seen in the wild. Returns ok=false when the
+// value is empty or unparseable (callers treat that as "no date known").
+func parseSitemapTime(s string) (time.Time, bool) {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return time.Time{}, false
+	}
+	for _, layout := range []string{
+		time.RFC3339,
+		"2006-01-02T15:04:05Z0700",
+		"2006-01-02T15:04Z0700",
+		"2006-01-02",
+		"2006-01",
+		"2006",
+	} {
+		if t, err := time.Parse(layout, s); err == nil {
+			return t, true
+		}
+	}
+	return time.Time{}, false
+}
+
+// olderThanCutoff reports whether a `<lastmod>` value is strictly before the
+// cutoff. A missing/unparseable date is never "older" — we keep it rather than
+// silently drop content whose age we cannot determine.
+func olderThanCutoff(lastmod string, cutoff time.Time) bool {
+	if cutoff.IsZero() {
+		return false
+	}
+	t, ok := parseSitemapTime(lastmod)
+	if !ok {
+		return false
+	}
+	return t.Before(cutoff)
 }
 
 type sitemapURLNode struct {
@@ -104,6 +149,11 @@ func flattenSitemap(ctx context.Context, sitemapURL string, depth int, opts Flat
 			if loc == "" {
 				continue
 			}
+			// Skip whole child sitemaps that predate the cutoff — this is what
+			// makes a years-deep monthly archive index cheap to walk.
+			if olderThanCutoff(s.LastMod, opts.Since) {
+				continue
+			}
 			if len(*entries) >= opts.MaxURLs {
 				return nil
 			}
@@ -122,6 +172,9 @@ func flattenSitemap(ctx context.Context, sitemapURL string, depth int, opts Flat
 				continue
 			}
 			if seen[loc] {
+				continue
+			}
+			if olderThanCutoff(u.LastMod, opts.Since) {
 				continue
 			}
 			seen[loc] = true

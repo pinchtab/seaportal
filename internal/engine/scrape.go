@@ -88,6 +88,13 @@ type ScrapeOptions struct {
 	// BlockPrivateIPs disabled (the CLI --allow-internal / MCP allow_internal
 	// escape hatch).
 	Security *SecurityPolicy
+
+	// Since, when non-zero, bounds sitemap discovery to content at or newer
+	// than it: child sitemaps and `<url>` entries with an older `<lastmod>`
+	// are skipped (see FlattenSitemapOptions.Since). The CLI --recent-days N
+	// flag sets it to now−N days. Essential for large news archives whose
+	// sitemap indexes span years of monthly partitions.
+	Since time.Time
 }
 
 // normalized returns a copy of o with zero-valued fields replaced by the
