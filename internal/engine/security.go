@@ -68,6 +68,15 @@ type SecurityPolicy struct {
 	// callers may supply a custom resolver (e.g. DoH). Replaces the former
 	// package-global resolveHostIPs hook.
 	Resolver IPResolver
+
+	// URLFilter is an optional host-application veto, invoked by ValidateURL
+	// after every built-in check passes. It therefore runs pre-fetch and —
+	// when RevalidateRedirects is set — on every redirect hop, letting an
+	// embedding application (e.g. PinchTab) enforce rules this policy cannot
+	// express: dynamic per-request domain logic, its own resolver guards, a
+	// crawl budget. A non-nil error blocks the fetch. Must be safe for
+	// concurrent use; excluded from JSON round-trips.
+	URLFilter func(ctx context.Context, rawURL string) error `json:"-"`
 }
 
 // IPResolver resolves a hostname to its IP addresses for SecurityPolicy's
@@ -137,7 +146,13 @@ func (p *SecurityPolicy) ValidateURL(ctx context.Context, rawURL string) error {
 	if err := p.checkDomain(host); err != nil {
 		return err
 	}
-	return p.checkResolvedHost(ctx, host)
+	if err := p.checkResolvedHost(ctx, host); err != nil {
+		return err
+	}
+	if p.URLFilter != nil {
+		return p.URLFilter(ctx, rawURL)
+	}
+	return nil
 }
 
 func (p *SecurityPolicy) checkScheme(scheme string) error {
