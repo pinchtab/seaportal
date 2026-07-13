@@ -2,6 +2,7 @@ package engine
 
 import (
 	"context"
+	"errors"
 	"net/url"
 	"regexp"
 	"strings"
@@ -77,13 +78,24 @@ func discover(ctx context.Context, opts ScrapeOptions, robots *CrawlDelayCache, 
 			break
 		}
 		entries, ferr := FlattenSitemap(ctx, sm, FlattenSitemapOptions{Timeout: o.Timeout, Security: o.Security, Since: o.Since})
-		if ferr != nil || len(entries) == 0 {
-			continue
+		// Keep whatever was flattened even when the deadline fired mid-walk:
+		// a partial sitemap is still useful discovery output (ALP-051).
+		if len(entries) > 0 {
+			res.SitemapFound = true
+			res.TotalURLsInSitemap += len(entries)
+			for _, e := range entries {
+				add(e.Loc)
+			}
 		}
-		res.SitemapFound = true
-		res.TotalURLsInSitemap += len(entries)
-		for _, e := range entries {
-			add(e.Loc)
+		if ferr != nil {
+			// A deadline/cancellation means the discovery budget is spent —
+			// stop rather than grinding through the remaining sitemaps (each
+			// would just fail its first fetch). A per-sitemap fetch/parse error
+			// is local: skip only that sitemap.
+			if ctx.Err() != nil || errors.Is(ferr, context.DeadlineExceeded) || errors.Is(ferr, context.Canceled) {
+				break
+			}
+			continue
 		}
 	}
 

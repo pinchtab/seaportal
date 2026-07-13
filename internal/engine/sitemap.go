@@ -117,6 +117,13 @@ func FlattenSitemap(ctx context.Context, sitemapURL string, opts FlattenSitemapO
 }
 
 func flattenSitemap(ctx context.Context, sitemapURL string, depth int, opts FlattenSitemapOptions, visited, seen map[string]bool, entries *[]SitemapEntry) error {
+	// Honour the deadline mid-flatten, not just between top-level sitemaps:
+	// a site whose robots.txt lists dozens of sitemaps (or a deep index) must
+	// not flatten to completion past the scrape budget (ALP-051). Whatever was
+	// collected so far is preserved by the caller.
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	if depth > opts.MaxDepth {
 		return nil
 	}
@@ -145,6 +152,9 @@ func flattenSitemap(ctx context.Context, sitemapURL string, depth int, opts Flat
 			return fmt.Errorf("parse sitemapindex %s: %w", sitemapURL, err)
 		}
 		for _, s := range doc.Sitemaps {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
 			loc := strings.TrimSpace(s.Loc)
 			if loc == "" {
 				continue
