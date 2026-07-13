@@ -26,9 +26,10 @@ locally and runs the scenarios directly.
 | `fixtures` | `./fixtures` | flat extraction fixtures (scenarios 01–05) |
 | `scrapesite` | `./fixtures/site` | multi-page scrape site with sitemap-index + robots (ALP-014) |
 | `crawlsite` | `./fixtures/site-nosm` | no-sitemap site for the crawl-fallback path |
+| `datedsite` | `./fixtures/site-dated` | sitemap with per-URL `<lastmod>` for `--recent-days` (12–13) |
 
-The runner receives `FIXTURES_URL`, `SCRAPE_SITE_URL`, and `CRAWL_SITE_URL`;
-`common.sh` provides defaults and the `require_host` guard.
+The runner receives `FIXTURES_URL`, `SCRAPE_SITE_URL`, `CRAWL_SITE_URL`, and
+`DATED_SITE_URL`; `common.sh` provides defaults and the `require_host` guard.
 
 ## Scrape scenarios (06–11)
 

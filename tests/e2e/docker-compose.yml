@@ -34,6 +34,19 @@ services:
       timeout: 5s
       retries: 5
 
+  # Dated sitemap variant (ALP-051/052 follow-up): its sitemap.xml carries
+  # per-URL <lastmod> (future-dated "fresh" + ancient "stale" pages, so the
+  # split is time-stable) to exercise `scrape --recent-days`.
+  datedsite:
+    image: nginx:alpine
+    volumes:
+      - ./fixtures/site-dated:/usr/share/nginx/html:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:80/robots.txt"]
+      interval: 2s
+      timeout: 5s
+      retries: 5
+
   runner:
     build:
       context: ./runner
@@ -44,10 +57,13 @@ services:
         condition: service_healthy
       crawlsite:
         condition: service_healthy
+      datedsite:
+        condition: service_healthy
     environment:
       - FIXTURES_URL=http://fixtures:80
       - SCRAPE_SITE_URL=http://scrapesite:80
       - CRAWL_SITE_URL=http://crawlsite:80
+      - DATED_SITE_URL=http://datedsite:80
     volumes:
       - ./scenarios:/scenarios:ro
       - ./results:/results

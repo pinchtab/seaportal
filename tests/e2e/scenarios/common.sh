@@ -20,6 +20,7 @@ RESULTS_DIR="${RESULTS_DIR:-/results}"
 # these hosts don't resolve, so the scrape scenarios skip via require_host.
 SCRAPE_SITE_URL="${SCRAPE_SITE_URL:-http://scrapesite:80}"
 CRAWL_SITE_URL="${CRAWL_SITE_URL:-http://crawlsite:80}"
+DATED_SITE_URL="${DATED_SITE_URL:-http://datedsite:80}"
 
 # The fixtures server runs on the private Docker network (e.g. 172.18.0.2), so
 # every CLI call opts into the SSRF escape hatch — these targets are trusted by
