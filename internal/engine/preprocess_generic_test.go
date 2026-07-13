@@ -7,8 +7,6 @@ import (
 	"testing"
 )
 
-// ---- scopeMainContent unit tests ----
-
 func TestScopeMainContent_PrefersMain(t *testing.T) {
 	in := `<html><body>
 <article><h1>Article block</h1><p>article body</p></article>
@@ -49,8 +47,6 @@ func TestScopeMainContent_LargestDivFallback(t *testing.T) {
 func TestScopeMainContent_NoOpWhenNoMatch(t *testing.T) {
 	in := `<html><body><p>just a single paragraph</p><p>and another</p></body></html>`
 	out := scopeMainContent(in)
-	// Renderer may normalise whitespace, but the body content semantics
-	// should be untouched: no <article> wrapper added, paragraphs remain.
 	if strings.Contains(out, "<article>") {
 		t.Errorf("expected no <article> wrapper for flat-DOM no-anchor case, got:\n%s", out)
 	}
@@ -58,8 +54,6 @@ func TestScopeMainContent_NoOpWhenNoMatch(t *testing.T) {
 		t.Errorf("expected original paragraph preserved:\n%s", out)
 	}
 }
-
-// ---- stripCommonChrome unit tests ----
 
 func TestStripCommonChrome_RemovesNavAside(t *testing.T) {
 	in := `<html><body>
@@ -123,8 +117,6 @@ func TestStripCommonChrome_StripsCookieBanners(t *testing.T) {
 	}
 }
 
-// ---- stripHighLinkDensityBlocks unit tests ----
-
 func TestStripHighLinkDensity_TagCloud(t *testing.T) {
 	prose := strings.Repeat("This is genuine article prose that anchors the page and gives the body real content beyond the tag cloud. ", 4)
 	var sb strings.Builder
@@ -163,7 +155,7 @@ func TestStripHighLinkDensity_RelatedArticlesWidget(t *testing.T) {
 }
 
 func TestStripHighLinkDensity_KeepsParagraphWithCitations(t *testing.T) {
-	prose := strings.Repeat("The quick brown fox jumps over the lazy dog. ", 5) // ~225 chars
+	prose := strings.Repeat("The quick brown fox jumps over the lazy dog. ", 5)
 	in := `<html><body><main><div class="article-body"><p>` + prose +
 		`See <a href="/r1">ref</a>, <a href="/r2">two</a>, and <a href="/r3">three</a>.</p></div></main></body></html>`
 	out := stripHighLinkDensityBlocks(in)
@@ -184,7 +176,7 @@ func TestStripHighLinkDensity_KeepsShortBlocks(t *testing.T) {
 }
 
 func TestStripHighLinkDensity_KeepsLowAnchorCount(t *testing.T) {
-	prose := strings.Repeat("Lorem ipsum dolor sit amet consectetur adipiscing elit. ", 4) // ~225 chars
+	prose := strings.Repeat("Lorem ipsum dolor sit amet consectetur adipiscing elit. ", 4)
 	in := `<html><body><main><div class="cite-block">` + prose +
 		`See <a href="/one">first</a> and <a href="/two">second</a>.</div></main></body></html>`
 	out := stripHighLinkDensityBlocks(in)
@@ -193,24 +185,13 @@ func TestStripHighLinkDensity_KeepsLowAnchorCount(t *testing.T) {
 	}
 }
 
-// ---- preprocess baseline matrix (integration) ----
-
 func TestPreprocessBaseline_ExtractionMatrix(t *testing.T) {
 	for _, row := range preprocessBaseline {
 		row := row
 		t.Run(row.fixture, func(t *testing.T) {
-			// The heavy real-world fixtures (1.3 MB wikipedia-latin,
-			// github-awesome) run ~20x slower under `-race -coverprofile` and
-			// dominate the race lane. They are exercised in the dedicated
-			// non-race "Heavy extraction fixtures" lane (see scripts/test.sh and
-			// .github/workflows/reusable-go.yml), so skip them here under
-			// -short or race.
 			if (testing.Short() || isRaceEnabled) && isHeavyFixture(row.fixture) {
 				t.Skipf("skipping heavy fixture under short/race; covered by the non-race lane")
 			}
-			// Search testdata/ + known class subfolders for the bare name.
-			// Lets the baseline matrix keep bare fixture names after the
-			// 2026-05-17 reorg moved real-world fixtures into class folders.
 			var data []byte
 			var lastErr error
 			for _, sub := range []string{"", "static", "ssr", "dynamic", "hydrated", "blocked", "multilingual"} {

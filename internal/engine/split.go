@@ -1,23 +1,3 @@
-// Package engine output file splitting.
-//
-// SplitResultToFiles shards a Result.Content (or its existing Chunks) into
-// multiple on-disk files under a target directory, each capped at an
-// approximate byte budget. Useful for piping a large extraction into LLMs
-// with fixed context budgets or sharding archival pipelines.
-//
-// Behaviour summary:
-//   - When r.Chunks is non-empty, the existing chunks are the unit of
-//     packing (they're never split further; oversized ones emit a stderr
-//     warning and land in their own file).
-//   - Otherwise r.Content is split on paragraph boundaries (\n\n) into
-//     pseudo-chunks and packed the same way.
-//   - Files are written atomically (.tmp + rename) with mode 0644.
-//   - Filename pattern: <base>-NNN.<ext> where base is derived from a
-//     URL slug (host + path, non-alphanumeric → '-', collapsed, truncated
-//     to 60 chars, fallback "seaportal").
-//   - Format "md" writes raw markdown text; "json" wraps each shard in
-//     {"index":N,"of":K,"url":...,"title":...,"text":...}.
-
 package engine
 
 import (
@@ -30,15 +10,13 @@ import (
 	"strings"
 )
 
-// SplitConfig controls SplitResultToFiles.
 type SplitConfig struct {
 	Dir      string
-	MaxBytes int    // soft cap per file; 0 = use default (32 KB)
-	BaseName string // optional; defaults to URL-slug-derived name
-	Format   string // "md" | "json" (default "md")
+	MaxBytes int
+	BaseName string
+	Format   string
 }
 
-// SplitFile is one entry in the manifest returned by SplitResultToFiles.
 type SplitFile struct {
 	Path  string `json:"path"`
 	Index int    `json:"index"`
@@ -50,9 +28,6 @@ const defaultSplitBytes = 32 * 1024
 
 var nonAlnumRE = regexp.MustCompile(`[^a-z0-9]+`)
 
-// slugFromURL derives a filename-safe base from a URL: lowercased host + path,
-// non-alphanumeric runs collapsed to '-', trimmed, truncated to 60 chars.
-// Returns "seaportal" when the URL is empty or yields no usable characters.
 func slugFromURL(raw string) string {
 	if raw == "" {
 		return "seaportal"
@@ -79,10 +54,6 @@ func slugFromURL(raw string) string {
 	return s
 }
 
-// SplitResultToFiles writes r's content into one or more files under cfg.Dir.
-// Prefers r.Chunks when present; otherwise paragraph-splits r.Content. Returns
-// the manifest of written files with absolute paths. Empty Content + no chunks
-// returns (nil, nil) and writes nothing.
 func SplitResultToFiles(r Result, cfg SplitConfig) ([]SplitFile, error) {
 	if cfg.Dir == "" {
 		return nil, fmt.Errorf("split: Dir is required")
@@ -135,16 +106,14 @@ func SplitResultToFiles(r Result, cfg SplitConfig) ([]SplitFile, error) {
 	}
 	for i, u := range units {
 		if len(u) > maxBytes {
-			// Flush current shard, then emit oversized unit alone.
 			flush()
 			fmt.Fprintf(os.Stderr, "split: oversized chunk %d: %d bytes (cap %d)\n", i, len(u), maxBytes)
 			shards = append(shards, u)
 			continue
 		}
-		// If adding would exceed cap (and we have content), flush first.
 		add := len(u)
 		if cur.Len() > 0 {
-			add += 2 // "\n\n"
+			add += 2
 		}
 		if cur.Len() > 0 && cur.Len()+add > maxBytes {
 			flush()

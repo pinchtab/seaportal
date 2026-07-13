@@ -29,7 +29,6 @@ func TestFixture_Redirect(t *testing.T) {
 	srv := fixture.New().Route("GET", "/redirect", fixture.Redirect("/final", 301))
 	defer srv.Close()
 
-	// Use a client that doesn't follow redirects so we can observe the 301.
 	client := &http.Client{
 		CheckRedirect: func(*http.Request, []*http.Request) error {
 			return http.ErrUseLastResponse
@@ -71,7 +70,6 @@ func TestFixture_Delay(t *testing.T) {
 }
 
 func TestFixture_Charset(t *testing.T) {
-	// 0xE9 is "é" in iso-8859-1, not valid UTF-8.
 	body := []byte{'h', 'e', 'l', 'l', 'o', ' ', 0xE9}
 	srv := fixture.New().Route("GET", "/latin1", fixture.Charset("iso-8859-1", body))
 	defer srv.Close()

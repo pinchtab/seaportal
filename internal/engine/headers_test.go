@@ -6,9 +6,6 @@ import (
 	"testing"
 )
 
-// TestResponseHeaders_Populate covers a representative subset of the
-// mechanical header→field mapping: caching validators, proxy/CDN echoes,
-// security policy headers, tracing, and the Link header.
 func TestResponseHeaders_Populate(t *testing.T) {
 	hdr := http.Header{}
 	set := map[string]string{
@@ -43,7 +40,7 @@ func TestResponseHeaders_Populate(t *testing.T) {
 	for k, v := range set {
 		hdr.Set(k, v)
 	}
-	hdr.Set("b3", "abc-def-1") // lowercase wire form used by Zipkin
+	hdr.Set("b3", "abc-def-1")
 
 	var h ResponseHeaders
 	h.populate(hdr)
@@ -89,9 +86,6 @@ func TestResponseHeaders_Populate(t *testing.T) {
 	}
 }
 
-// TestResponseHeaders_Populate_CaseInsensitive verifies the lookup is
-// case-insensitive: headers set with arbitrary casing (canonicalized by
-// http.Header) still land in their fields.
 func TestResponseHeaders_Populate_CaseInsensitive(t *testing.T) {
 	hdr := http.Header{}
 	hdr.Set("eTaG", `"weird"`)
@@ -112,9 +106,6 @@ func TestResponseHeaders_Populate_CaseInsensitive(t *testing.T) {
 	}
 }
 
-// TestResponseHeaders_Populate_MultiValueKeepsFirst documents that populate
-// uses http.Header.Get semantics: for multi-valued headers (Link, Vary, Via)
-// only the FIRST value is captured; later values are dropped.
 func TestResponseHeaders_Populate_MultiValueKeepsFirst(t *testing.T) {
 	hdr := http.Header{}
 	hdr.Add("Link", `<https://example.com/style.css>; rel="preload"; as="style"`)
@@ -133,8 +124,6 @@ func TestResponseHeaders_Populate_MultiValueKeepsFirst(t *testing.T) {
 	}
 }
 
-// TestResponseHeaders_Populate_SourceMapFallback covers the one non-mechanical
-// mapping: SourceMap falls back to the legacy X-SourceMap header.
 func TestResponseHeaders_Populate_SourceMapFallback(t *testing.T) {
 	legacy := http.Header{}
 	legacy.Set("X-SourceMap", "/legacy.map")
@@ -154,8 +143,6 @@ func TestResponseHeaders_Populate_SourceMapFallback(t *testing.T) {
 	}
 }
 
-// TestResponseHeaders_Populate_EmptyLeavesZeroValues: populating from an empty
-// header map leaves every field at its zero value.
 func TestResponseHeaders_Populate_EmptyLeavesZeroValues(t *testing.T) {
 	var h ResponseHeaders
 	h.populate(http.Header{})
@@ -164,9 +151,6 @@ func TestResponseHeaders_Populate_EmptyLeavesZeroValues(t *testing.T) {
 	}
 }
 
-// TestPopulateResponseHeaders_ContentTypeOnResult verifies the wrapper splits
-// Content-Type onto the Result (TransportInfo) while everything else lands on
-// the ResponseHeaders sub-struct.
 func TestPopulateResponseHeaders_ContentTypeOnResult(t *testing.T) {
 	resp := &http.Response{Header: http.Header{}}
 	resp.Header.Set("Content-Type", "text/html; charset=utf-8")

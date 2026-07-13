@@ -12,52 +12,38 @@ import (
 	"golang.org/x/crypto/blake2b"
 )
 
-// Near-duplicate detection knobs. These are intentionally the only dials.
 const (
 	nearDupHammingThreshold = 3
 	nearDupMinLength        = 40
 	shingleSize             = 4
 )
 
-// DedupeResult holds deduplication metrics and output
 type DedupeResult struct {
 	Content              string   `json:"content,omitempty"`
 	OriginalBlocks       int      `json:"originalBlocks,omitempty"`
 	UniqueBlocks         int      `json:"uniqueBlocks,omitempty"`
-	DuplicatesFound      int      `json:"duplicatesFound,omitempty"` // exact-hash matches
+	DuplicatesFound      int      `json:"duplicatesFound,omitempty"`
 	DuplicateSignals     []string `json:"duplicateSignals,omitempty"`
-	NearDuplicatesFound  int      `json:"nearDuplicatesFound,omitempty"` // simhash matches
+	NearDuplicatesFound  int      `json:"nearDuplicatesFound,omitempty"`
 	NearDuplicateSignals []string `json:"nearDuplicateSignals,omitempty"`
 }
 
-// DedupeOptions configures deduplication behavior
 type DedupeOptions struct {
-	// MinBlockLen is the minimum length for a block to be tracked for deduplication
-	// Shorter blocks (like single words) are always kept to avoid over-aggressive removal
-	MinBlockLen int
-	// NormalizeWhitespace collapses all whitespace to single spaces before comparison
+	MinBlockLen         int
 	NormalizeWhitespace bool
-	// CaseSensitive controls whether duplicate detection is case-sensitive
-	CaseSensitive bool
-	// NearDup enables simhash-based near-duplicate detection after the exact-hash
-	// check misses. Only blocks whose normalised length is >= nearDupMinLength are
-	// compared; matches within nearDupHammingThreshold bits are dropped.
-	NearDup bool
+	CaseSensitive       bool
+	NearDup             bool
 }
 
-// DefaultDedupeOptions returns sensible defaults for content deduplication
 func DefaultDedupeOptions() DedupeOptions {
 	return DedupeOptions{
-		MinBlockLen:         20, // Ignore blocks under 20 chars
+		MinBlockLen:         20,
 		NormalizeWhitespace: true,
 		CaseSensitive:       false,
 		NearDup:             true,
 	}
 }
 
-// Dedupe removes duplicate blocks from markdown content.
-// It splits content into logical blocks (paragraphs, headings, list items, etc.)
-// and removes exact duplicates while preserving structure and order.
 func Dedupe(content string) DedupeResult {
 	return DedupeWithOptions(content, DefaultDedupeOptions())
 }
@@ -90,13 +76,10 @@ func DedupeWithOptions(content string, opts DedupeOptions) DedupeResult {
 	for _, block := range blocks {
 		trimmed := strings.TrimSpace(block)
 		if trimmed == "" {
-			// Preserve empty blocks for formatting
 			uniqueBlocks = append(uniqueBlocks, block)
 			continue
 		}
 
-		// Short blocks are always kept (navigation markers, etc.)
-		// Exception: headings are always tracked regardless of length
 		isHeading := strings.HasPrefix(trimmed, "#")
 		if len(trimmed) < opts.MinBlockLen && !isHeading {
 			uniqueBlocks = append(uniqueBlocks, block)
@@ -114,9 +97,6 @@ func DedupeWithOptions(content string, opts DedupeOptions) DedupeResult {
 		}
 		seen[hash] = true
 
-		// Near-duplicate pass — only for sufficiently long blocks. The exact-hash
-		// path above remains primary; this catches templated boilerplate that
-		// differs only by a date / counter / A/B-tested word.
 		if opts.NearDup && len(normalized) >= nearDupMinLength {
 			sig := simhash(normalized)
 			matched := false
@@ -213,7 +193,6 @@ func normalizeBlock(block string, opts DedupeOptions) string {
 		s = strings.TrimSpace(s)
 	}
 
-	// Strip markdown formatting so duplicates that differ only in formatting collapse.
 	s = stripMarkdownFormatting(s)
 
 	return s
@@ -232,7 +211,7 @@ func stripMarkdownFormatting(s string) string {
 
 func hashBlock(block string) string {
 	h := sha256.Sum256([]byte(block))
-	return hex.EncodeToString(h[:8]) // 16 hex chars is enough for dedup
+	return hex.EncodeToString(h[:8])
 }
 
 func classifyDuplicate(block string) string {
@@ -286,8 +265,6 @@ func cleanupWhitespace(content string) string {
 	return strings.TrimSpace(content)
 }
 
-// DedupeLines removes exact duplicate lines from content.
-// This is a lighter-weight deduplication for line-based content.
 func DedupeLines(content string) string {
 	lines := strings.Split(content, "\n")
 	seen := make(map[string]bool)
@@ -300,7 +277,6 @@ func DedupeLines(content string) string {
 			continue
 		}
 
-		// Use lowercase for comparison to catch case-insensitive duplicates
 		key := strings.ToLower(normalized)
 		if !seen[key] {
 			seen[key] = true
@@ -311,8 +287,6 @@ func DedupeLines(content string) string {
 	return strings.Join(unique, "\n")
 }
 
-// NearDuplicateScore returns a similarity score (0-100) between two blocks
-// 100 = identical, 0 = completely different
 func NearDuplicateScore(a, b string) int {
 	opts := DefaultDedupeOptions()
 	normA := normalizeBlock(a, opts)
@@ -341,7 +315,6 @@ func NearDuplicateScore(a, b string) int {
 		}
 	}
 
-	// Jaccard-ish: overlap / union
 	union := len(wordsA) + len(wordsB) - overlap
 	if union == 0 {
 		return 0
@@ -350,9 +323,6 @@ func NearDuplicateScore(a, b string) int {
 	return (overlap * 100) / union
 }
 
-// simhash computes a 64-bit simhash signature for a normalised block, using
-// 4-word shingles hashed with Blake2b. Returns 0 if the block has fewer than
-// shingleSize tokens (caller should not compare such blocks).
 func simhash(block string) uint64 {
 	tokens := simhashTokens(block)
 	if len(tokens) < shingleSize {
@@ -363,7 +333,6 @@ func simhash(block string) uint64 {
 	for i := 0; i+shingleSize <= len(tokens); i++ {
 		shingle := strings.Join(tokens[i:i+shingleSize], " ")
 		sum := blake2b.Sum256([]byte(shingle))
-		// Fold 256 bits into 64 by XORing the four 64-bit lanes.
 		h := binary.LittleEndian.Uint64(sum[0:8]) ^
 			binary.LittleEndian.Uint64(sum[8:16]) ^
 			binary.LittleEndian.Uint64(sum[16:24]) ^
@@ -387,8 +356,6 @@ func simhash(block string) uint64 {
 	return sig
 }
 
-// simhashTokens splits a string on whitespace, lowercases each token, and
-// strips non-alphanumeric runes. Empty tokens are skipped.
 func simhashTokens(s string) []string {
 	fields := strings.Fields(s)
 	out := make([]string, 0, len(fields))
@@ -406,7 +373,6 @@ func simhashTokens(s string) []string {
 	return out
 }
 
-// hammingDistance returns the number of differing bits between two uint64s.
 func hammingDistance(a, b uint64) int {
 	return bits.OnesCount64(a ^ b)
 }

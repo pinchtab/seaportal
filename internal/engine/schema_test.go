@@ -113,7 +113,6 @@ func TestApplySchema_InvalidSelectorErrors(t *testing.T) {
 }
 
 func TestApplySchema_NestedScope(t *testing.T) {
-	// .name outside .box should NOT leak into the nested result.
 	html := `<html><body>
 		<span class="name">leaked</span>
 		<div class="box"><span class="name">inside</span></div>
@@ -137,7 +136,6 @@ func TestApplySchema_NestedScope(t *testing.T) {
 }
 
 func TestApplySchema_DepthBound(t *testing.T) {
-	// Build a schema nested 6 levels deep (over the depth-5 cap).
 	leaf := FieldSpec{Selector: "x"}
 	cur := leaf
 	for i := 0; i < 6; i++ {
@@ -245,7 +243,6 @@ func TestExtract_SchemaPath(t *testing.T) {
 		t.Fatalf("product 0: %v", products[0])
 	}
 
-	// Sanity: result.Schema is JSON-marshallable.
 	if _, err := json.Marshal(res.Schema); err != nil {
 		t.Fatalf("marshal: %v", err)
 	}

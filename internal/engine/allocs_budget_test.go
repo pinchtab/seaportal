@@ -10,20 +10,6 @@ import (
 	"testing"
 )
 
-// TestAllocationBudgets re-runs the engine's hot-path benchmarks via
-// testing.Benchmark(...) and compares B/op and allocs/op against the
-// committed baseline at tests/bench/profiles/allocs_baseline.json.
-//
-// A drift greater than ±tolerance_pct (default 15%) in either direction
-// fails the test. The gate is opt-in via the `allocs` build tag so the
-// default `go test ./...` and `./dev all` flows stay fast.
-//
-// Regenerate the baseline with: scripts/regen-allocs-baseline.sh
-//
-// The race detector inflates allocation counts dramatically; the
-// `&& !race` half of the build tag prevents accidental runs under
-// `-race` from producing misleading failures.
-
 type allocsBaselineEntry struct {
 	BPerOp      int64 `json:"b_per_op"`
 	AllocsPerOp int64 `json:"allocs_per_op"`
@@ -39,10 +25,6 @@ type allocsBaseline struct {
 	Benchmarks   map[string]allocsBaselineEntry `json:"benchmarks"`
 }
 
-// registeredAllocBenches maps baseline benchmark name -> bench function.
-// When a new benchmark is added (or removed), update this map AND
-// regenerate the baseline. The test fails loudly on either direction of
-// drift between this map and the JSON.
 var registeredAllocBenches = map[string]func(*testing.B){
 	"BenchmarkExtract_Local":                  BenchmarkExtract_Local,
 	"BenchmarkFromHTML_WikipediaLatinPhrases": BenchmarkFromHTML_WikipediaLatinPhrases,
@@ -76,7 +58,6 @@ func TestAllocationBudgets(t *testing.T) {
 		t.Fatalf("baseline tolerance_pct must be > 0 (got %v)", baseline.TolerancePct)
 	}
 
-	// Detect drift between baseline JSON and registered map in both directions.
 	for name := range baseline.Benchmarks {
 		if _, ok := registeredAllocBenches[name]; !ok {
 			t.Errorf("baseline lists %q but no Go binding is registered in registeredAllocBenches", name)
@@ -91,7 +72,6 @@ func TestAllocationBudgets(t *testing.T) {
 		t.FailNow()
 	}
 
-	// Iterate in sorted order for deterministic subtest output.
 	names := make([]string, 0, len(baseline.Benchmarks))
 	for name := range baseline.Benchmarks {
 		names = append(names, name)
@@ -118,8 +98,6 @@ func TestAllocationBudgets(t *testing.T) {
 	}
 }
 
-// withinTolerance reports whether got is within ±tolerance (fractional)
-// of want. A want of 0 is matched only by got of 0.
 func withinTolerance(got, want int64, tolerance float64) bool {
 	if want == 0 {
 		return got == 0

@@ -204,7 +204,6 @@ func TestExtractCardItems(t *testing.T) {
 	}
 }
 
-// regression: index-extract-skip-unsafe-schemes
 func TestDetectIndexPage_SkipsUnsafeHrefSchemes(t *testing.T) {
 	html := `
 		<html><body>

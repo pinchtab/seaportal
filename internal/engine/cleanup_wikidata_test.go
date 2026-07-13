@@ -5,7 +5,6 @@ import (
 	"testing"
 )
 
-// regression: wikidata-edit-property-pencil-leak
 func TestCleanupMarkdown_StripsWikidataEditProperty(t *testing.T) {
 	in := `Country: Egypt [![تعديل قيمة خاصية (P17) في ويكي بيانات](https://commons.wikimedia.org/edit.svg)](https://www.wikidata.org/wiki/Q79#P17) and more text.`
 	got := CleanupMarkdown(in)
@@ -20,7 +19,6 @@ func TestCleanupMarkdown_StripsWikidataEditProperty(t *testing.T) {
 	}
 }
 
-// regression: wikidata-edit-property-pencil-leak
 func TestCleanupMarkdown_PreservesNonWikidataImageLinks(t *testing.T) {
 	in := `Gallery: [![photo caption](photo.jpg)](https://example.com/gallery/1) end.`
 	got := CleanupMarkdown(in)
@@ -29,10 +27,7 @@ func TestCleanupMarkdown_PreservesNonWikidataImageLinks(t *testing.T) {
 	}
 }
 
-// regression: wikidata-edit-property-pencil-leak
 func TestCleanupMarkdown_PreservesWikidataItemLinks(t *testing.T) {
-	// Bare Wikidata Q-page link without a #P property anchor — that's an item
-	// reference, not a property-edit pencil. Keep it.
 	in := `See [Q123 on Wikidata](https://www.wikidata.org/wiki/Q123) for details.`
 	got := CleanupMarkdown(in)
 	if !strings.Contains(got, "wikidata.org/wiki/Q123") {

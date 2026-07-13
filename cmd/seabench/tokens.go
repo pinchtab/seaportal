@@ -1,16 +1,5 @@
 package main
 
-// tokens is the token-efficiency lane of seabench. For every corpus fixture
-// it counts source HTML tokens once, then runs engine.FromHTMLWithOptions
-// four times — one per LinkRetention mode (all|none|text|footer) — and
-// records output Markdown tokens and the output/source ratio.
-//
-// Token counts use a deterministic whitespace + punctuation approximation
-// (see approxTokenCount). The numbers are not GPT-precise but stable across
-// runs, which is what matters for spotting refactor-induced bloat.
-//
-// Observational: emits a JSON + Markdown report; never tweaks the engine.
-
 import (
 	"flag"
 	"fmt"
@@ -24,9 +13,6 @@ import (
 	"github.com/pinchtab/seaportal/internal/corpus"
 )
 
-// tokenModes is the canonical order for the four LinkRetention modes — used
-// as map iteration order for rendering and for the deterministic per-fixture
-// loop so reports are stable run-to-run.
 var tokenModes = []seaportal.LinkRetention{
 	seaportal.LinkRetentionAll,
 	seaportal.LinkRetentionNone,
@@ -34,30 +20,25 @@ var tokenModes = []seaportal.LinkRetention{
 	seaportal.LinkRetentionFooter,
 }
 
-// tokenModeNames mirrors tokenModes for JSON/Markdown keys.
 var tokenModeNames = []string{"all", "none", "text", "footer"}
 
-// ModeStats is the per-fixture per-mode slice.
 type ModeStats struct {
 	OutputTokens int     `json:"output_tokens"`
 	Ratio        float64 `json:"ratio"`
 }
 
-// FixtureTokens is the per-fixture row of the JSON report.
 type FixtureTokens struct {
 	Path         string               `json:"path"`
 	SourceTokens int                  `json:"source_tokens"`
 	Modes        map[string]ModeStats `json:"modes"`
 }
 
-// ModeAggregate is the per-mode roll-up across all fixtures.
 type ModeAggregate struct {
 	MeanRatio   float64 `json:"mean_ratio"`
 	MedianRatio float64 `json:"median_ratio"`
 	P95Ratio    float64 `json:"p95_ratio"`
 }
 
-// TokensReport mirrors the on-disk JSON schema (version 1).
 type TokensReport struct {
 	Version       int                      `json:"version"`
 	CapturedAt    string                   `json:"captured_at"`
@@ -92,13 +73,10 @@ func runTokens(args []string) {
 		report.PerMode["all"].MeanRatio, report.TotalFixtures, len(tokenModes), mdPath)
 }
 
-// tokensCorpus loads the corpus and runs the 4-mode token-ratio benchmark.
-// Sequential execution; runtime on the 31-entry corpus is a few seconds.
 func tokensCorpus(corpusPath string) (TokensReport, error) {
 	var empty TokensReport
 
 	var rows []FixtureTokens
-	// ratios[modeName] = slice of per-fixture ratios, for aggregate math.
 	ratios := make(map[string][]float64, len(tokenModeNames))
 
 	err := forEachFixture(corpusPath, func(entry corpus.Entry, html, baseURL string) error {
@@ -147,16 +125,6 @@ func tokensCorpus(corpusPath string) (TokensReport, error) {
 	}, nil
 }
 
-// approxTokenCount returns a deterministic token-count approximation.
-//
-// Formula: len(strings.Fields(s)) + punctuation_clusters / 4.
-// A "punctuation cluster" is a maximal run of unicode.IsPunct runes — so
-// "..." counts as one cluster, "(hi)," counts as two. We add a quarter-token
-// per cluster because real BPE tokenizers (e.g. cl100k_base) emit roughly
-// one extra token per few punctuation events, not one per character.
-//
-// Not GPT-precise but stable across runs (no map iteration, no randomness)
-// and good enough for relative ratios across modes / refactors.
 func approxTokenCount(s string) int {
 	if s == "" {
 		return 0
@@ -177,10 +145,6 @@ func approxTokenCount(s string) int {
 	return words + clusters/4
 }
 
-// renderTokensMarkdown produces the human-friendly report:
-//   - per-mode aggregate table (mean / median / p95)
-//   - top-5 worst-compression fixtures per mode
-//   - side-by-side per-fixture ratios across all four modes
 func renderTokensMarkdown(r TokensReport) string {
 	var b strings.Builder
 	reportHeader(&b, "SeaPortal Token-Efficiency Report",
@@ -228,7 +192,6 @@ func renderTokensMarkdown(r TokensReport) string {
 	fmt.Fprintln(&b)
 	fmt.Fprintln(&b, "| Path | Source | all | none | text | footer |")
 	fmt.Fprintln(&b, "|---|---|---|---|---|---|")
-	// Keep corpus order so re-runs diff cleanly.
 	for _, row := range r.PerFixture {
 		fmt.Fprintf(&b, "| `%s` | %d | %.4f | %.4f | %.4f | %.4f |\n",
 			row.Path,

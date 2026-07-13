@@ -9,17 +9,8 @@ import (
 	pdfReader "github.com/ledongthuc/pdf"
 )
 
-// collapseBlankRunsRe collapses runs of 3+ blank lines down to 2.
 var collapseBlankRunsRe = regexp.MustCompile(`\n{3,}`)
 
-// ExtractPDFText opens the PDF body bytes and returns plain text with
-// per-page separators. Returns an error on encrypted, malformed, or
-// empty PDF input.
-//
-// regression: pdf-malformed-xref-panic — `pdfReader.NewReader` and
-// `NumPage` both panic on malformed startxref offsets (upstream
-// `ledongthuc/pdf` returns no error). Top-level recover converts those
-// panics into Go errors so a single bad PDF can't kill the caller.
 func ExtractPDFText(body []byte) (out string, err error) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -46,7 +37,6 @@ func ExtractPDFText(body []byte) (out string, err error) {
 		}
 		text, terr := safeGetPlainText(page)
 		if terr != nil {
-			// Skip the page with a warning marker rather than aborting the whole extraction.
 			if i > 1 {
 				sb.WriteString("\n\n")
 			}
@@ -69,8 +59,6 @@ func ExtractPDFText(body []byte) (out string, err error) {
 	return out, nil
 }
 
-// safeGetPlainText wraps page.GetPlainText to recover from the panics the
-// upstream pdf library sometimes throws on malformed page content streams.
 func safeGetPlainText(page pdfReader.Page) (text string, err error) {
 	defer func() {
 		if r := recover(); r != nil {

@@ -90,7 +90,6 @@ func TestComputeTraceInfo(t *testing.T) {
 		{
 			name: "64-bit b3 id is zero-padded before comparison",
 			headers: ResponseHeaders{
-				// W3C trace-id whose upper 64 bits are zero == padded B3 id.
 				ResponseTraceparent: "00-0000000000000000a3ce929d0e0e4736-00f067aa0ba902b7-01",
 				ResponseXB3TraceId:  "a3ce929d0e0e4736",
 			},
@@ -109,9 +108,8 @@ func TestComputeTraceInfo(t *testing.T) {
 			name: "b3 multi wins over single when both present",
 			headers: ResponseHeaders{
 				ResponseTraceparent: w3cTraceparent,
-				// Multi disagrees, single would agree: correlation must follow multi.
-				ResponseXB3TraceId: "deadbeefdeadbeefdeadbeefdeadbeef",
-				ResponseB3:         traceID128 + "-e457b5a2e4d86bd1",
+				ResponseXB3TraceId:  "deadbeefdeadbeefdeadbeefdeadbeef",
+				ResponseB3:          traceID128 + "-e457b5a2e4d86bd1",
 			},
 			wantFormats: []string{"w3c", "b3"},
 		},
@@ -145,9 +143,9 @@ func TestExtractW3CTraceID(t *testing.T) {
 		want string
 	}{
 		{w3cTraceparent, traceID128},
-		{"00-ABCDEF-span-01", "abcdef"}, // lowercased
-		{"justoneword", ""},             // no separator → no trace id
-		{"00-", ""},                     // empty trace-id field
+		{"00-ABCDEF-span-01", "abcdef"},
+		{"justoneword", ""},
+		{"00-", ""},
 	}
 	for _, tt := range tests {
 		if got := extractW3CTraceID(tt.in); got != tt.want {
@@ -162,8 +160,8 @@ func TestExtractB3SingleTraceID(t *testing.T) {
 		want string
 	}{
 		{"80f198ee56343ba864fe8b2a57d3eff7-e457b5a2e4d86bd1-1", "80f198ee56343ba864fe8b2a57d3eff7"},
-		{"a3ce929d0e0e4736-e457b5a2e4d86bd1", "0000000000000000a3ce929d0e0e4736"}, // 64-bit padded
-		{"traceonly", "traceonly"}, // no span part: first field is still returned
+		{"a3ce929d0e0e4736-e457b5a2e4d86bd1", "0000000000000000a3ce929d0e0e4736"},
+		{"traceonly", "traceonly"},
 	}
 	for _, tt := range tests {
 		if got := extractB3SingleTraceID(tt.in); got != tt.want {
@@ -177,9 +175,9 @@ func TestNormalizeTraceID(t *testing.T) {
 		in   string
 		want string
 	}{
-		{"A3CE929D0E0E4736", "0000000000000000a3ce929d0e0e4736"}, // 16-char → padded + lowered
-		{traceID128, traceID128},                                 // 32-char unchanged
-		{"short", "short"},                                       // odd lengths pass through
+		{"A3CE929D0E0E4736", "0000000000000000a3ce929d0e0e4736"},
+		{traceID128, traceID128},
+		{"short", "short"},
 	}
 	for _, tt := range tests {
 		if got := normalizeTraceID(tt.in); got != tt.want {

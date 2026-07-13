@@ -5,21 +5,6 @@ import (
 	"time"
 )
 
-// Result holds the extraction output for a URL.
-//
-// The observability tail is grouped into anonymous embedded sub-structs
-// (TransportInfo, ResponseHeaders, CDNInfo, CacheAnalysis, DedupeStats).
-// Embedding keeps both compatibility guarantees intact:
-//   - Go API: field promotion means r.TTFBMs, r.RetryCount, … still compile
-//     at every existing call site;
-//   - JSON wire format: encoding/json inlines embedded fields at the
-//     embedding position, so the key set AND key order are byte-identical
-//     to the historical flat struct (locked by TestResultJSONWireStability).
-//
-// Because JSON key order follows declaration order, each sub-struct must map
-// to a contiguous run of the historical field order. A few fields therefore
-// live in the sub-struct their wire position dictates rather than the one
-// their meaning suggests; these are marked "wire-order" below.
 type Result struct {
 	URL              string   `json:"url"`
 	CanonicalURL     string   `json:"canonicalUrl,omitempty"`
@@ -69,9 +54,6 @@ type Result struct {
 
 	ResponseHeaders
 
-	// Normalized cache status derived across CDN cache headers (reserved —
-	// not currently populated). Wire-order keeps them outside CacheAnalysis:
-	// CDNInfo sits between them and the rest of the cache fields.
 	NormalizedCacheStatus string `json:"normalizedCacheStatus,omitempty"`
 	CacheStatusSource     string `json:"cacheStatusSource,omitempty"`
 
@@ -101,22 +83,11 @@ type Result struct {
 
 	ExtractionMethod string `json:"extractionMethod,omitempty"`
 
-	// SecurityBlock carries the reason a fetch was refused by the SecurityPolicy
-	// (SSRF / private-IP / blocked-scheme / blocked-domain / size-cap). Empty
-	// when no policy is active or the fetch passed every check.
 	SecurityBlock string `json:"securityBlock,omitempty"`
 
-	// err preserves the sentinel-carrying error chain behind the Error string
-	// (T17). Deliberately unexported with NO json tag: the wire format is
-	// locked by TestResultJSONWireStability and must not change. Set via
-	// setError; read via Err().
 	err error
 }
 
-// setError records e on the result: Error gets the flattened string (exactly
-// what the historical `result.Error = err.Error()` sites produced) and err
-// keeps the chain so callers can errors.Is/errors.As against the engine
-// sentinels. A nil e is a no-op.
 func (r *Result) setError(e error) {
 	if e == nil {
 		return
@@ -125,17 +96,6 @@ func (r *Result) setError(e error) {
 	r.err = e
 }
 
-// Err returns the error that produced Result.Error with its wrap chain intact,
-// or nil when extraction succeeded. Unlike the JSON-serialized Error string,
-// the returned error preserves sentinel identity, so
-//
-//	errors.Is(result.Err(), engine.ErrPrivateIPBlocked)
-//	errors.Is(result.Err(), engine.ErrBlockedByRobots)
-//	errors.Is(result.Err(), context.Canceled)
-//
-// all work as expected. When Error was assigned as a bare string by code that
-// bypassed setError, Err still returns a non-nil (opaque) error so the
-// "failed ⇔ Err() != nil" invariant holds.
 func (r *Result) Err() error {
 	if r.err != nil {
 		return r.err
@@ -146,9 +106,6 @@ func (r *Result) Err() error {
 	return nil
 }
 
-// TransportInfo groups the transport/telemetry fields stamped by
-// finalizeTransport: retry counters, per-phase timings, content length,
-// and redirect tracking.
 type TransportInfo struct {
 	RetryCount          int           `json:"retryCount,omitempty"`
 	TotalRetryWait      time.Duration `json:"totalRetryWait,omitempty"`
@@ -158,9 +115,7 @@ type TransportInfo struct {
 	ParseTimeMs   int64 `json:"parseTimeMs,omitempty"`
 	ConvertTimeMs int64 `json:"convertTimeMs,omitempty"`
 
-	ContentLength int64 `json:"contentLength,omitempty"`
-	// ResponseContentType is a response-header echo kept here for wire-order
-	// (it is declared between ContentLength and RedirectCount on the wire).
+	ContentLength       int64  `json:"contentLength,omitempty"`
 	ResponseContentType string `json:"responseContentType,omitempty"`
 
 	RedirectCount int      `json:"redirectCount,omitempty"`
@@ -168,10 +123,6 @@ type TransportInfo struct {
 	FinalURL      string   `json:"finalUrl,omitempty"`
 }
 
-// ResponseHeaders is the per-header echo of the HTTP response, populated
-// mechanically by (*ResponseHeaders).populate for observability. TraceInfo is
-// embedded mid-struct, and a handful of non-header fields (marked wire-order)
-// live here, because JSON key order pins them to these positions.
 type ResponseHeaders struct {
 	ResponseETag         string `json:"responseEtag,omitempty"`
 	ResponseLastModified string `json:"responseLastModified,omitempty"`
@@ -180,10 +131,8 @@ type ResponseHeaders struct {
 	ResponseServer          string `json:"responseServer,omitempty"`
 	ResponseXForwardedFor   string `json:"responseXForwardedFor,omitempty"`
 
-	// RequestAcceptEncoding echoes the request's Accept-Encoding (wire-order).
 	RequestAcceptEncoding string `json:"requestAcceptEncoding,omitempty"`
 
-	// TTFBMs / DownloadMs are transport timings (wire-order).
 	TTFBMs     int64 `json:"ttfbMs,omitempty"`
 	DownloadMs int64 `json:"downloadMs,omitempty"`
 
@@ -285,8 +234,6 @@ type ResponseHeaders struct {
 
 	ResponseLink string `json:"responseLink,omitempty"`
 
-	// LLMsTxtURL / LDJSONBlocks / HasLLMContent are extraction-derived, not
-	// header echoes (wire-order).
 	LLMsTxtURL string `json:"llmsTxtUrl,omitempty"`
 
 	LDJSONBlocks []LDJSONBlock `json:"ldJsonBlocks,omitempty"`
@@ -299,7 +246,7 @@ type ResponseHeaders struct {
 
 	ResponseXContentDuration string `json:"responseXContentDuration,omitempty"`
 
-	ResponseRefresh string `json:"responseRefresh,omitempty"` // Refresh header for HTTP-level redirect/meta refresh (e.g., "5; url=https://example.com")
+	ResponseRefresh string `json:"responseRefresh,omitempty"`
 
 	ResponseContentLanguage string `json:"responseContentLanguage,omitempty"`
 
@@ -387,17 +334,11 @@ type ResponseHeaders struct {
 	ResponseXAmzCfId string `json:"responseXAmzCfId,omitempty"`
 }
 
-// TraceInfo is the distributed-tracing summary derived from the trace
-// response headers by computeTraceInfo. It is embedded inside
-// ResponseHeaders (not Result) for wire-order.
 type TraceInfo struct {
 	TraceFormats     []string `json:"traceFormats,omitempty"`
 	TraceCorrelation string   `json:"traceCorrelation,omitempty"`
 }
 
-// CDNInfo is the CDN/proxy-chain fingerprint derived from the response
-// headers: the provider identified by fingerprintCDN plus the parsed Via
-// hop chain.
 type CDNInfo struct {
 	CDNProvider string   `json:"cdnProvider,omitempty"`
 	CDNSignals  []string `json:"cdnSignals,omitempty"`
@@ -406,9 +347,6 @@ type CDNInfo struct {
 	ProxyLayers int      `json:"proxyLayers,omitempty"`
 }
 
-// CacheAnalysis groups the cache-policy analysis fields (currently reserved —
-// no engine code populates them yet). CDNEdgeLocation, EffectiveCDNTTL,
-// CDNOptimizationIssues, and RequestID sit inside this struct for wire-order.
 type CacheAnalysis struct {
 	CacheAge       int  `json:"cacheAge,omitempty"`
 	CacheMaxAge    int  `json:"cacheMaxAge,omitempty"`
@@ -444,8 +382,6 @@ type CacheAnalysis struct {
 	SurrogateNoStore              bool `json:"surrogateNoStore,omitempty"`
 	SurrogateNoStoreRemote        bool `json:"surrogateNoStoreRemote,omitempty"`
 
-	// RequestID is the request-correlation ID (Options.RequestID echo), kept
-	// inside CacheAnalysis for wire-order.
 	RequestID string `json:"requestId,omitempty"`
 
 	CacheHitRateEstimate  string `json:"cacheHitRateEstimate,omitempty"`
@@ -453,8 +389,6 @@ type CacheAnalysis struct {
 	CacheCostAnalysis     string `json:"cacheCostAnalysis,omitempty"`
 }
 
-// DedupeStats groups the block-deduplication statistics recorded by
-// applyDedupeStage.
 type DedupeStats struct {
 	DedupeApplied         bool     `json:"dedupeApplied,omitempty"`
 	DuplicatesRemoved     int      `json:"duplicatesRemoved,omitempty"`

@@ -23,42 +23,21 @@ var (
 	utlsClientOnce sync.Once
 )
 
-// h2IdleConnTimeout is how long a cached idle HTTP/2 connection may sit
-// unused before closing itself (mirrors net/http.DefaultTransport's
-// IdleConnTimeout). The self-close also bounds the lifetime of connections
-// cached by short-lived chromeTransport instances that nobody explicitly
-// closes.
 const h2IdleConnTimeout = 90 * time.Second
 
-// h2DrainTimeout bounds the graceful drain of an evicted HTTP/2 connection
-// before it is force-closed, so a wedged peer can't pin the connection's
-// readLoop goroutine (and fd) forever.
 const h2DrainTimeout = 5 * time.Second
 
-// maxH2Conns caps the per-host HTTP/2 connection cache. A long-running
-// process (MCP server, large multi-host scrapes) would otherwise grow the
-// map without bound; past the cap the least-recently-used idle connection is
-// evicted and drained (T19). Connections with in-flight streams are never
-// force-evicted by the cap.
 const maxH2Conns = 256
 
-// Dial-layer knobs shared by every connection the transport opens: TCP dial
-// deadline, keep-alive probe interval, and how long an idle pooled plain-HTTP
-// connection may live before self-reaping.
 const (
 	dialTimeout          = 30 * time.Second
 	dialKeepAlive        = 30 * time.Second
 	plainIdleConnTimeout = 90 * time.Second
 )
 
-// getUTLSClient returns a shared HTTP client using utls for Chrome fingerprint impersonation.
-// This bypasses Cloudflare and other bot detection that fingerprint TLS.
 func getUTLSClient() *http.Client {
 	utlsClientOnce.Do(func() {
 		utlsClient = &http.Client{
-			// The singleton is shared process-wide, so it carries the engine
-			// default; per-fetch clients built by buildFetchClient honour
-			// Options.ClientTimeout instead (T19).
 			Timeout:   DefaultClientTimeout,
 			Transport: &chromeTransport{},
 			CheckRedirect: func(req *http.Request, via []*http.Request) error {
@@ -72,12 +51,6 @@ func getUTLSClient() *http.Client {
 	return utlsClient
 }
 
-// getUTLSClientWithProxy returns a fresh (uncached) HTTP client that routes
-// through the supplied proxy URL. HTTPS targets are tunnelled via CONNECT
-// with optional Basic auth (from proxyURL.User); the Chrome TLS fingerprint
-// is applied AFTER the tunnel is established. HTTP targets are forwarded via
-// a vanilla http.Transport with Proxy set, which natively handles Basic auth
-// and SOCKS5.
 func getUTLSClientWithProxy(proxyURL *url.URL) *http.Client {
 	return &http.Client{
 		Timeout:   DefaultClientTimeout,
@@ -91,40 +64,17 @@ func getUTLSClientWithProxy(proxyURL *url.URL) *http.Client {
 	}
 }
 
-// chromeTransport implements http.RoundTripper with Chrome TLS fingerprint.
-// Handles both HTTP/1.1 and HTTP/2 depending on server ALPN negotiation.
-// Optional proxyURL routes requests through an HTTP/HTTPS/SOCKS5 proxy.
-//
-// security, when set with BlockPrivateIPs, installs a dial Control hook that
-// re-validates the post-DNS resolved IP just before connect — the
-// DNS-rebinding guard. It is applied only on the direct (non-proxy) dial: a
-// proxied request dials the proxy, not the target, so the target's host/scheme
-// is instead vetted by the pre-fetch and per-redirect ValidateURL gates.
-//
-// HTTP/2 connections are cached per host (h2Conns) and reused across
-// requests, so a long-running process performs one TLS handshake per host
-// instead of leaking a connection + readLoop goroutine per request. The
-// transport is shared across scrape-pool goroutines; mu guards all lazily
-// built state. chromeTransport is constructed as a bare struct literal at
-// several call sites, so everything derived must be built lazily — there is
-// deliberately no constructor.
 type chromeTransport struct {
 	proxyURL *url.URL
 	security *SecurityPolicy
 
-	// tlsConfig, when non-nil, is merged into the utls.Config used by
-	// dialTLSChrome before handshake (InsecureSkipVerify / RootCAs only).
-	// Test seam (T16): lets httptest TLS servers with self-signed certs be
-	// trusted on the specific transport instance a test builds — replacing
-	// the former package-global testTLSConfig hook. Production construction
-	// sites leave it nil.
 	tlsConfig *utls.Config
 
 	mu      sync.Mutex
-	h2Trans *http2.Transport             // shared wrapper for dialled h2 conns
-	h2Conns map[string]*http2.ClientConn // keyed by canonical host:port
-	h2Last  map[string]time.Time         // last use per cached conn (cap eviction)
-	plainTr http.RoundTripper            // non-HTTPS path (T09: built once)
+	h2Trans *http2.Transport
+	h2Conns map[string]*http2.ClientConn
+	h2Last  map[string]time.Time
+	plainTr http.RoundTripper
 }
 
 func (t *chromeTransport) RoundTrip(req *http.Request) (*http.Response, error) {
@@ -134,20 +84,14 @@ func (t *chromeTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 
 	key := canonicalHostPort(req.URL.Host)
 
-	// Fast path: reuse the cached HTTP/2 connection for this host.
 	if cc := t.cachedH2Conn(key); cc != nil {
 		resp, err := cc.RoundTrip(req)
 		if err == nil {
 			return withNegotiatedALPN(resp, "h2"), nil
 		}
 		if cc.CanTakeNewRequest() || req.Context().Err() != nil {
-			// Stream-level failure on a still-healthy conn, or the caller's
-			// context died: keep the conn, surface the error.
 			return nil, err
 		}
-		// Conn-level failure (GOAWAY, idle self-close, dead peer): evict the
-		// stale conn and fall through to a single fresh dial rather than
-		// returning a hard error.
 		t.evictH2Conn(key, cc)
 		var ok bool
 		if req, ok = rewindRequest(req); !ok {
@@ -155,8 +99,6 @@ func (t *chromeTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 		}
 	}
 
-	// HTTPS: dial directly or through a CONNECT tunnel, then upgrade to
-	// the utls Chrome fingerprint.
 	tlsConn, err := t.dialTLS(req)
 	if err != nil {
 		return nil, err
@@ -180,8 +122,6 @@ func (t *chromeTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	return withNegotiatedALPN(resp, alpn), nil
 }
 
-// dialTLS establishes the fingerprinted TLS connection for req, directly or
-// through the configured CONNECT proxy.
 func (t *chromeTransport) dialTLS(req *http.Request) (*utls.UConn, error) {
 	if t.proxyURL != nil {
 		return dialTLSChromeViaProxy(req.Context(), t.proxyURL, req.URL.Hostname(), req.URL.Host)
@@ -189,17 +129,10 @@ func (t *chromeTransport) dialTLS(req *http.Request) (*utls.UConn, error) {
 	return dialTLSChrome(req.Context(), req.URL.Hostname(), req.URL.Host, t.security.dialControl(), t.tlsConfig)
 }
 
-// plainTransport returns the RoundTripper for non-HTTPS requests. Built once
-// and reused — proxyURL and security are immutable after construction — so
-// the proxy / dial-guard branches no longer abandon a fresh idle pool on
-// every call (T09).
 func (t *chromeTransport) plainTransport() http.RoundTripper {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	if t.plainTr == nil {
-		// IdleConnTimeout so pools of transports abandoned by short-lived
-		// clients self-reap instead of pinning fds (a bare http.Transport
-		// keeps idle conns forever).
 		switch {
 		case t.proxyURL != nil:
 			t.plainTr = &http.Transport{
@@ -208,10 +141,6 @@ func (t *chromeTransport) plainTransport() http.RoundTripper {
 			}
 		default:
 			if ctrl := t.security.dialControl(); ctrl != nil {
-				// Plain-HTTP direct path with the SSRF dial guard. Note the
-				// guard is a dial-time check: pooled conns were validated at
-				// connect and a reused TCP conn can't be re-pointed by a DNS
-				// rebind, so reuse is safe.
 				t.plainTr = &http.Transport{
 					DialContext: (&net.Dialer{
 						Timeout:   dialTimeout,
@@ -228,10 +157,6 @@ func (t *chromeTransport) plainTransport() http.RoundTripper {
 	return t.plainTr
 }
 
-// h2Transport lazily builds the shared http2.Transport used to wrap dialled
-// TLS connections. IdleConnTimeout makes each cached conn close itself once
-// idle, so even transports abandoned without CloseIdleConnections can't pin
-// fds indefinitely.
 func (t *chromeTransport) h2Transport() *http2.Transport {
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -241,9 +166,6 @@ func (t *chromeTransport) h2Transport() *http2.Transport {
 	return t.h2Trans
 }
 
-// cachedH2Conn returns the cached connection for key when it can still take
-// a new request. A conn that can't (closed, GOAWAY'd, idle-timed-out) is
-// evicted and drained so the caller dials fresh.
 func (t *chromeTransport) cachedH2Conn(key string) *http2.ClientConn {
 	t.mu.Lock()
 	cc, ok := t.h2Conns[key]
@@ -264,9 +186,6 @@ func (t *chromeTransport) cachedH2Conn(key string) *http2.ClientConn {
 	return cc
 }
 
-// evictH2Conn removes cc from the cache — only if it is still the cached
-// entry for key; a racing goroutine may have already replaced it — and
-// drains it in the background.
 func (t *chromeTransport) evictH2Conn(key string, cc *http2.ClientConn) {
 	t.mu.Lock()
 	if t.h2Conns[key] == cc {
@@ -277,11 +196,6 @@ func (t *chromeTransport) evictH2Conn(key string, cc *http2.ClientConn) {
 	go drainH2Conn(cc)
 }
 
-// cacheH2Conn wraps tlsConn in an http2.ClientConn and installs it in the
-// per-host cache. If another goroutine cached a usable conn for the same host
-// while this one was dialling, the fresh conn is closed (it has no streams
-// yet) and the winner is returned, so a burst of first requests converges on
-// one connection. Ownership of tlsConn transfers to the returned ClientConn.
 func (t *chromeTransport) cacheH2Conn(key string, tlsConn *utls.UConn) (*http2.ClientConn, error) {
 	cc, err := t.h2Transport().NewClientConn(tlsConn)
 	if err != nil {
@@ -294,8 +208,6 @@ func (t *chromeTransport) cacheH2Conn(key string, tlsConn *utls.UConn) (*http2.C
 			_ = cc.Close()
 			return existing, nil
 		}
-		// Stale entry: replace it and drain the old conn (it may still be
-		// serving another goroutine's in-flight streams).
 		go drainH2Conn(existing)
 	}
 	if t.h2Conns == nil {
@@ -309,10 +221,6 @@ func (t *chromeTransport) cacheH2Conn(key string, tlsConn *utls.UConn) (*http2.C
 	return cc, nil
 }
 
-// evictOverCapLocked enforces maxH2Conns: while the cache is over the cap, the
-// least-recently-used connection with no in-flight streams is removed and
-// drained. Busy connections are never force-evicted — if every conn is busy
-// the cache is left over-cap and the next insert retries. Caller holds t.mu.
 func (t *chromeTransport) evictOverCapLocked() {
 	for len(t.h2Conns) > maxH2Conns {
 		key := t.lruIdleH2KeyLocked()
@@ -326,9 +234,6 @@ func (t *chromeTransport) evictOverCapLocked() {
 	}
 }
 
-// lruIdleH2KeyLocked returns the cache key of the least-recently-used cached
-// connection that currently has no active streams, or "" when every cached
-// conn is busy. Caller holds t.mu.
 func (t *chromeTransport) lruIdleH2KeyLocked() string {
 	var lruKey string
 	var lruAt time.Time
@@ -343,10 +248,6 @@ func (t *chromeTransport) lruIdleH2KeyLocked() string {
 	return lruKey
 }
 
-// CloseIdleConnections releases every cached HTTP/2 connection and the plain
-// transport's idle pool. http.Client.CloseIdleConnections forwards here.
-// Idle conns close immediately; conns with in-flight streams are drained
-// gracefully rather than interrupted.
 func (t *chromeTransport) CloseIdleConnections() {
 	t.mu.Lock()
 	conns := t.h2Conns
@@ -367,10 +268,6 @@ func (t *chromeTransport) CloseIdleConnections() {
 	}
 }
 
-// drainH2Conn gracefully shuts down an evicted connection: send GOAWAY, wait
-// for in-flight streams (other goroutines may still be reading responses),
-// then close. Falls back to a hard Close when the drain outlives
-// h2DrainTimeout so a wedged peer can't pin the readLoop goroutine forever.
 func drainH2Conn(cc *http2.ClientConn) {
 	ctx, cancel := context.WithTimeout(context.Background(), h2DrainTimeout)
 	defer cancel()
@@ -379,10 +276,6 @@ func drainH2Conn(cc *http2.ClientConn) {
 	}
 }
 
-// rewindRequest prepares req for a one-shot replay after a conn-level failure
-// on a cached connection. Bodyless requests replay as-is; requests with a
-// GetBody rewind through it; anything else is not replayable because the
-// first attempt may have consumed the body.
 func rewindRequest(req *http.Request) (*http.Request, bool) {
 	if req.Body == nil || req.Body == http.NoBody {
 		return req, true
@@ -399,10 +292,6 @@ func rewindRequest(req *http.Request) (*http.Request, bool) {
 	return req2, true
 }
 
-// withNegotiatedALPN surfaces the negotiated ALPN protocol on resp.TLS so
-// callers can read `resp.TLS.NegotiatedProtocol` exactly as they would with
-// the standard transport. Only synthesises when the response doesn't already
-// carry one (the h2 layer may attach its own ConnectionState).
 func withNegotiatedALPN(resp *http.Response, alpn string) *http.Response {
 	if resp.TLS == nil {
 		resp.TLS = &tls.ConnectionState{NegotiatedProtocol: alpn}
@@ -410,8 +299,6 @@ func withNegotiatedALPN(resp *http.Response, alpn string) *http.Response {
 	return resp
 }
 
-// canonicalHostPort normalises a URL host to host:port form (default 443) so
-// cache keys for "example.com" and "example.com:443" collide as intended.
 func canonicalHostPort(host string) string {
 	if _, _, err := net.SplitHostPort(host); err != nil {
 		return net.JoinHostPort(host, "443")
@@ -419,11 +306,6 @@ func canonicalHostPort(host string) string {
 	return host
 }
 
-// dialTLSChrome establishes a TLS connection impersonating Chrome 120. The
-// optional control hook (from SecurityPolicy.dialControl) validates the
-// post-DNS resolved IP before connect, closing the DNS-rebinding window. The
-// optional tlsOverride (from chromeTransport.tlsConfig) merges trust-related
-// fields into the handshake config.
 func dialTLSChrome(ctx context.Context, serverName, host string, control func(network, address string, c syscall.RawConn) error, tlsOverride *utls.Config) (*utls.UConn, error) {
 	dialer := &net.Dialer{
 		Timeout:   dialTimeout,
@@ -459,10 +341,6 @@ func dialTLSChrome(ctx context.Context, serverName, host string, control func(ne
 	return tlsConn, nil
 }
 
-// dialTLSChromeViaProxy opens a CONNECT tunnel to the proxy, then upgrades
-// the tunnelled connection to utls Chrome 120 TLS. Fingerprint is applied
-// AFTER the tunnel is established, preserving the Chrome TLS signature
-// end-to-end with the origin server.
 func dialTLSChromeViaProxy(ctx context.Context, proxyURL *url.URL, serverName, host string) (*utls.UConn, error) {
 	host = canonicalHostPort(host)
 
@@ -508,7 +386,6 @@ func dialTLSChromeViaProxy(ctx context.Context, proxyURL *url.URL, serverName, h
 		_ = conn.Close()
 		return nil, fmt.Errorf("proxy CONNECT failed: %s", statusLine)
 	}
-	// Drain remaining response headers until empty line.
 	for {
 		line, err := br.ReadString('\n')
 		if err != nil {
@@ -519,10 +396,6 @@ func dialTLSChromeViaProxy(ctx context.Context, proxyURL *url.URL, serverName, h
 			break
 		}
 	}
-	// If the proxy buffered extra bytes beyond the CONNECT response, we'd
-	// lose them by wrapping `conn` directly. In practice servers don't
-	// pipeline data before the client's first TLS ClientHello, so this is
-	// safe for the CONNECT case.
 	if br.Buffered() > 0 {
 		_ = conn.Close()
 		return nil, fmt.Errorf("proxy sent unexpected pre-handshake bytes")
@@ -540,10 +413,6 @@ func dialTLSChromeViaProxy(ctx context.Context, proxyURL *url.URL, serverName, h
 	return tlsConn, nil
 }
 
-// doHTTP2Request performs an HTTP/2 request over the given TLS connection via
-// the per-host connection cache. On success the conn stays cached for reuse
-// (resp.Body.Close only ends the stream, which is now correct — the conn is
-// pooled, not leaked); on failure it is evicted so the next request redials.
 func (t *chromeTransport) doHTTP2Request(key string, tlsConn *utls.UConn, req *http.Request) (*http.Response, error) {
 	cc, err := t.cacheH2Conn(key, tlsConn)
 	if err != nil {
@@ -561,7 +430,6 @@ func (t *chromeTransport) doHTTP2Request(key string, tlsConn *utls.UConn, req *h
 	return resp, nil
 }
 
-// doHTTP1Request performs an HTTP/1.1 request over the given TLS connection.
 func doHTTP1Request(tlsConn *utls.UConn, req *http.Request) (*http.Response, error) {
 	transport := &http.Transport{
 		DialTLSContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
@@ -573,21 +441,13 @@ func doHTTP1Request(tlsConn *utls.UConn, req *http.Request) (*http.Response, err
 	return transport.RoundTrip(req)
 }
 
-// Compile-time check that chromeTransport implements http.RoundTripper
 var _ http.RoundTripper = (*chromeTransport)(nil)
 
-// negotiatedProtocol returns the ALPN protocol used to fetch resp, or
-// "http/1.1" as the documented default when the connection didn't surface
-// one (plain HTTP, or TLS without ALPN). Returns "" only when the inputs
-// are too incomplete to classify (defensive — should not happen on a
-// successful client.Do).
 func negotiatedProtocol(req *http.Request, resp *http.Response) string {
 	if resp != nil && resp.TLS != nil && resp.TLS.NegotiatedProtocol != "" {
 		return resp.TLS.NegotiatedProtocol
 	}
 	if req != nil && req.URL != nil {
-		// HTTPS with no ALPN (rare — server didn't advertise any) and plain
-		// HTTP both default to HTTP/1.1.
 		return "http/1.1"
 	}
 	return ""

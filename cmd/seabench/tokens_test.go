@@ -8,10 +8,6 @@ import (
 	"testing"
 )
 
-// TestTokens_TinyCorpusRoundTrip wires a 2-entry tempdir corpus, drives
-// runTokens through its public CLI seam, and asserts the JSON report
-// parses and carries 2 fixtures × 4 modes = 8 mode-rows. Light on
-// extraction expectations — only the wiring is under test.
 func TestTokens_TinyCorpusRoundTrip(t *testing.T) {
 	dir := t.TempDir()
 
@@ -77,7 +73,6 @@ func TestTokens_TinyCorpusRoundTrip(t *testing.T) {
 	if len(report.PerFixture) != 2 {
 		t.Fatalf("per_fixture len = %d, want 2", len(report.PerFixture))
 	}
-	// 2 fixtures × 4 modes = 8 mode-rows.
 	totalModeRows := 0
 	for _, row := range report.PerFixture {
 		if len(row.Modes) != 4 {
@@ -100,10 +95,6 @@ func TestTokens_TinyCorpusRoundTrip(t *testing.T) {
 	}
 }
 
-// TestApproxTokenCount_Deterministic guards the "no map iteration, no
-// randomness" contract. Three consecutive calls with the same input must
-// return identical counts — otherwise CI gates on top of this would be
-// flaky for the wrong reasons.
 func TestApproxTokenCount_Deterministic(t *testing.T) {
 	input := "Hello, world! This is a (small) test... with punctuation; and links: https://example.com/x."
 	first := approxTokenCount(input)
@@ -113,15 +104,11 @@ func TestApproxTokenCount_Deterministic(t *testing.T) {
 			t.Fatalf("approxTokenCount drift: call %d returned %d, first returned %d", i+2, got, first)
 		}
 	}
-	// Empty string sanity.
 	if approxTokenCount("") != 0 {
 		t.Errorf("approxTokenCount(\"\") = %d, want 0", approxTokenCount(""))
 	}
 }
 
-// TestApproxTokenCount_RoughlyMonotonic confirms that appending content
-// never lowers the count — basic sanity check that protects against a
-// regression where the cluster counter accidentally subtracts.
 func TestApproxTokenCount_RoughlyMonotonic(t *testing.T) {
 	base := "alpha beta gamma"
 	more := base + " delta epsilon zeta"

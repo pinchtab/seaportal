@@ -14,8 +14,6 @@ import (
 	"github.com/andybalholm/brotli"
 )
 
-// allowInternalPolicy returns a policy that permits httptest's 127.0.0.1
-// targets while keeping the rest of the given caps in force.
 func allowInternalPolicy() *SecurityPolicy {
 	return &SecurityPolicy{BlockPrivateIPs: false}
 }
@@ -86,14 +84,12 @@ func TestFetchBytes_CustomUserAgent(t *testing.T) {
 	defer srv.Close()
 
 	if _, _, _, err := FetchBytes(context.Background(), srv.URL, FetchBytesOptions{
-		UserAgent: "  seaportal-test/1.0  ", // trimmed before use
+		UserAgent: "  seaportal-test/1.0  ",
 	}); err != nil {
 		t.Fatalf("FetchBytes: %v", err)
 	}
 }
 
-// TestFetchBytes_Non2xxPassthrough: non-2xx statuses are not errors — the
-// status, headers, and body pass through for the caller to interpret.
 func TestFetchBytes_Non2xxPassthrough(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
@@ -113,8 +109,6 @@ func TestFetchBytes_Non2xxPassthrough(t *testing.T) {
 	}
 }
 
-// TestFetchBytes_SecurityBlocksInternalTarget: the secure-by-default policy
-// rejects a loopback target before any request is made (SSRF guard).
 func TestFetchBytes_SecurityBlocksInternalTarget(t *testing.T) {
 	var hits int
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -136,8 +130,6 @@ func TestFetchBytes_SecurityBlocksInternalTarget(t *testing.T) {
 	}
 }
 
-// TestFetchBytes_AllowInternalPolicyPermitsLoopback: lifting only the
-// private-IP block lets tests target httptest while the policy stays non-nil.
 func TestFetchBytes_AllowInternalPolicyPermitsLoopback(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("internal ok"))
@@ -164,8 +156,6 @@ func TestFetchBytes_SecuritySchemeBlocked(t *testing.T) {
 	}
 }
 
-// TestFetchBytes_ResponseSizeCap: bodies over MaxResponseBytes surface
-// ErrResponseTooLarge along with the status code already received.
 func TestFetchBytes_ResponseSizeCap(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write(bytes.Repeat([]byte("x"), 1024))
@@ -183,10 +173,6 @@ func TestFetchBytes_ResponseSizeCap(t *testing.T) {
 	}
 }
 
-// TestFetchBytes_GzipDecompression: an explicit Content-Encoding: gzip body is
-// decompressed by FetchBytes itself. A client with DisableCompression keeps
-// net/http's transparent decompression out of the way so the FetchBytes branch
-// is the one under test.
 func TestFetchBytes_GzipDecompression(t *testing.T) {
 	const plain = "hello gzip world, this is the decompressed payload"
 	payload := gzipBytes(t, []byte(plain))
@@ -209,8 +195,6 @@ func TestFetchBytes_GzipDecompression(t *testing.T) {
 	}
 }
 
-// TestFetchBytes_BrotliDecompression: net/http never transparently handles br,
-// so the default client path exercises FetchBytes' own brotli branch.
 func TestFetchBytes_BrotliDecompression(t *testing.T) {
 	const plain = "hello brotli world, this is the decompressed payload"
 	payload := brotliBytes(t, []byte(plain))
@@ -229,8 +213,6 @@ func TestFetchBytes_BrotliDecompression(t *testing.T) {
 	}
 }
 
-// TestFetchBytes_DecompressionBombCap: MaxDecompressedBytes bounds the
-// decompressor output (a few KB of gzip can expand to GBs).
 func TestFetchBytes_DecompressionBombCap(t *testing.T) {
 	payload := gzipBytes(t, bytes.Repeat([]byte("0"), 64*1024))
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -251,8 +233,6 @@ func TestFetchBytes_DecompressionBombCap(t *testing.T) {
 	}
 }
 
-// TestFetchBytes_RedirectsFollowedUnderCap: hops below MaxRedirects are
-// followed to the final target.
 func TestFetchBytes_RedirectsFollowedUnderCap(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/a", func(w http.ResponseWriter, r *http.Request) {
@@ -275,8 +255,6 @@ func TestFetchBytes_RedirectsFollowedUnderCap(t *testing.T) {
 	}
 }
 
-// TestFetchBytes_RedirectCapReturnsLastResponse: MaxRedirects 0 means "no
-// redirects" — the 3xx response itself is returned, not an error.
 func TestFetchBytes_RedirectCapReturnsLastResponse(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/a", func(w http.ResponseWriter, r *http.Request) {
@@ -323,12 +301,10 @@ func TestFetchBytes_InvalidURL(t *testing.T) {
 	}
 }
 
-// TestFetchBytes_TimeoutOverride: opts.Timeout is applied to the (cloned)
-// client, so a stalled server turns into a client timeout instead of hanging.
 func TestFetchBytes_TimeoutOverride(t *testing.T) {
 	release := make(chan struct{})
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		<-release // stall until the client has timed out
+		<-release
 	}))
 	defer srv.Close()
 	defer close(release)

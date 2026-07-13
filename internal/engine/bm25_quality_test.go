@@ -6,32 +6,6 @@ import (
 	"testing"
 )
 
-// TestBM25Quality_MDNHTTPMethods_DeleteQueryRanksDeleteSection exercises the
-// full FromHTMLWithOptions pipeline (extraction → markdown → BM25 ranking)
-// against the MDN HTTP methods fixture for a query about the DELETE method.
-//
-// MDN packs every method (GET/POST/DELETE/...) as a single <table> under a
-// single H2. There are no per-method H2/H3 anchors. The chunker's heading
-// pass alone therefore cannot surface a DELETE-specific chunk; we rely on
-// the soft-split second pass (table-row boundaries) to emit one sub-chunk
-// per method, headed "<parent> · DELETE".
-//
-// HISTORY:
-//   - 2026-05-17 (initial lock-in): pre-soft-split. Top-3 was
-//     1. "## Specifications"               (~3.52)
-//     2. "## Safe, idempotent..."          (~1.34, actually mentions DELETE)
-//     3. "## Browser compatibility"        (0)
-//     Test asserted top-3 contained "DELETE" anywhere in body text and that
-//     #2 was the "Safe..." section.
-//   - 2026-05-17 (soft-split landing): bold-paragraph / table-row soft splits
-//     added in chunk.go. New top-3 for "DELETE method semantics":
-//     1. "## Specifications"                              (~5.14) ← URL slug match
-//     2. "## Safe, idempotent... · Method"                (~3.65) ← table header row
-//     3. "## Safe, idempotent... · DELETE"                (~2.86) ← per-method row
-//     DELETE no longer #1 (the Specifications section out-scores it because
-//     the slug literally contains "DELETE" four times via per-method
-//     spec-links). But a chunk whose heading is literally "...· DELETE" now
-//     exists and ranks top-3 — assert exactly that.
 func TestBM25Quality_MDNHTTPMethods_DeleteQueryRanksDeleteSection(t *testing.T) {
 	html := loadFixture(t, "ssr/mdn-http-methods.html")
 	r := FromHTMLWithOptions(html, "https://example.com/methods",
@@ -42,9 +16,6 @@ func TestBM25Quality_MDNHTTPMethods_DeleteQueryRanksDeleteSection(t *testing.T) 
 	if len(r.RankedSections) == 0 {
 		t.Fatalf("no sections ranked; Content=%q", r.Content)
 	}
-	// Tightened assertion (post soft-split): a chunk whose HEADING contains
-	// "DELETE" — i.e. the per-method sub-chunk produced by the table-row
-	// soft-splitter — must appear in the top-3.
 	foundDeleteHeadingInTop3 := false
 	for i := 0; i < len(r.RankedSections) && i < 3; i++ {
 		if strings.Contains(strings.ToUpper(r.RankedSections[i].Heading), "DELETE") {
@@ -58,11 +29,6 @@ func TestBM25Quality_MDNHTTPMethods_DeleteQueryRanksDeleteSection(t *testing.T) 
 	}
 }
 
-// TestBM25Quality_WikipediaLatinPhrases_CarpeDiemRanksCSection exercises the
-// pipeline against the (large) Wikipedia Latin phrases fixture. The phrase
-// "carpe diem" appears in the C-prefixed section of the glossary; we expect
-// a query for it to surface a section that actually contains the phrase in
-// the top-3 results.
 func TestBM25Quality_WikipediaLatinPhrases_CarpeDiemRanksCSection(t *testing.T) {
 	skipHeavyFixture(t)
 	html := loadFixture(t, "static/wikipedia-latin-phrases.html")

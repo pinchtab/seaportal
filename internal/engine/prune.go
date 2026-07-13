@@ -8,14 +8,6 @@ import (
 	"golang.org/x/net/html/atom"
 )
 
-// PruneToContent runs a tag-density + position heuristic over the body and
-// returns HTML containing only the highest-scoring contiguous content region
-// wrapped in <article>. Returns the original input unchanged when no
-// candidate scores above a minimum threshold (textLen >= 200).
-//
-// Score: textLen / (1 + linkTextLen) - 100 * chromeChildCount, multiplied by
-// a position bias that peaks at mid-document (1.0) and decays toward the
-// document edges (>= 0).
 func PruneToContent(htmlStr string) string {
 	doc, err := html.Parse(strings.NewReader(htmlStr))
 	if err != nil {
@@ -27,8 +19,6 @@ func PruneToContent(htmlStr string) string {
 		return htmlStr
 	}
 
-	// Assign a document-order index to every element node so we can compute a
-	// mid-document position bias for each candidate.
 	indexByNode := map[*html.Node]int{}
 	total := 0
 	{
@@ -124,9 +114,6 @@ func isPruneCandidate(n *html.Node) bool {
 	return false
 }
 
-// countChromeChildren counts direct children of n that look like chrome —
-// semantic chrome elements (nav/aside/header/footer) or elements whose class
-// or id token matches one of the chromeClassNeedles used by stripCommonChrome.
 func countChromeChildren(n *html.Node) int {
 	count := 0
 	for c := n.FirstChild; c != nil; c = c.NextSibling {

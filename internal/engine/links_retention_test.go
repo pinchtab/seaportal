@@ -39,8 +39,6 @@ func TestParseLinkRetention_Roundtrip(t *testing.T) {
 
 func TestApplyLinkRetention_NoneRemovesLinks(t *testing.T) {
 	got := applyLinkRetention("Visit [docs](https://x.com)", LinkRetentionNone)
-	// Trailing space left where the link used to be is acceptable; we just
-	// want to confirm the URL and bracketed text are gone.
 	if strings.Contains(got, "docs") || strings.Contains(got, "x.com") || strings.Contains(got, "[") {
 		t.Fatalf("none mode did not strip link: %q", got)
 	}
@@ -104,8 +102,6 @@ func TestApplyLinkRetention_LeavesImagesAlone(t *testing.T) {
 		}
 	}
 }
-
-// ── Integration: httptest-driven Options.LinkRetention plumbing ─────
 
 func linkPage() string {
 	prose := ""

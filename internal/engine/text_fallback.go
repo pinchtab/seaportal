@@ -1,4 +1,3 @@
-// Package portal provides content extraction with SPA detection
 package engine
 
 import (
@@ -9,7 +8,6 @@ import (
 	"golang.org/x/net/html"
 )
 
-// TextFallbackResult holds results from text-based fallback extraction
 type TextFallbackResult struct {
 	Content  string
 	Length   int
@@ -17,9 +15,6 @@ type TextFallbackResult struct {
 	Links    int
 }
 
-// TextFallback extracts visible text content directly from HTML when readability fails.
-// This is a last-resort extraction that finds all text nodes in the body,
-// skipping script/style/nav/footer elements, and formats them as markdown.
 func TextFallback(htmlStr string) TextFallbackResult {
 	doc, err := html.Parse(strings.NewReader(htmlStr))
 	if err != nil {
@@ -30,14 +25,12 @@ func TextFallback(htmlStr string) TextFallbackResult {
 	var headings int
 	var links int
 
-	// Skip these elements entirely
 	skipTags := map[string]bool{
 		"script": true, "style": true, "noscript": true,
 		"nav": true, "footer": true, "header": true,
 		"svg": true, "iframe": true, "form": true,
 	}
 
-	// Skip elements with these classes/roles
 	skipClasses := []string{
 		"nav", "menu", "sidebar", "footer", "header",
 		"cookie", "banner", "modal", "popup", "overlay",
@@ -49,12 +42,10 @@ func TextFallback(htmlStr string) TextFallbackResult {
 		if n.Type == html.ElementNode {
 			tag := strings.ToLower(n.Data)
 
-			// Skip certain tags
 			if skipTags[tag] {
 				return
 			}
 
-			// Skip elements with navigation/menu classes
 			for _, attr := range n.Attr {
 				if attr.Key == "class" || attr.Key == "role" || attr.Key == "aria-label" {
 					val := strings.ToLower(attr.Val)
@@ -66,7 +57,6 @@ func TextFallback(htmlStr string) TextFallbackResult {
 				}
 			}
 
-			// Extract heading text
 			if len(tag) == 2 && tag[0] == 'h' && tag[1] >= '1' && tag[1] <= '6' {
 				text := cleanText(getTextContent(n))
 				if len(text) > 3 && len(text) < 200 {
@@ -75,10 +65,9 @@ func TextFallback(htmlStr string) TextFallbackResult {
 					sections = append(sections, fmt.Sprintf("%s %s", prefix, text))
 					headings++
 				}
-				return // Don't recurse into heading children
+				return
 			}
 
-			// Extract link text
 			if tag == "a" {
 				href := getAttr(n, "href")
 				text := cleanText(getTextContent(n))
@@ -89,7 +78,6 @@ func TextFallback(htmlStr string) TextFallbackResult {
 				return
 			}
 
-			// Extract paragraph text
 			if tag == "p" || tag == "li" || tag == "td" || tag == "dd" {
 				text := cleanText(getTextContent(n))
 				if len(text) > 20 {
@@ -98,9 +86,7 @@ func TextFallback(htmlStr string) TextFallbackResult {
 				return
 			}
 
-			// Extract div/span text only at leaf level (no block children)
 			if tag == "div" || tag == "span" || tag == "section" || tag == "main" {
-				// Recurse into children
 				for c := n.FirstChild; c != nil; c = c.NextSibling {
 					extract(c, depth+1)
 				}
@@ -108,13 +94,11 @@ func TextFallback(htmlStr string) TextFallbackResult {
 			}
 		}
 
-		// Recurse into children for non-handled elements
 		for c := n.FirstChild; c != nil; c = c.NextSibling {
 			extract(c, depth+1)
 		}
 	}
 
-	// Find body element
 	var body *html.Node
 	var findBody func(*html.Node)
 	findBody = func(n *html.Node) {
@@ -132,7 +116,6 @@ func TextFallback(htmlStr string) TextFallbackResult {
 		extract(body, 0)
 	}
 
-	// Deduplicate sections
 	seen := make(map[string]bool)
 	var unique []string
 	for _, s := range sections {
@@ -143,7 +126,6 @@ func TextFallback(htmlStr string) TextFallbackResult {
 		}
 	}
 
-	// Remove very short/noisy sections
 	var filtered []string
 	noisePattern := regexp.MustCompile(`^(©|copyright|all rights reserved|cookie|privacy|terms)`)
 	for _, s := range unique {

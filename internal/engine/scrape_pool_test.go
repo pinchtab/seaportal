@@ -13,8 +13,6 @@ import (
 	"github.com/pinchtab/seaportal/internal/engine/leakcheck"
 )
 
-// poolFixture serves a robots.txt (with optional Crawl-delay) plus HTML pages
-// for every other path.
 func poolFixture(t *testing.T, robotsBody string) *httptest.Server {
 	t.Helper()
 	mux := http.NewServeMux()
@@ -35,8 +33,6 @@ func poolFixture(t *testing.T, robotsBody string) *httptest.Server {
 	return srv
 }
 
-// runScrapeFetch drives fetchAndAssemble the way ScrapeSite does: normalized
-// options, one shared robots cache + limiter per run.
 func runScrapeFetch(ctx context.Context, t *testing.T, urls []string, baseURL string) ([]PageObject, []string) {
 	t.Helper()
 	o := ScrapeOptions{BaseURL: baseURL, Security: allowInternalTestPolicy()}.normalized()
@@ -48,8 +44,6 @@ func runScrapeFetch(ctx context.Context, t *testing.T, urls []string, baseURL st
 	return fetchAndAssemble(ctx, base, urls, o, robots, NewHostRateLimiter())
 }
 
-// Ported from the deleted fetchAll tests (T07): the shared pool must return
-// one PageObject per input URL, in input order.
 func TestFetchAndAssembleOrderedAndComplete(t *testing.T) {
 	leakcheck.CheckLeak(t)
 	srv := poolFixture(t, "")
@@ -76,11 +70,7 @@ func TestFetchAndAssembleOrderedAndComplete(t *testing.T) {
 	}
 }
 
-// Ported from the deleted fetchAll rate-limit test: a robots Crawl-delay must
-// space same-host requests across pool workers via the shared limiter.
 func TestFetchAndAssembleCrawlDelayAcrossWorkers(t *testing.T) {
-	// Crawl-delay accepts fractions ("0.04" = 40ms); three same-host URLs on
-	// three-plus workers must serialize into >= 2 intervals of spacing.
 	srv := poolFixture(t, "User-agent: *\nCrawl-delay: 0.04\n")
 	urls := []string{srv.URL + "/1", srv.URL + "/2", srv.URL + "/3"}
 
@@ -101,12 +91,9 @@ func TestFetchAndAssembleCrawlDelayAcrossWorkers(t *testing.T) {
 	}
 }
 
-// Ported from the deleted fetchAll partial-failure test: one bad host must not
-// abort its siblings.
 func TestFetchAndAssemblePartialFailure(t *testing.T) {
 	leakcheck.CheckLeak(t)
 	srv := poolFixture(t, "")
-	// A bogus host fails DNS/connection; the good URLs must still succeed.
 	urls := []string{srv.URL + "/", "http://nonexistent.invalid/x", srv.URL + "/ok"}
 
 	got, _ := runScrapeFetch(context.Background(), t, urls, srv.URL)
@@ -125,8 +112,6 @@ func TestFetchAndAssemblePartialFailure(t *testing.T) {
 	}
 }
 
-// Ported from the deleted fetchAll cancellation test: a cancelled ctx yields
-// one errored PageObject per URL, promptly.
 func TestFetchAndAssembleContextCancelled(t *testing.T) {
 	leakcheck.CheckLeak(t)
 	srv := poolFixture(t, "")
@@ -135,7 +120,7 @@ func TestFetchAndAssembleContextCancelled(t *testing.T) {
 		urls = append(urls, fmt.Sprintf("%s/p%d", srv.URL, i))
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	cancel() // cancelled up front
+	cancel()
 
 	start := time.Now()
 	got, _ := runScrapeFetch(ctx, t, urls, srv.URL)
@@ -154,8 +139,6 @@ func TestFetchAndAssembleContextCancelled(t *testing.T) {
 	}
 }
 
-// T05: a hostile Crawl-delay is clamped and reported once per host. The run is
-// bounded by a short pool timeout so the test never waits the clamped 30s.
 func TestFetchAndAssembleClampWarning(t *testing.T) {
 	srv := poolFixture(t, "User-agent: *\nCrawl-delay: 86400\n")
 	urls := []string{srv.URL + "/a", srv.URL + "/b"}

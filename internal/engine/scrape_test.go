@@ -12,9 +12,6 @@ import (
 	"time"
 )
 
-// allowInternalTestPolicy is the default scrape policy with the private-IP
-// block lifted so httptest fixtures (127.0.0.1) pass the secure-by-default
-// gate; every other guard (schemes, redirects, size caps) stays on.
 func allowInternalTestPolicy() *SecurityPolicy {
 	p := DefaultSecurityPolicy()
 	p.BlockPrivateIPs = false
@@ -45,8 +42,6 @@ func TestScrapeOptionsDefaults(t *testing.T) {
 	if got.UserAgent != DefaultUserAgent {
 		t.Errorf("UserAgent = %q, want %q", got.UserAgent, DefaultUserAgent)
 	}
-	// T01: scrape is secure by default — nil Security resolves to the full
-	// default policy (unlike single-URL extraction, where nil is unguarded).
 	if got.Security == nil || !got.Security.BlockPrivateIPs {
 		t.Errorf("Security = %+v, want DefaultSecurityPolicy() with BlockPrivateIPs", got.Security)
 	}
@@ -86,7 +81,7 @@ func TestScrapeSiteEndToEnd(t *testing.T) {
 			_, _ = w.Write([]byte(`<html><head><title>Home</title></head><body><h1>Home</h1>` +
 				`<a href="/about">About</a><a href="/blog/1">Post 1</a><a href="/blog/2">Post 2</a></body></html>`))
 		case "/sitemap.xml":
-			http.NotFound(w, r) // force crawl fallback
+			http.NotFound(w, r)
 		default:
 			_, _ = w.Write([]byte(`<html><head><title>` + r.URL.Path + `</title></head><body><h1>` + r.URL.Path + `</h1><p>Some body content for extraction here.</p></body></html>`))
 		}
@@ -94,8 +89,6 @@ func TestScrapeSiteEndToEnd(t *testing.T) {
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
 
-	// Security: httptest serves on 127.0.0.1, so the secure-by-default policy
-	// needs its private-IP block lifted (T01 sanctioned behavior change).
 	res, err := ScrapeSite(context.Background(), &ScrapeOptions{BaseURL: srv.URL, MaxPages: 10, Security: allowInternalTestPolicy()})
 	if err != nil {
 		t.Fatalf("ScrapeSite: %v", err)
@@ -119,9 +112,6 @@ func TestScrapeSiteEndToEnd(t *testing.T) {
 	}
 }
 
-// T01 regression lock: with no explicit policy, ScrapeSite must refuse to
-// crawl a private/loopback target — every fetch (discovery and pages) is
-// blocked, so no page comes back fetched.
 func TestScrapeSiteSecureByDefaultBlocksPrivateTargets(t *testing.T) {
 	mux := http.NewServeMux()
 	var hits int32
@@ -153,8 +143,6 @@ func TestScrapeSiteValidatesBaseURL(t *testing.T) {
 	if _, err := ScrapeSite(context.Background(), nil); !errors.Is(err, ErrMissingBaseURL) {
 		t.Fatalf("nil opts err = %v, want ErrMissingBaseURL", err)
 	}
-	// A supplied-but-malformed base URL (bare host, no scheme) is invalid, not
-	// missing — distinct sentinel, and the message names the offending value.
 	for _, bad := range []string{"example.com", "not-a-url"} {
 		_, err := ScrapeSite(context.Background(), &ScrapeOptions{BaseURL: bad})
 		if !errors.Is(err, ErrInvalidBaseURL) {
@@ -173,17 +161,11 @@ func TestDiscoveryBudgetReservesFetchWindow(t *testing.T) {
 	if got := discoveryBudget(40 * time.Second); got != 20*time.Second {
 		t.Errorf("discoveryBudget(40s) = %s, want 20s", got)
 	}
-	// Discovery must never claim the entire budget — some is always reserved.
 	if got := discoveryBudget(time.Second); got >= time.Second {
 		t.Errorf("discoveryBudget(1s) = %s, want < 1s (fetch reservation)", got)
 	}
 }
 
-// ALP-040: crawl-fallback discovery must not consume the whole --timeout and
-// leave the fetch phase with a dead context. This simulates slow discovery
-// (the seed + section pages, fetched during the crawl to extract links, are
-// slow) with fast leaf pages (only fetched in the fetch phase). With discovery
-// sub-budgeted, at least some pages must come back fetched (not 100% canceled).
 func TestScrapeSiteDiscoveryDoesNotStarveFetch(t *testing.T) {
 	if testing.Short() {
 		t.Skip("uses real sleeps to simulate slow discovery; runs in the full lane")
@@ -193,9 +175,9 @@ func TestScrapeSiteDiscoveryDoesNotStarveFetch(t *testing.T) {
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case r.URL.Path == "/sitemap.xml" || r.URL.Path == "/robots.txt":
-			http.NotFound(w, r) // force crawl fallback
+			http.NotFound(w, r)
 		case r.URL.Path == "/":
-			time.Sleep(slow) // slow seed (fetched during crawl)
+			time.Sleep(slow)
 			var b strings.Builder
 			b.WriteString(`<html><body><h1>Home</h1>`)
 			for i := 1; i <= 20; i++ {
@@ -204,10 +186,10 @@ func TestScrapeSiteDiscoveryDoesNotStarveFetch(t *testing.T) {
 			b.WriteString(`</body></html>`)
 			_, _ = w.Write([]byte(b.String()))
 		case strings.HasPrefix(r.URL.Path, "/s/"):
-			time.Sleep(slow) // slow section pages (fetched during crawl for links)
+			time.Sleep(slow)
 			id := strings.TrimPrefix(r.URL.Path, "/s/")
 			_, _ = fmt.Fprintf(w, `<html><body><h1>Section</h1><a href="/p/%s">Leaf %s</a></body></html>`, id, id)
-		default: // /p/* leaf pages: fast, only fetched in the fetch phase
+		default:
 			_, _ = w.Write([]byte(`<html><body><h1>Leaf</h1><p>Real leaf content worth extracting here.</p></body></html>`))
 		}
 	})
@@ -233,7 +215,6 @@ func TestScrapeSiteDiscoveryDoesNotStarveFetch(t *testing.T) {
 	if fetched == 0 {
 		t.Fatalf("0 of %d pages fetched — discovery starved the fetch phase", len(res.Pages))
 	}
-	// Wall-clock cap (ALP-029) still holds: don't run far past --timeout.
 	if elapsed > 2*time.Second {
 		t.Errorf("elapsed %s exceeds the timeout budget by too much", elapsed)
 	}

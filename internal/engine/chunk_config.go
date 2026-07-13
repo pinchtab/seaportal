@@ -1,40 +1,26 @@
 package engine
 
-// chunk_config.go — ChunkConfig type, CLI-form rendering, and parsing. Moved
-// verbatim from chunk.go; the chunking algorithms stay there.
-
 import (
 	"fmt"
 	"strconv"
 	"strings"
 )
 
-// ChunkStrategy selects a chunking algorithm. Default is off.
 type ChunkStrategy int
 
 const (
-	// ChunkOff disables chunking (default — Result.Chunks stays nil).
 	ChunkOff ChunkStrategy = iota
-	// ChunkHeading splits at H2-H6 boundaries, preserving the heading.
 	ChunkHeading
-	// ChunkSentence groups sentences until a ~Size-token threshold.
 	ChunkSentence
-	// ChunkWindow slides a Size-char window with Overlap chars of backstep.
 	ChunkWindow
 )
 
-// ChunkConfig controls how Markdown is split into Chunks.
 type ChunkConfig struct {
 	Strategy ChunkStrategy
-	// Size meaning depends on Strategy:
-	//   sentence: target tokens per group
-	//   window:   chars per window
-	Size int
-	// Overlap is only used by window strategy (chars of overlap).
-	Overlap int
+	Size     int
+	Overlap  int
 }
 
-// String renders the canonical CLI form of the config (or "" for off).
 func (c ChunkConfig) String() string {
 	switch c.Strategy {
 	case ChunkOff:
@@ -59,16 +45,6 @@ func (c ChunkConfig) String() string {
 	}
 }
 
-// ParseChunkConfig parses the colon-form CLI argument.
-//
-//	""                          -> {ChunkOff, 0, 0}
-//	"heading"                   -> {ChunkHeading, 0, 0}
-//	"sentence" / "sentence:N"   -> {ChunkSentence, N|512, 0}
-//	"window" / "window:N[:O]"   -> {ChunkWindow, N|2000, O|200}
-//
-// Validation:
-//   - overlap must be < size (window strategy)
-//   - unknown names error out
 func ParseChunkConfig(s string) (ChunkConfig, error) {
 	if s == "" {
 		return ChunkConfig{}, nil
@@ -104,8 +80,6 @@ func ParseChunkConfig(s string) (ChunkConfig, error) {
 				return ChunkConfig{}, fmt.Errorf("invalid window size %q: want positive integer", parts[1])
 			}
 			cfg.Size = n
-			// When the caller specifies size but no overlap, default overlap to 0
-			// rather than 200 — keeps "window:N" unambiguous.
 			if len(parts) < 3 {
 				cfg.Overlap = 0
 			}

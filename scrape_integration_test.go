@@ -19,14 +19,10 @@ func pageURLs(pages []seaportal.PageObject) []string {
 	return out
 }
 
-// TestScrapeSiteIntegration drives the whole pipeline against an in-process
-// multi-page fixture (no Docker, no external network).
 func TestScrapeSiteIntegration(t *testing.T) {
 	srv := fixture.MultiPageSite()
 	defer srv.Close()
 
-	// The fixture serves on loopback: lift the private-IP block of the
-	// secure-by-default scrape policy (T01 sanctioned behavior change).
 	sec := seaportal.DefaultSecurityPolicy()
 	sec.BlockPrivateIPs = false
 
@@ -56,7 +52,6 @@ func TestScrapeSiteIntegration(t *testing.T) {
 		t.Errorf("robots-disallowed /private grouped: %v", patterns)
 	}
 
-	// Robots-disallowed path absent, caps respected, pages populated.
 	if res.Site.SampledPages == 0 || res.Site.SampledPages > 20 {
 		t.Errorf("SampledPages = %d, want 1..20", res.Site.SampledPages)
 	}
@@ -82,7 +77,6 @@ func TestScrapeSiteIntegration(t *testing.T) {
 		t.Errorf("contentType classification missing article/product across %d pages", len(res.Pages))
 	}
 
-	// Sampling determinism: same options, forced sub-sampling, identical set.
 	det := &seaportal.ScrapeOptions{BaseURL: srv.URL(), MaxPages: 20, MaxPerPattern: 1, Security: sec}
 	a, err := seaportal.ScrapeSite(context.Background(), det)
 	if err != nil {

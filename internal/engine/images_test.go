@@ -136,16 +136,8 @@ func TestExtractImages_IgnoresScriptStyleSubtrees(t *testing.T) {
 	}
 }
 
-// imagesTestProse provides enough body text to keep readability happy.
 var imagesTestProse = strings.Repeat("This page exists to exercise the image extractor end-to-end with realistic text. ", 10)
 
-// imagesTestPage has 4 <img> elements:
-//   - /hero.png (kept)
-//   - data: URL (skipped)
-//   - /thumb.png (kept)
-//   - /hero.png duplicate (deduped)
-//
-// Expected: 2 entries in Images.
 var imagesTestPage = `<!doctype html><html><head><title>Images Test</title></head><body>
 <article><h1>Images Test</h1>
 <p>` + imagesTestProse + `</p>

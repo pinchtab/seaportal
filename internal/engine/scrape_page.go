@@ -6,15 +6,6 @@ import (
 	"strings"
 )
 
-// assemblePage turns an extraction Result into a fully-populated PageObject.
-// On the converged fetch path (T07) the page's raw HTML is no longer in hand,
-// so everything derives from the Result: the metadata fields the pipeline
-// resolved, the LD-JSON blocks it recorded, the opt-in captured link list
-// (Options.WithLinks), and its structural metrics for content-type
-// classification. Internal vs external links are counted relative to base.
-// Performance (TTFB, fetched bytes, request count) is filled only when
-// withPerformance is set. A failed page (r.Error != "") still yields a
-// PageObject with its status and error.
 func assemblePage(base *url.URL, targetURL string, r Result, withPerformance bool) PageObject {
 	p := PageObject{
 		URL:      targetURL,
@@ -39,9 +30,6 @@ func assemblePage(base *url.URL, targetURL string, r Result, withPerformance boo
 	return p
 }
 
-// metaMap flattens the Result's resolved metadata (JSON-LD first, <meta>
-// fill-when-empty — see applyLDJSONMetadata/applyMetadata) into the
-// PageObject.Meta string map, dropping empty values.
 func metaMap(r Result) map[string]string {
 	out := map[string]string{}
 	put := func(k, v string) {
@@ -63,8 +51,6 @@ func metaMap(r Result) map[string]string {
 	return out
 }
 
-// ldjsonToMaps renders each JSON-LD block as a generic map (empty fields
-// dropped via the block's omitempty tags) for the PageObject.Schema slice.
 func ldjsonToMaps(blocks []LDJSONBlock) []map[string]any {
 	var out []map[string]any
 	for _, b := range blocks {
@@ -80,8 +66,6 @@ func ldjsonToMaps(blocks []LDJSONBlock) []map[string]any {
 	return out
 }
 
-// countLinks splits links into internal (same host as base, or relative) vs
-// external counts.
 func countLinks(base *url.URL, links []LinkRef) (internal, external int) {
 	for _, l := range links {
 		u, err := url.Parse(l.Href)
@@ -97,13 +81,6 @@ func countLinks(base *url.URL, links []LinkRef) (internal, external int) {
 	return internal, external
 }
 
-// classifyContentType derives a coarse content type from the extraction
-// Result: JSON-LD @type first, then a structural heuristic over the URL shape
-// and the extractor's own metrics (ALP-041) so metadata-poor sites (e.g. MDN)
-// don't collapse to "unknown". A page with no extractable content classifies
-// as "unknown". (On the converged fetch path the raw HTML is not retained, so
-// og:type-only pages without JSON-LD fall through to the structural
-// heuristics — T07.)
 func classifyContentType(r Result, pageURL string) string {
 	for _, b := range r.LDJSONBlocks {
 		if t := normalizeContentType(b.Type); t != "" {
@@ -121,19 +98,14 @@ func classifyContentType(r Result, pageURL string) string {
 			}
 		}
 	}
-	// Dense prose (a heading plus several paragraphs, as counted by the
-	// extraction pipeline) reads as an article.
 	if r.HeadingCount >= 1 && r.ParagraphCount >= 5 {
 		return "article"
 	}
 	return "page"
 }
 
-// articleURLSegments are path segments that strongly signal long-form content.
 var articleURLSegments = []string{"/blog", "/docs", "/article", "/post", "/news", "/guide", "/tutorial"}
 
-// normalizeContentType maps a schema.org / OpenGraph type onto one of a small
-// set of categories, or "" when unrecognized (so the caller can fall through).
 func normalizeContentType(raw string) string {
 	t := strings.ToLower(strings.TrimSpace(raw))
 	if t == "" {

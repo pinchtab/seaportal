@@ -5,13 +5,6 @@ import (
 	"testing"
 )
 
-// This file locks down the two algorithms most likely to regress silently:
-// URL pattern grouping (ALP-003) and sampling (ALP-004). The per-feature test
-// files cover the mechanics; here we assert the stronger byte-identical
-// determinism guarantees and a single consolidated URL-shape table.
-
-// TestGroupingShapesTable asserts the pattern derived for every URL shape called
-// out in the spec, exercised as full URLs (not bare segments).
 func TestGroupingShapesTable(t *testing.T) {
 	cases := []struct {
 		name, url, wantPattern string
@@ -39,8 +32,6 @@ func TestGroupingShapesTable(t *testing.T) {
 	}
 }
 
-// permutations returns a few deterministic reorderings of urls (rotations +
-// reverse) so the test itself introduces no randomness.
 func permutations(urls []string) [][]string {
 	out := [][]string{append([]string(nil), urls...)}
 	rev := make([]string, len(urls))
@@ -79,7 +70,7 @@ func TestGroupingByteIdenticalAcrossOrderings(t *testing.T) {
 }
 
 func TestSamplingByteIdenticalAcrossRuns(t *testing.T) {
-	groups := bigCorpus() // 1 home + 20 /blog/*/post + 15 /products/*/detail + 2 flat
+	groups := bigCorpus()
 	for _, strategy := range []SampleStrategy{SampleRandom, SampleBalanced, SamplePriority} {
 		opts := ScrapeOptions{BaseURL: "https://ex.com", MaxPages: 14, MaxPerPattern: 4, SampleStrategy: strategy}
 		first, err := json.Marshal(sample(groups, opts))
@@ -116,7 +107,6 @@ func TestSamplingCapsAllStrategies(t *testing.T) {
 func TestSamplingIncludeExcludeExclusive(t *testing.T) {
 	groups := bigCorpus()
 
-	// Exclusively included: only /products/* survive.
 	inc := sample(groups, ScrapeOptions{
 		BaseURL: "https://ex.com", MaxPages: 100, MaxPerPattern: 100,
 		IncludePatterns: []string{"/products/**"},
@@ -130,7 +120,6 @@ func TestSamplingIncludeExcludeExclusive(t *testing.T) {
 		}
 	}
 
-	// Fully excluded: no /blog/* remain.
 	exc := sample(groups, ScrapeOptions{
 		BaseURL: "https://ex.com", MaxPages: 100, MaxPerPattern: 100,
 		ExcludePatterns: []string{"/blog/**"},

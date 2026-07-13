@@ -324,7 +324,6 @@ func TestCLI_FeedSubcommand(t *testing.T) {
 	}
 	defer func() { _ = os.Remove(bin) }()
 
-	// TSV mode
 	cmd := exec.Command(bin, "feed", "--allow-internal", srv.URL+"/feed.xml")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -340,7 +339,6 @@ func TestCLI_FeedSubcommand(t *testing.T) {
 		t.Errorf("CLI TSV mismatch:\nwant:\n%s\ngot:\n%s", want, got)
 	}
 
-	// JSON mode
 	cmd = exec.Command(bin, "feed", "--allow-internal", "--json", srv.URL+"/feed.xml")
 	out, err = cmd.CombinedOutput()
 	if err != nil {

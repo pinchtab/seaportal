@@ -8,10 +8,6 @@ import (
 	"golang.org/x/net/html/atom"
 )
 
-// LinkRef is a structured representation of a discovered <a> link in the raw
-// page HTML. Surfaced on Result.Links when the caller opts in via
-// Options.WithLinks so agents can pick the next page without re-parsing the
-// extracted Markdown.
 type LinkRef struct {
 	Href string `json:"href"`
 	Text string `json:"text,omitempty"`
@@ -20,8 +16,6 @@ type LinkRef struct {
 
 const linkTextMaxLen = 200
 
-// skippedSchemes drops non-navigational schemes: in-page handlers, mail
-// helpers, phone dialers, embedded payloads.
 var skippedSchemes = map[string]bool{
 	"javascript": true,
 	"mailto":     true,
@@ -29,11 +23,6 @@ var skippedSchemes = map[string]bool{
 	"data":       true,
 }
 
-// ExtractLinks walks htmlStr and returns every <a href="…"> as a LinkRef in
-// document order. Relative hrefs are resolved against baseURL; entries are
-// deduplicated by the (href, text) pair (first occurrence wins). Anchors
-// inside <script>/<style> subtrees, fragment-only hrefs (#…), empty hrefs,
-// and javascript/mailto/tel/data schemes are skipped.
 func ExtractLinks(htmlStr string, baseURL string) []LinkRef {
 	if htmlStr == "" {
 		return nil
@@ -65,8 +54,6 @@ func ExtractLinks(htmlStr string, baseURL string) []LinkRef {
 						out = append(out, ref)
 					}
 				}
-				// Fall through: nested <a> is invalid HTML, but keep walking
-				// so we don't miss valid descendants in malformed input.
 			}
 		}
 		for c := n.FirstChild; c != nil; c = c.NextSibling {
@@ -77,8 +64,6 @@ func ExtractLinks(htmlStr string, baseURL string) []LinkRef {
 	return out
 }
 
-// buildLinkRef extracts href/text/rel from an anchor node. Returns ok=false
-// when the anchor should be skipped (no href, fragment-only, skipped scheme).
 func buildLinkRef(n *html.Node, base *url.URL) (LinkRef, bool) {
 	hrefRaw := strings.TrimSpace(getAttr(n, "href"))
 	if hrefRaw == "" {
@@ -108,9 +93,6 @@ func buildLinkRef(n *html.Node, base *url.URL) (LinkRef, bool) {
 	}, true
 }
 
-// extractAnchorText walks descendants, concatenates TextNode contents,
-// collapses whitespace runs, and truncates at linkTextMaxLen (with ellipsis).
-// <script>/<style> subtrees are skipped.
 func extractAnchorText(n *html.Node) string {
 	collapsed := collapseWhitespace(nodeText(n, true))
 	if len([]rune(collapsed)) > linkTextMaxLen {

@@ -12,23 +12,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Schema is a declarative CSS-selector mapping from output field names to
-// extraction specs. Top-level fields capture single values; nested Fields
-// (on a FieldSpec) produce arrays of objects (one per matching element);
-// Multiple=true produces a flat array of strings.
 type Schema struct {
 	Fields map[string]FieldSpec `json:"fields" yaml:"fields"`
 }
 
-// FieldSpec describes how to extract one field from the DOM.
-//
-//   - Selector: CSS selector (cascadia syntax). Required.
-//   - Attr: when set, the value is the named attribute of the matched element
-//     rather than its joined text content.
-//   - Multiple: when true (and Fields empty), emit an array of values.
-//   - Fields: when non-empty, treat this as a nested-object collector; query
-//     QueryAll on Selector and recursively apply Fields scoped to each match,
-//     emitting an array of maps.
 type FieldSpec struct {
 	Selector string               `json:"selector,omitempty" yaml:"selector,omitempty"`
 	Attr     string               `json:"attr,omitempty" yaml:"attr,omitempty"`
@@ -38,10 +25,6 @@ type FieldSpec struct {
 
 const schemaMaxDepth = 5
 
-// LoadSchema reads a schema file from disk and decodes it as YAML or JSON.
-// The format is picked from the file extension (.yaml/.yml → YAML, .json →
-// JSON). When the extension is ambiguous or unknown we try YAML first and
-// fall back to JSON.
 func LoadSchema(path string) (Schema, error) {
 	raw, err := os.ReadFile(path)
 	if err != nil {
@@ -68,11 +51,6 @@ func LoadSchema(path string) (Schema, error) {
 	return s, nil
 }
 
-// ApplySchema parses htmlStr and walks the supplied Schema, returning a
-// map[string]interface{} keyed by FieldSpec name. Schema is intended to run
-// on RAW html (before preprocess/sanitize) so the caller-supplied selectors
-// can target chrome elements like nav/sidebar/footer that the main extraction
-// pipeline strips.
 func ApplySchema(htmlStr string, schema Schema) (map[string]interface{}, error) {
 	doc, err := xhtml.Parse(strings.NewReader(htmlStr))
 	if err != nil {
@@ -95,7 +73,6 @@ func applySchemaToNode(parent *xhtml.Node, fields map[string]FieldSpec, depth in
 
 		switch {
 		case len(spec.Fields) > 0:
-			// Nested-object array: one map per matched element.
 			items := make([]map[string]interface{}, 0, len(matches))
 			for _, m := range matches {
 				child, cerr := applySchemaToNode(m, spec.Fields, depth+1)
@@ -122,8 +99,6 @@ func applySchemaToNode(parent *xhtml.Node, fields map[string]FieldSpec, depth in
 	return out, nil
 }
 
-// extractValue returns the named attribute when attr is set; otherwise the
-// joined, whitespace-collapsed text of n's descendant text nodes.
 func extractValue(n *xhtml.Node, attr string) string {
 	if attr != "" {
 		return getAttr(n, attr)

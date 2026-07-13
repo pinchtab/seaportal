@@ -1,7 +1,3 @@
-//
-// Provides a content hash that is stable across cosmetic changes (timestamps,
-// counters, session IDs) while detecting meaningful content differences.
-
 package engine
 
 import (
@@ -18,14 +14,10 @@ func SemanticFingerprint(content string) string {
 	return hex.EncodeToString(h[:16])
 }
 
-// ContentChanged returns true if the semantic fingerprint differs
-// This is smarter than raw byte comparison - ignores timestamps, counters, etc.
 func ContentChanged(oldContent, newContent string) bool {
 	return SemanticFingerprint(oldContent) != SemanticFingerprint(newContent)
 }
 
-// ChangeSignificance returns a score 0-100 indicating how significant
-// the content change is (0 = noise only, 100 = completely different)
 func ChangeSignificance(oldContent, newContent string) int {
 	oldNorm := normalizeForFingerprint(oldContent)
 	newNorm := normalizeForFingerprint(newContent)
@@ -41,7 +33,6 @@ func ChangeSignificance(oldContent, newContent string) int {
 		return 0
 	}
 
-	// Calculate Jaccard similarity of word sets
 	oldSet := make(map[string]bool)
 	for _, w := range oldWords {
 		oldSet[w] = true
@@ -67,7 +58,6 @@ func ChangeSignificance(oldContent, newContent string) int {
 	similarity := float64(intersection) / float64(union)
 	significance := int((1 - similarity) * 100)
 
-	// Boost significance for structural changes
 	oldLines := len(strings.Split(oldNorm, "\n"))
 	newLines := len(strings.Split(newNorm, "\n"))
 	lineDiff := abs(oldLines - newLines)
@@ -82,7 +72,6 @@ func ChangeSignificance(oldContent, newContent string) int {
 
 func normalizeForFingerprint(content string) string {
 	s := content
-	// Remove session/tracking IDs FIRST (before counters strip parts of UUIDs)
 	s = idPatterns.ReplaceAllString(s, " ")
 	s = timestampPatterns.ReplaceAllString(s, " ")
 	s = counterPatterns.ReplaceAllString(s, " ")
@@ -112,26 +101,22 @@ func abs(x int) int {
 }
 
 var (
-	// ISO 8601, RFC 3339, common date formats
 	timestampPatterns = regexp.MustCompile(`(?i)` +
-		`\d{4}-\d{2}-\d{2}([T ]\d{2}:\d{2}(:\d{2})?(\.\d+)?(Z|[+-]\d{2}:?\d{2})?)?` + // ISO 8601 date with optional time
-		`|\d{1,2}/\d{1,2}/\d{2,4}` + // MM/DD/YYYY
-		`|\d{1,2}\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{2,4}` + // 10 Mar 2024
-		`|(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{1,2},?\s+\d{2,4}` + // March 10, 2024
-		`|\d{1,2}:\d{2}(:\d{2})?\s*(am|pm)?` + // HH:MM:SS (standalone time)
+		`\d{4}-\d{2}-\d{2}([T ]\d{2}:\d{2}(:\d{2})?(\.\d+)?(Z|[+-]\d{2}:?\d{2})?)?` +
+		`|\d{1,2}/\d{1,2}/\d{2,4}` +
+		`|\d{1,2}\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{2,4}` +
+		`|(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{1,2},?\s+\d{2,4}` +
+		`|\d{1,2}:\d{2}(:\d{2})?\s*(am|pm)?` +
 		`|(today|yesterday|tomorrow)`,
 	)
 
-	// Numbers that are likely counters (views, likes, followers) - 3+ digits
 	counterPatterns = regexp.MustCompile(`\b\d{3,}\b`)
 
-	// UUIDs and hex strings
 	idPatterns = regexp.MustCompile(`(?i)` +
-		`[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}` + // UUID
-		`|[0-9a-f]{32,}`, // Long hex strings
+		`[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}` +
+		`|[0-9a-f]{32,}`,
 	)
 
-	// Relative time expressions
 	relativeTimePatterns = regexp.MustCompile(`(?i)` +
 		`\d+\s*(second|minute|hour|day|week|month|year)s?\s+ago` +
 		`|just\s+now` +
@@ -139,6 +124,5 @@ var (
 		`|a\s+(few|couple)\s+(seconds?|minutes?|hours?|days?)\s+ago`,
 	)
 
-	// Version numbers
 	versionPatterns = regexp.MustCompile(`\bv?\d+\.\d+(\.\d+)*\b`)
 )

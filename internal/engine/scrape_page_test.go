@@ -43,8 +43,6 @@ func mustBase(t *testing.T, s string) *url.URL {
 	return u
 }
 
-// T07: assemblePage consumes the extraction Result (the converged fetch path
-// keeps no raw HTML), so the extraction runs with WithLinks like production.
 func TestAssemblePageArticle(t *testing.T) {
 	base := mustBase(t, "https://ex.com")
 	target := "https://ex.com/blog/my-article"
@@ -85,8 +83,6 @@ func TestAssemblePageProduct(t *testing.T) {
 	base := mustBase(t, "https://ex.com")
 	target := "https://ex.com/widget"
 	r := FromHTMLWithOptions(productHTML, target, Options{WithLinks: true})
-	// The fetch stage stamps ContentLength on a live fetch; simulate it here
-	// since FromHTMLWithOptions never sees the wire bytes.
 	r.ContentLength = int64(len(productHTML))
 	r.TTFBMs = 12
 
@@ -131,14 +127,12 @@ func TestAssemblePageFailedStillPopulatesStatusAndError(t *testing.T) {
 }
 
 func TestClassifyContentTypeFromResult(t *testing.T) {
-	// Structured metadata still wins (no regression).
 	if got := classifyContentType(Result{ResponseHeaders: ResponseHeaders{LDJSONBlocks: []LDJSONBlock{{Type: "NewsArticle"}}}, Content: "x"}, ""); got != "article" {
 		t.Errorf("NewsArticle = %q, want article", got)
 	}
 	if got := classifyContentType(Result{ResponseHeaders: ResponseHeaders{LDJSONBlocks: []LDJSONBlock{{Type: "Product"}}}, Content: "x"}, "https://ex.com/w"); got != "product" {
 		t.Errorf("Product = %q, want product", got)
 	}
-	// Empty extraction stays "unknown" even with URL hints.
 	if got := classifyContentType(Result{}, "https://ex.com/docs/x"); got != "unknown" {
 		t.Errorf("empty content = %q, want unknown", got)
 	}

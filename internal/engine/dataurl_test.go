@@ -82,8 +82,6 @@ func TestExtract_DataURL_HTML(t *testing.T) {
 }
 
 func TestExtract_DataURL_Binary_RejectedCleanly(t *testing.T) {
-	// Use a valid base64 payload so the mime gate (not the decoder) is what
-	// rejects this — that's the behaviour we're locking in.
 	res := FromURLWithOptions("data:application/pdf;base64,JVBERi0=", Options{})
 	if res.Error == "" {
 		t.Fatal("expected error for unsupported binary mime, got empty")

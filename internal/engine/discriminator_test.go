@@ -2,9 +2,6 @@ package engine
 
 import "testing"
 
-// Acceptance tests for the browser-routing decision derived from a resolved
-// profile + result (docs/reference/browser-discriminator.md). Cases mirror the
-// doc's acceptance table; inputs are synthetic Result/profile shapes.
 func TestDeriveDecision(t *testing.T) {
 	cases := []struct {
 		name        string
@@ -100,8 +97,6 @@ func TestDeriveDecision(t *testing.T) {
 	}
 }
 
-// ClassifyPage must always populate the decision (never empty), so callers can
-// rely on profile.Decision being set on every path.
 func TestClassifyPage_AlwaysSetsDecision(t *testing.T) {
 	r := Result{StatusCode: 200, Length: 2000, HeadingCount: 3, ParagraphCount: 5, Confidence: 90}
 	p := ClassifyPage(r)

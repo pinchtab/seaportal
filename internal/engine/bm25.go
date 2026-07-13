@@ -7,9 +7,6 @@ import (
 	"unicode"
 )
 
-// RankedSection is a heading-bounded slice of Markdown scored against a query
-// via BM25. Higher Score = more relevant. Heading is the H2/H3 line (may be
-// empty for the prologue or a heading-less document).
 type RankedSection struct {
 	Score   float64 `json:"score"`
 	Heading string  `json:"heading,omitempty"`
@@ -17,18 +14,6 @@ type RankedSection struct {
 	Tokens  int     `json:"tokens"`
 }
 
-// RankSections splits content by H2/H3 boundaries (reusing chunkByHeading)
-// and scores each section by BM25 against the query. Returns sections in
-// descending score order. When topN > 0, truncates to topN. Returns nil
-// for empty query.
-//
-// BM25 formula (per query term q):
-//
-//	idf(q)  = log((N - df + 0.5) / (df + 0.5) + 1)
-//	tfNorm  = tf * (k1 + 1) / (tf + k1 * (1 - b + b * dl/avgdl))
-//	score  += idf(q) * tfNorm
-//
-// Defaults applied when caller passes 0: k1 = 1.5, b = 0.75.
 func RankSections(content, query string, k1, b float64, topN int) []RankedSection {
 	if strings.TrimSpace(query) == "" {
 		return nil
@@ -72,7 +57,6 @@ func RankSections(content, query string, k1, b float64, topN int) []RankedSectio
 		for _, t := range toks {
 			tf[t]++
 		}
-		// df counts each term once per section.
 		for term := range tf {
 			df[term]++
 		}
@@ -127,9 +111,6 @@ func RankSections(content, query string, k1, b float64, topN int) []RankedSectio
 	return out
 }
 
-// tokeniseBM25 lowercases and splits on runs of Unicode letter/digit. No
-// stopword removal, no stemming — V1 keeps it simple; IDF handles common
-// words naturally.
 func tokeniseBM25(s string) []string {
 	s = strings.ToLower(s)
 	var out []string

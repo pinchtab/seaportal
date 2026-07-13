@@ -8,7 +8,6 @@ import (
 	"testing"
 )
 
-// regression: parse-feed-security-redirect-bypass
 func TestParseFeed_SecurityPolicyStopsRedirects(t *testing.T) {
 	var finalHit atomic.Bool
 	mux := http.NewServeMux()

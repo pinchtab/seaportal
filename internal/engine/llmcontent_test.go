@@ -48,12 +48,6 @@ func TestDetectLLMContent(t *testing.T) {
 			want:    false,
 		},
 		{
-			// BUG(audit): the fast-path gate only checks for "llm",
-			// "language model" and "ai agent" before running the regexes, so
-			// "Instructions for AI" — which the second pattern
-			// `instructions? for (AI|...)` is written to catch — is rejected
-			// before the regex ever runs. Asserting current (arguably wrong)
-			// behavior; fixing means adding "ai" to the gate or dropping it.
 			name:    "instructions for AI is missed by the fast-path gate",
 			content: "Instructions for AI: summarize this page faithfully.",
 			want:    false,

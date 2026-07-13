@@ -1,20 +1,11 @@
 package engine
 
-// metadata.go — Unified <meta> tag extractor. Walks every <meta> tag once,
-// extracts the attributes we care about (name/property/http-equiv/itemprop +
-// content), then resolves a priority chain per Result field. Companion to
-// ldjson_metadata.go: JSON-LD runs first with unconditional overwrite;
-// applyMetadata fills the remaining gaps so the long tail of conventions
-// (OpenGraph, article:*, Dublin Core, classic <meta name>, citation_author)
-// still reaches the Result.
-
 import (
 	"html"
 	"regexp"
 	"strings"
 )
 
-// Metadata holds the resolved per-field winners from a single HTML pass.
 type Metadata struct {
 	Author        string
 	PublishedDate string
@@ -32,16 +23,12 @@ var (
 	htmlLangRE = regexp.MustCompile(`(?is)<html\b[^>]*?\blang\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))`)
 )
 
-// ExtractMetadata walks every <meta> tag once and resolves the per-field
-// priority chains documented in the user story.
 func ExtractMetadata(rawHTML string) Metadata {
 	var m Metadata
 	if rawHTML == "" {
 		return m
 	}
 
-	// Per-source slot collectors. Multi-value (authors) accumulate; the rest
-	// keep the first non-empty value to mirror "first wins within a tier".
 	var (
 		ogDesc, ogImage, ogLocale, ogType        string
 		twitterImage                             string
@@ -172,7 +159,6 @@ func ExtractMetadata(rawHTML string) Metadata {
 		}
 	}
 
-	// Author priority: article:author > name=author > DC.creator > citation_author.
 	switch {
 	case len(artAuthors) > 0:
 		m.Author = strings.Join(artAuthors, "; ")
@@ -184,7 +170,6 @@ func ExtractMetadata(rawHTML string) Metadata {
 		m.Author = strings.Join(citationAuthors, "; ")
 	}
 
-	// PublishedDate: article:published_time > DC.date > itemprop=datePublished.
 	switch {
 	case artPublished != "":
 		m.PublishedDate = artPublished
@@ -194,7 +179,6 @@ func ExtractMetadata(rawHTML string) Metadata {
 		m.PublishedDate = itemPropDate
 	}
 
-	// Language: og:locale > http-equiv=content-language > DC.language > <html lang>.
 	switch {
 	case ogLocale != "":
 		m.Language = ogLocale
@@ -215,7 +199,6 @@ func ExtractMetadata(rawHTML string) Metadata {
 		}
 	}
 
-	// Section: article:section > DC.subject.
 	switch {
 	case artSection != "":
 		m.Section = artSection
@@ -223,7 +206,6 @@ func ExtractMetadata(rawHTML string) Metadata {
 		m.Section = dcSubject
 	}
 
-	// Description: og:description > name=description > DC.description.
 	switch {
 	case ogDesc != "":
 		m.Description = ogDesc
@@ -233,7 +215,6 @@ func ExtractMetadata(rawHTML string) Metadata {
 		m.Description = dcDescription
 	}
 
-	// ImageURL: og:image > twitter:image.
 	switch {
 	case ogImage != "":
 		m.ImageURL = ogImage
@@ -243,7 +224,6 @@ func ExtractMetadata(rawHTML string) Metadata {
 
 	m.OGType = ogType
 
-	// Keywords: name=keywords > DC.subject.
 	switch {
 	case nameKeywords != "":
 		m.Keywords = nameKeywords
@@ -254,12 +234,6 @@ func ExtractMetadata(rawHTML string) Metadata {
 	return m
 }
 
-// applyMetadata fills Result fields ONLY when currently empty. This preserves
-// applyLDJSONMetadata's earlier unconditional-overwrite priority — JSON-LD
-// values stay; everything else gets backfilled from the unified pass.
-//
-// For Author, we mirror applyMetaAuthors' idempotent "**Authors:** …\n\n"
-// content prepend so downstream Markdown still surfaces the byline up top.
 func applyMetadata(result *Result, m Metadata) {
 	if result == nil {
 		return

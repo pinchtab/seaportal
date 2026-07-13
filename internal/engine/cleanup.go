@@ -6,19 +6,10 @@ import (
 )
 
 var (
-	cdataBareRE   = regexp.MustCompile(`(?s)<!\\?\[CDATA\\?\[(.*?)\\?\]\\?\]>`)
-	cdataEntityRE = regexp.MustCompile(`(?s)&lt;!\\?\[CDATA\\?\[(.*?)\\?\]\\?\]&gt;`)
-	// regression: wikidata-edit-property-pencil-leak — Wikipedia infobox edit
-	// pencils render as image-only links to Wikidata Q*#P* anchors. They're
-	// chrome, not content, and appear identically across every language
-	// edition (de/es/zh/ar/ru). URL-pattern match so the rule is cross-cutting,
-	// not site-specific.
+	cdataBareRE            = regexp.MustCompile(`(?s)<!\\?\[CDATA\\?\[(.*?)\\?\]\\?\]>`)
+	cdataEntityRE          = regexp.MustCompile(`(?s)&lt;!\\?\[CDATA\\?\[(.*?)\\?\]\\?\]&gt;`)
 	wikidataEditPropertyRE = regexp.MustCompile(`\[!\[[^\]]*\]\([^)]*\)\]\(https?://(?:www\.)?wikidata\.org/wiki/Q\d+#P\d+(?:\s+"[^"]*")?\)`)
-	// regression: wikidata-edit-property-pencil-leak — MediaWiki section-edit
-	// anchors (`?action=edit`, `?veaction=edit`) render as text links like
-	// `[edit](...)`/`[تعديل](...)` and are pure chrome on every MediaWiki
-	// instance, not just Wikipedia.
-	mediaWikiEditLinkRE = regexp.MustCompile(`\[[^\]]*\]\(https?://[^)\s]*[?&](?:ve)?action=edit[^)]*\)`)
+	mediaWikiEditLinkRE    = regexp.MustCompile(`\[[^\]]*\]\(https?://[^)\s]*[?&](?:ve)?action=edit[^)]*\)`)
 )
 
 func CleanupMarkdown(md string) string {

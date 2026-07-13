@@ -77,9 +77,6 @@ func TestRetry_503WithoutRetryAfter(t *testing.T) {
 	if len(waitTimes) != 2 {
 		t.Fatalf("expected 2 retry wait events, got %d", len(waitTimes))
 	}
-	// Exponential backoff: second wait should be larger than first (allowing jitter +/-25%).
-	// With RetryBackoffBase=5ms: first base = 5ms, second base = 10ms.
-	// Minimum second = 7.5ms, max first = 6.25ms.
 	if waitTimes[1] <= waitTimes[0] {
 		t.Errorf("expected exponential growth, got waits %v then %v", waitTimes[0], waitTimes[1])
 	}
@@ -107,7 +104,7 @@ func TestRetry_503ExhaustedReportsError(t *testing.T) {
 	if result.Error == "" && !result.IsBlocked && result.StatusCode != http.StatusServiceUnavailable {
 		t.Errorf("expected error or 503 status surfaced, got status=%d error=%q", result.StatusCode, result.Error)
 	}
-	if attempts != 3 { // initial + 2 retries
+	if attempts != 3 {
 		t.Errorf("server saw %d requests, want 3", attempts)
 	}
 }
@@ -131,7 +128,7 @@ func TestRetry_CLIFlagsRespectMaxRetries(t *testing.T) {
 	if result.RetryCount > 1 {
 		t.Errorf("RetryCount = %d, want <= 1", result.RetryCount)
 	}
-	if attempts > 2 { // initial + at most 1 retry
+	if attempts > 2 {
 		t.Errorf("server saw %d requests, want <= 2", attempts)
 	}
 }

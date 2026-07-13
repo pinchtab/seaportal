@@ -12,10 +12,6 @@ func loadAuthWallFixture(t *testing.T, name string) string {
 	return loadTestdataFixture(t, name)
 }
 
-// loadTestdataFixture reads a fixture from testdata/, searching the bare
-// path first and then the known class subfolders. Lets bare-name callsites
-// keep working after the 2026-05-17 reorg moved real-world fixtures into
-// testdata/{static,ssr,dynamic,hydrated,blocked,multilingual,...}/.
 func loadTestdataFixture(t *testing.T, name string) string {
 	t.Helper()
 	base := filepath.Join("..", "..", "testdata")
@@ -134,11 +130,6 @@ func TestClassifyPage_Hydrated(t *testing.T) {
 }
 
 func TestClassifyPage_Dynamic(t *testing.T) {
-	// regression: classifier-round-2-fallback — `dynamic` now requires an
-	// actual positive signal (a SPA signal OR confidence < 50). Without
-	// either, the medium-confidence fallback prefers `static` over the
-	// misleading-personalization `dynamic` label. Test gives the SPA
-	// signal explicitly so the dynamic branch still fires.
 	result := Result{
 		Confidence:     55,
 		HeadingCount:   1,
@@ -376,12 +367,6 @@ func TestClassifyPage_LinkedInAuthWall(t *testing.T) {
 }
 
 func TestClassifyPage_LinkedInPulsePublic(t *testing.T) {
-	// After the host-keyed suppression list was removed from authwall.go,
-	// this synthetic fixture (5 distinct CTAs, paragraphCount<3, Length<1500,
-	// no real article prose) is indistinguishable from a logged-out wall
-	// using purely generic content signals. The legacy guarantee relied on
-	// a per-host allow-list of paths (/pulse/, /jobs/, /news/, …) which has
-	// been deleted on principle. Re-adding hostnames is forbidden.
 	t.Skip("accepted regression: /pulse/ CTA-dense synthetic page cannot be told apart from an auth wall without host knowledge after the generic refactor")
 	result := Result{
 		URL:            "https://www.linkedin.com/pulse/some-article/",
@@ -415,7 +400,6 @@ func TestDetectAuthWall_NonAuthWallHost(t *testing.T) {
 }
 
 func TestDetectAuthWall_LinkedInHome(t *testing.T) {
-	// Fixture captured via `./seaportal --json https://www.linkedin.com/`.
 	content := loadAuthWallFixture(t, "linkedin-loggedout.html")
 	result := Result{
 		URL:            "https://www.linkedin.com/",
@@ -621,17 +605,7 @@ func TestDetectAuthWallByContent(t *testing.T) {
 	}
 }
 
-// regression: classifier-accuracy-baseline-2026-05-17
-//
-// Locks in the corpus-wide accuracy + per-class F1 floor established by
-// PR #classifier-accuracy-fix. Today's measured numbers (on a 36-fixture
-// corpus) are accuracy=1.000 and every class F1=1.000; we assert a more
-// conservative floor (accuracy >= 0.85, every class F1 >= 0.5) so future
-// threshold tweaks have headroom to fluctuate without flapping CI, while
-// still catching any genuine regression.
 func TestClassifier_AccuracyOnCorpus(t *testing.T) {
-	// Runs FromHTML over the whole eval corpus, which includes the multi-MB
-	// wikipedia-latin / github-awesome fixtures; under -race that is ~190s.
 	skipHeavyFixture(t)
 	corpusPath := filepath.Join("..", "..", "tests", "eval", "corpus.yaml")
 	entries, err := LoadCorpus(corpusPath)
@@ -644,7 +618,6 @@ func TestClassifier_AccuracyOnCorpus(t *testing.T) {
 
 	repoRoot := filepath.Join("..", "..")
 
-	// matrix[expected][predicted] = count
 	matrix := make(map[string]map[string]int)
 	add := func(exp, pred string) {
 		if _, ok := matrix[exp]; !ok {
@@ -692,8 +665,6 @@ func TestClassifier_AccuracyOnCorpus(t *testing.T) {
 			accuracy, minAccuracy, correct, total)
 	}
 
-	// Per-class F1: compute over the union of expected rows + predicted
-	// columns. A class with zero support is reported as N/A and skipped.
 	classes := make(map[string]bool)
 	for exp, row := range matrix {
 		classes[exp] = true
@@ -720,7 +691,7 @@ func TestClassifier_AccuracyOnCorpus(t *testing.T) {
 		}
 		support := tp + fn
 		if support == 0 {
-			continue // N/A: no labelled fixtures for this class
+			continue
 		}
 		var precision, recall, f1 float64
 		if tp+fp > 0 {
@@ -738,9 +709,6 @@ func TestClassifier_AccuracyOnCorpus(t *testing.T) {
 		}
 	}
 
-	// Blocked class must stay perfect — it's the guardrail for the
-	// auth-wall/bot-detection escalation path, and there is no reason a
-	// threshold change in classify.go should ever affect it.
 	if bRow, ok := matrix["blocked"]; ok {
 		tp := bRow["blocked"]
 		support := 0
@@ -766,10 +734,6 @@ func TestDetectAuthWall_LinkedInWithUserContent(t *testing.T) {
 	}
 }
 
-// regression: classifier-round-2-fallback — exercises the new
-// spa-bootstrap-with-real-content branch. A page that advertises a SPA
-// root + noscript-warning but renders substantive HTML up front must
-// downgrade to PageHydrated so callers extract instead of escalating.
 func TestClassifier_SPAWithRealContent(t *testing.T) {
 	result := Result{
 		IsSPA:          true,
@@ -791,10 +755,6 @@ func TestClassifier_SPAWithRealContent(t *testing.T) {
 	}
 }
 
-// regression: classifier-round-2-fallback — the medium-confidence default
-// branch must NOT label every unmatched page as `dynamic`. Without SPA
-// signals and with healthy confidence + substantive content, the fallback
-// is now `static` (best-effort), not the misleading `dynamic`.
 func TestClassifier_DynamicFallback_RequiresSignal(t *testing.T) {
 	result := Result{
 		Confidence:     60,
@@ -817,11 +777,6 @@ func TestClassifier_DynamicFallback_RequiresSignal(t *testing.T) {
 	}
 }
 
-// contains() helper lives in validate_test.go (same package).
-
-// regression: ALP-039 — a client-rendered shell whose "enable JavaScript"
-// warning sits OUTSIDE <noscript> (app.diagrams.net) classified as
-// high-confidence static and skipped the browser hand-off.
 func TestClassifyPage_JSShellContent(t *testing.T) {
 	diagramsShaped := Result{
 		URL:          "https://app.diagrams.net/",
@@ -896,7 +851,6 @@ func TestClassifyPage_JSShellNegatives(t *testing.T) {
 		t.Error("long article about JavaScript: expected browserRecommended=false")
 	}
 
-	// thehindu-shaped: short, mentions "loading..." but has real paragraph prose.
 	thinWithProse := Result{
 		URL:            "https://x.test/news",
 		Content:        "Top stories loading... Meanwhile the council approved the measure yesterday. Officials said the review continues.",
@@ -911,7 +865,6 @@ func TestClassifyPage_JSShellNegatives(t *testing.T) {
 			profile.Class, profile.Reasons)
 	}
 
-	// article-og-full-shaped: short static page without any shell phrases.
 	shortStatic := Result{
 		URL:            "https://x.test/article",
 		Content:        "OG Demo. Body content with a real sentence of article prose.",

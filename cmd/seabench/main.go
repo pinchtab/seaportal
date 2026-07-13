@@ -1,14 +1,3 @@
-// Command seabench is the SeaPortal benchmark / evaluation harness.
-//
-// The first subcommand is `eval`: run the corpus at tests/eval/corpus.yaml
-// through four in-process extractors (seaportal, go-readability standalone,
-// html-to-markdown standalone, strip-tags baseline) and emit a Markdown
-// report with per-extractor precision / recall / F1 plus machine-independent
-// time ratios relative to the strip-tags baseline.
-//
-// All extractors run in-process — no subprocesses, no network, no LLM. The
-// scoring signal comes entirely from must_include / must_exclude substring
-// lists declared in the corpus YAML.
 package main
 
 import (

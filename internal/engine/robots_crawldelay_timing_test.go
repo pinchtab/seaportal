@@ -8,14 +8,6 @@ import (
 	"github.com/pinchtab/seaportal/internal/testserver/fixture"
 )
 
-// regression: robots-crawl-delay-timing
-//
-// Locks the wall-clock semantics of crawl-delay enforcement end-to-end.
-// `extract.go` reads the parsed URL's host[:port] (not bare hostname) and
-// threads it through `CrawlDelayCache`, so non-default-port targets get
-// real delay enforcement. This test fires two requests against an httptest
-// server publishing `Crawl-delay: 1` and asserts the gap is within
-// [0.9s, 1.4s] — the parsed delay with generous CI jitter tolerance.
 func TestRobotsCrawlDelay_GapBetweenRequests(t *testing.T) {
 	if testing.Short() {
 		t.Skip("asserts a real ~1s crawl-delay gap; runs in the full lane (./dev test full)")

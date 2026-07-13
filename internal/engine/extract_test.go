@@ -348,8 +348,6 @@ func TestFromHTML_ReadabilityErrorClassified(t *testing.T) {
 }
 
 func TestExtract_LanguageFallback(t *testing.T) {
-	// No <html lang>, no og:locale, no Content-Language, no JSON-LD → the
-	// stopword fallback must populate Result.Language from the prose.
 	html := `<!DOCTYPE html>
 <html>
 <head><title>Sample article</title></head>
@@ -378,8 +376,6 @@ and fonts which need to verify that every glyph is reachable.</p>
 	}
 }
 
-// ALP-036: JSON/XML bodies must pass through verbatim. The HTML→markdown path
-// escapes `_`/`[`, turning "node_id" into the invalid JSON escape "node\_id".
 func TestFromURL_JSONPassthroughUnescaped(t *testing.T) {
 	body := `{"node_id":"R_kgDONaN_id","full_name":"pinchtab/seaportal","key_a":"v_b"}`
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -400,7 +396,6 @@ func TestFromURL_JSONPassthroughUnescaped(t *testing.T) {
 	if result.Content != body {
 		t.Errorf("JSON not passed through verbatim:\n got: %q\nwant: %q", result.Content, body)
 	}
-	// The body must still parse as JSON (no invalid \_ escapes).
 	var v map[string]any
 	if err := json.Unmarshal([]byte(result.Content), &v); err != nil {
 		t.Errorf("extracted JSON does not round-trip: %v", err)
@@ -432,8 +427,6 @@ func TestFromURL_XMLPassthroughUnescaped(t *testing.T) {
 	}
 }
 
-// XHTML is HTML and must keep flowing through the readability/markdown path,
-// not the raw JSON/XML branch.
 func TestFromURL_XHTMLStillHTML(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/xhtml+xml")
@@ -448,9 +441,6 @@ func TestFromURL_XHTMLStillHTML(t *testing.T) {
 	}
 }
 
-// regression: ALP-038 — binary responses (image/*, octet-stream) fell through
-// into readability/markdown, which parses binary bytes as HTML and stalls for
-// minutes. The gate must run on the default path (no ContentTypePreflight).
 func TestFromURL_BinaryContentSkippedFast(t *testing.T) {
 	binaryBody := make([]byte, 128*1024)
 	for i := range binaryBody {
@@ -486,11 +476,9 @@ func TestFromURL_BinaryContentSkippedFast(t *testing.T) {
 }
 
 func TestSleepCtx(t *testing.T) {
-	// Completes normally when the context stays alive.
 	if err := sleepCtx(context.Background(), time.Millisecond); err != nil {
 		t.Errorf("sleepCtx(alive) = %v, want nil", err)
 	}
-	// Returns the context error promptly when already cancelled.
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	start := time.Now()
@@ -502,11 +490,6 @@ func TestSleepCtx(t *testing.T) {
 	}
 }
 
-// ALP-043: a retry backoff wait must be interruptible by the request context —
-// an overall deadline / SIGINT should preempt an in-flight retry sleep instead
-// of blocking for the full backoff. Uses a Retry-After of 1s (a deterministic
-// wait, unaffected by Options.RetryBackoffBase) that a 100ms deadline must
-// cut short.
 func TestFromURL_RetrySleepInterruptedByContext(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Retry-After", "1")
@@ -529,8 +512,6 @@ func TestFromURL_RetrySleepInterruptedByContext(t *testing.T) {
 	}
 }
 
-// ALP-044: a supplied/loaded schema with no fields (commonly the omitted
-// top-level "fields" wrapper) must warn instead of silently producing nothing.
 func TestFromURL_SchemaEmptyFieldsWarns(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(`<html><body><h1>Title</h1><p>Body content here for extraction.</p></body></html>`))
@@ -545,7 +526,6 @@ func TestFromURL_SchemaEmptyFieldsWarns(t *testing.T) {
 		t.Errorf("empty schema: result.Schema = %v, want empty", empty.Schema)
 	}
 
-	// A valid schema still populates result.Schema with no spurious warning.
 	valid := FromURLWithOptions(server.URL, Options{Schema: &Schema{Fields: map[string]FieldSpec{"title": {Selector: "h1"}}}})
 	if containsWarning(valid.Warnings, "no fields") {
 		t.Errorf("valid schema: unexpected 'no fields' warning: %v", valid.Warnings)
@@ -555,9 +535,6 @@ func TestFromURL_SchemaEmptyFieldsWarns(t *testing.T) {
 	}
 }
 
-// regression: ALP-046 — the shared waitAndRetry tail must enforce
-// totalRetryTimeout: a Retry-After larger than the remaining budget stops the
-// retry loop immediately instead of sleeping.
 func TestRetryTotalBudgetEnforced(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Retry-After", "2")
@@ -590,12 +567,9 @@ func TestRetryTotalBudgetEnforced(t *testing.T) {
 	}
 }
 
-// ALP-047: a per-domain DomainRetry{MaxRetryWait} override must reach the retry
-// stage and clamp the backoff. Without the fix the stage defaulted to 60s and
-// ignored the override, so backoff grew exponentially past the cap.
 func TestFromURL_DomainMaxRetryWaitClampsBackoff(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusServiceUnavailable) // 503, no Retry-After → exponential backoff
+		w.WriteHeader(http.StatusServiceUnavailable)
 	}))
 	defer server.Close()
 
@@ -616,8 +590,6 @@ func TestFromURL_DomainMaxRetryWaitClampsBackoff(t *testing.T) {
 	if len(waits) < 2 {
 		t.Fatalf("expected multiple retry waits, got %d: %v", len(waits), waits)
 	}
-	// Clamped backoff is at most capWait × addJitter's 1.25 ceiling; the
-	// exponential base would otherwise reach ~20ms by the third attempt.
 	limit := capWait*5/4 + time.Millisecond
 	for i, w := range waits {
 		if w > limit {
@@ -626,8 +598,6 @@ func TestFromURL_DomainMaxRetryWaitClampsBackoff(t *testing.T) {
 	}
 }
 
-// T14: FromURLContext is the ctx-first primary entry point. Its ctx argument
-// bounds the fetch and takes precedence over the deprecated Options.Context.
 func TestFromURLContext_CtxTakesPrecedence(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Retry-After", "1")
@@ -639,7 +609,6 @@ func TestFromURLContext_CtxTakesPrecedence(t *testing.T) {
 	defer cancel()
 
 	start := time.Now()
-	// opts.Context is a live Background ctx; the canceled argument must win.
 	result := FromURLContext(ctx, server.URL, Options{Context: context.Background(), MaxRetries: 3})
 	if elapsed := time.Since(start); elapsed > 800*time.Millisecond {
 		t.Errorf("ctx argument did not bound the fetch: elapsed %s", elapsed)
@@ -648,7 +617,6 @@ func TestFromURLContext_CtxTakesPrecedence(t *testing.T) {
 		t.Errorf("result.Err() = %v, want context.DeadlineExceeded in the chain", result.Err())
 	}
 
-	// nil ctx degrades to Background — same behaviour as FromURLWithOptions.
 	okSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("<html><body><h1>T</h1><p>body text for extraction</p></body></html>"))
 	}))

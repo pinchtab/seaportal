@@ -42,7 +42,6 @@ func TestConvertCitations_NumbersInDocumentOrder(t *testing.T) {
 	if !strings.Contains(got, want) {
 		t.Fatalf("want %q in output; got:\n%s", want, got)
 	}
-	// Reference order must match.
 	idx1 := strings.Index(got, "1. <https://1.example>")
 	idx2 := strings.Index(got, "2. <https://2.example>")
 	idx3 := strings.Index(got, "3. <https://3.example>")
@@ -111,10 +110,7 @@ func TestConvertCitations_HandlesNestedEmphasis(t *testing.T) {
 	}
 }
 
-// --- Integration ---
-
 func citationsProse() string {
-	// Long enough prose to ensure readability picks the article.
 	s := "This is a sufficiently long paragraph of prose to satisfy the readability extractor and ensure the article body is detected as the primary content of the page. "
 	return strings.Repeat(s, 6)
 }

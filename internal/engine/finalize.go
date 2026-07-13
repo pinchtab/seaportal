@@ -1,17 +1,5 @@
 package engine
 
-// finalize.go — the shared result-finalization tails that were previously
-// copy-pasted across the PDF / raw / markdown / HTML branches of
-// FromURLWithOptions: the transport/telemetry stamp, the post-content
-// pipeline (link retention → dedupe → truncate → chunk), and the quality
-// metrics refresh. Per-branch divergence (TimeMs/FetchTimeMs semantics, the
-// markdown branch's Link header handling, which stages run) stays at the
-// call sites.
-
-// mergePreWarnings prepends fetch-phase warnings onto result.Warnings.
-// Prepending keeps fetch warnings (cache write, charset decode) ahead of
-// extraction warnings (selectors, schema) in stable order. Safe to call
-// with a nil or empty pre slice — no-op in that case.
 func mergePreWarnings(result *Result, pre []string) {
 	if len(pre) == 0 {
 		return
@@ -26,9 +14,6 @@ func mergePreWarnings(result *Result, pre []string) {
 	result.Warnings = merged
 }
 
-// finalizeTransport stamps the shared transport/telemetry tail onto result:
-// status, content length, timings, retry counters, redirect info, response
-// headers, trace/CDN fingerprints, proxy hops, and the fetch-phase warnings.
 func finalizeTransport(result *Result, opts Options, st *fetchState, contentLength int64) {
 	resp := st.resp
 	result.StatusCode = resp.StatusCode
@@ -56,19 +41,11 @@ func finalizeTransport(result *Result, opts Options, st *fetchState, contentLeng
 	mergePreWarnings(result, st.preWarnings)
 }
 
-// postProcessConfig selects which optional stages of the post-content
-// pipeline run for a content branch: PDF runs link retention only, raw
-// passthrough runs neither, negotiated markdown runs both.
 type postProcessConfig struct {
 	linkRetention bool
 	dedupe        bool
 }
 
-// applyContentPostProcessing runs the shared post-content tail on content —
-// link retention, dedupe, MaxTokens truncation, chunking, per cfg — recording
-// side effects (dedupe stats, Truncated, Chunks) on result, and returns the
-// transformed content. The HTML branch (fromHTMLInternal) calls the
-// individual stages instead because other logic is interleaved between them.
 func applyContentPostProcessing(content string, result *Result, opts Options, cfg postProcessConfig) string {
 	if cfg.linkRetention {
 		content, _ = applyLinkRetentionStage(content, opts)
@@ -81,9 +58,6 @@ func applyContentPostProcessing(content string, result *Result, opts Options, cf
 	return content
 }
 
-// applyLinkRetentionStage applies the resolved link-retention mode to
-// content. Citations demote "all" to footer form. Reports whether a rewrite
-// actually ran (mode "all", or empty content, leaves content untouched).
 func applyLinkRetentionStage(content string, opts Options) (string, bool) {
 	if content == "" {
 		return content, false
@@ -98,9 +72,6 @@ func applyLinkRetentionStage(content string, opts Options) (string, bool) {
 	return applyLinkRetention(content, mode), true
 }
 
-// applyDedupeStage runs block dedupe over content when opts.Dedupe is set,
-// recording the dedupe statistics on result. Returns the deduped content and
-// whether dedupe ran.
 func applyDedupeStage(content string, result *Result, opts Options) (string, bool) {
 	if !opts.Dedupe || content == "" {
 		return content, false
@@ -120,8 +91,6 @@ func applyDedupeStage(content string, result *Result, opts Options) (string, boo
 	return dedupeResult.Content, true
 }
 
-// applyTruncateStage truncates content to opts.MaxTokens at a paragraph
-// boundary, setting result.Truncated when a cut happened.
 func applyTruncateStage(content string, result *Result, opts Options) (string, bool) {
 	if opts.MaxTokens <= 0 {
 		return content, false
@@ -134,16 +103,12 @@ func applyTruncateStage(content string, result *Result, opts Options) (string, b
 	return truncated, true
 }
 
-// applyChunkStage populates result.Chunks when chunking is enabled.
 func applyChunkStage(content string, result *Result, opts Options) {
 	if opts.Chunk.Strategy != ChunkOff {
 		result.Chunks = ChunkMarkdown(content, opts.Chunk)
 	}
 }
 
-// refreshContentMetrics recomputes the quality score and semantic
-// fingerprint from result.Content. Call after any stage that replaces or
-// rewrites the content.
 func refreshContentMetrics(result *Result) {
 	result.QualityInfo = ComputeQuality(result.Content)
 	result.Quality = result.QualityInfo.Score

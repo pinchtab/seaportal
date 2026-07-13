@@ -1,12 +1,3 @@
-// Package mcp implements a minimal Model Context Protocol (MCP) server over
-// JSON-RPC 2.0 line-delimited stdio. It is intentionally tiny: just enough of
-// the protocol to satisfy "initialize", "tools/list" and "tools/call" so that
-// editors (Claude Code / Cursor / VS Code) can drive seaportal's library
-// functions as tools.
-//
-// One JSON-RPC request per stdin line; one JSON-RPC response per stdout line.
-// Notifications (no id) produce no response. Requests are handled serially
-// (V1 — no concurrency).
 package mcp
 
 import (
@@ -19,10 +10,8 @@ import (
 	"sync"
 )
 
-// ProtocolVersion is the MCP spec revision this server advertises.
 const ProtocolVersion = "2024-11-05"
 
-// Standard JSON-RPC 2.0 error codes.
 const (
 	codeParseError     = -32700
 	codeMethodNotFound = -32601
@@ -30,8 +19,6 @@ const (
 	codeInternalError  = -32603
 )
 
-// ToolHandler is invoked when a client calls a registered tool. The returned
-// string is wrapped in `{content: [{type:"text", text: ...}]}` for the client.
 type ToolHandler func(ctx context.Context, args map[string]interface{}) (string, error)
 
 type tool struct {
@@ -41,17 +28,14 @@ type tool struct {
 	handler     ToolHandler
 }
 
-// Server is a minimal MCP server. Construct with NewServer, register tools,
-// then call ServeStdio.
 type Server struct {
 	mu      sync.Mutex
 	tools   map[string]tool
-	ordered []string // preserves registration order for tools/list
+	ordered []string
 	name    string
 	version string
 }
 
-// NewServer returns an empty MCP server with default identity.
 func NewServer() *Server {
 	return &Server{
 		tools:   map[string]tool{},
@@ -60,7 +44,6 @@ func NewServer() *Server {
 	}
 }
 
-// SetIdentity overrides the serverInfo reported during initialize.
 func (s *Server) SetIdentity(name, version string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -72,8 +55,6 @@ func (s *Server) SetIdentity(name, version string) {
 	}
 }
 
-// RegisterTool adds a tool to the registry. Re-registering the same name
-// overwrites the previous entry.
 func (s *Server) RegisterTool(name, description string, inputSchema map[string]interface{}, handler ToolHandler) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -88,7 +69,6 @@ func (s *Server) RegisterTool(name, description string, inputSchema map[string]i
 	}
 }
 
-// ServeStdio runs the server over the process's stdin/stdout.
 func (s *Server) ServeStdio(ctx context.Context) error {
 	return s.serve(ctx, os.Stdin, os.Stdout)
 }
@@ -114,18 +94,11 @@ type rpcResponse struct {
 
 var nullID = json.RawMessage("null")
 
-// serve runs the read/respond loop. Exposed (lowercase) for tests via pipes.
 func (s *Server) serve(ctx context.Context, in io.Reader, out io.Writer) error {
 	scanner := bufio.NewScanner(in)
-	// 16 MB max line — extracted Markdown / sitemap JSON can be large.
 	scanner.Buffer(make([]byte, 1<<20), 1<<24)
 	enc := json.NewEncoder(out)
 	for scanner.Scan() {
-		// Cancellation check per iteration so a cancelled ctx (client
-		// shutdown, SIGINT) stops the server instead of handling more
-		// requests. A read blocked in scanner.Scan still has to return
-		// first — stdio has no ctx-aware read — but no new request is
-		// dispatched after cancellation.
 		if err := ctx.Err(); err != nil {
 			return err
 		}
@@ -158,15 +131,10 @@ func okResponse(id json.RawMessage, result interface{}) *rpcResponse {
 	return &rpcResponse{JSONRPC: "2.0", ID: id, Result: result}
 }
 
-// isNotification reports whether the raw id field marks the request as a
-// JSON-RPC notification (absent id). JSON `null` counts as a regular request
-// per the spec, though responses to it are still discouraged.
 func isNotification(id json.RawMessage) bool {
 	return len(id) == 0
 }
 
-// handleRequest parses one line and returns the response envelope (or nil for
-// notifications). It never panics: handler panics are recovered.
 func (s *Server) handleRequest(ctx context.Context, line []byte) *rpcResponse {
 	var req rpcRequest
 	if err := json.Unmarshal(line, &req); err != nil {
@@ -190,7 +158,6 @@ func (s *Server) handleRequest(ctx context.Context, line []byte) *rpcResponse {
 		})
 
 	case "notifications/initialized", "initialized":
-		// MCP clients typically send this notification after initialize.
 		return nil
 
 	case "tools/list":
@@ -240,8 +207,6 @@ func (s *Server) handleRequest(ctx context.Context, line []byte) *rpcResponse {
 			return errorResponse(req.ID, codeInternalError, err.Error())
 		}
 		if err != nil {
-			// Return a tool-level error as a successful result with isError=true,
-			// per the MCP spec. JSON-RPC error reserved for protocol failures.
 			return okResponse(req.ID, map[string]interface{}{
 				"content": []map[string]interface{}{
 					{"type": "text", "text": err.Error()},
@@ -263,8 +228,6 @@ func (s *Server) handleRequest(ctx context.Context, line []byte) *rpcResponse {
 	}
 }
 
-// callHandler invokes a tool handler, converting panics into a flagged error
-// so the server stays alive and the caller can map them to JSON-RPC -32603.
 func (s *Server) callHandler(ctx context.Context, h ToolHandler, args map[string]interface{}) (out string, panicked bool, err error) {
 	defer func() {
 		if r := recover(); r != nil {

@@ -11,8 +11,6 @@ import (
 	"time"
 )
 
-// slowNoSitemapServer serves a sitemap-less site whose pages each take
-// pageDelay to respond, so an unbounded crawl would run for many seconds.
 func slowNoSitemapServer(t *testing.T, pages int, pageDelay time.Duration) *httptest.Server {
 	t.Helper()
 	mux := http.NewServeMux()
@@ -48,7 +46,7 @@ func TestScrapeSiteTimeoutBoundsWallClock(t *testing.T) {
 		BaseURL:  srv.URL,
 		MaxPages: 30,
 		Timeout:  timeout,
-		Security: allowInternalTestPolicy(), // httptest is loopback (T01)
+		Security: allowInternalTestPolicy(),
 	})
 	elapsed := time.Since(start)
 
@@ -58,17 +56,11 @@ func TestScrapeSiteTimeoutBoundsWallClock(t *testing.T) {
 	if res == nil {
 		t.Fatal("expected a result")
 	}
-	// Unbounded, discovery alone would need 40 × 300ms = 12s. Allow generous
-	// grace over the 700ms deadline to keep CI stable while still proving the
-	// overall bound holds.
 	if elapsed > 4*time.Second {
 		t.Errorf("scrape ran %v, want ~%v (+grace): timeout is not an overall deadline", elapsed, timeout)
 	}
 }
 
-// T21: cancelling the CALLER's context mid-fetch returns the partial result
-// alongside ctx.Err() instead of dropping the output. (The internal --timeout
-// budget elapsing stays a normal nil-error completion — asserted above.)
 func TestScrapeSiteCallerCancelReturnsPartialResult(t *testing.T) {
 	mux := http.NewServeMux()
 	srv := httptest.NewServer(mux)
@@ -86,7 +78,7 @@ func TestScrapeSiteCallerCancelReturnsPartialResult(t *testing.T) {
 			}
 			b.WriteString("</urlset>")
 			_, _ = w.Write([]byte(b.String()))
-		default: // slow pages (longer than the cancel delay) so the cancel lands mid-fetch
+		default:
 			time.Sleep(400 * time.Millisecond)
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			_, _ = w.Write([]byte(`<html><head><title>p</title></head><body><h1>p</h1><p>content</p></body></html>`))
@@ -95,7 +87,7 @@ func TestScrapeSiteCallerCancelReturnsPartialResult(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
-		time.Sleep(120 * time.Millisecond) // discovery is fast; land mid-fetch
+		time.Sleep(120 * time.Millisecond)
 		cancel()
 	}()
 
@@ -140,8 +132,8 @@ func TestScrapeSiteZeroTimeoutStillCompletes(t *testing.T) {
 	res, err := ScrapeSite(context.Background(), &ScrapeOptions{
 		BaseURL:  srv.URL,
 		MaxPages: 3,
-		Timeout:  0,                         // escape: no overall deadline; per-request default still applies
-		Security: allowInternalTestPolicy(), // httptest is loopback (T01)
+		Timeout:  0,
+		Security: allowInternalTestPolicy(),
 	})
 	if err != nil {
 		t.Fatalf("ScrapeSite: %v", err)

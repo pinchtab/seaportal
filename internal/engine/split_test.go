@@ -21,10 +21,8 @@ func TestSplitResultToFiles_PrefersChunks(t *testing.T) {
 			{Index: 2, Text: strings.Repeat("c", 100)},
 			{Index: 3, Text: strings.Repeat("d", 100)},
 		},
-		// Content present but should be ignored when Chunks exist.
 		Content: "should-not-be-used",
 	}
-	// Cap small enough that each chunk lands in its own file.
 	files, err := SplitResultToFiles(r, SplitConfig{Dir: dir, MaxBytes: 150})
 	if err != nil {
 		t.Fatalf("unexpected err: %v", err)
@@ -107,7 +105,6 @@ func TestSplitResultToFiles_HandlesEmptyContent(t *testing.T) {
 
 func TestSplitResultToFiles_WarnsOnOversizedFirstPara(t *testing.T) {
 	dir := t.TempDir()
-	// Capture stderr.
 	oldStderr := os.Stderr
 	rPipe, wPipe, _ := os.Pipe()
 	os.Stderr = wPipe
@@ -233,8 +230,6 @@ func TestSplitResultToFiles_MDFormat(t *testing.T) {
 	}
 }
 
-// ── Integration tests ──────────────────────────────────────────────
-
 func TestExtract_SplitOutFlagWritesFiles(t *testing.T) {
 	body := `<!doctype html><html><head><title>Long Doc</title></head><body><article>` +
 		`<h1>Long Doc</h1>`
@@ -253,9 +248,6 @@ func TestExtract_SplitOutFlagWritesFiles(t *testing.T) {
 	opts := Options{SplitOut: dir, SplitBytes: 800}
 	r := FromURLWithOptions(srv.URL, opts)
 
-	// The CLI is what calls SplitResultToFiles, but the integration test verifies
-	// the library wiring: when SplitOut is set on Options the caller is expected
-	// to invoke SplitResultToFiles. We invoke it directly to match the CLI path.
 	files, err := SplitResultToFiles(r, SplitConfig{Dir: opts.SplitOut, MaxBytes: opts.SplitBytes})
 	if err != nil {
 		t.Fatalf("split err: %v", err)
@@ -271,7 +263,6 @@ func TestExtract_SplitOutFlagWritesFiles(t *testing.T) {
 		if _, err := os.Stat(f.Path); err != nil {
 			t.Errorf("file missing: %s", f.Path)
 		}
-		// Verify under tempdir.
 		absDir, _ := filepath.Abs(dir)
 		if !strings.HasPrefix(f.Path, absDir) {
 			t.Errorf("file %s not under %s", f.Path, absDir)

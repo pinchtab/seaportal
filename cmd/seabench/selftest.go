@@ -1,24 +1,5 @@
 package main
 
-// selftest is the agent-scoreboard lane of seabench. It parses a JSONL
-// transcript produced by `tests/optimization/record.sh` (one line per
-// task step) and emits three headline numbers:
-//
-//   - completion_rate     = passed_tasks / total_tasks
-//   - avg_ops             = mean(steps_per_task)
-//   - escalation_correctness = correct_escalations / total_escalations
-//
-// where a task is "passed" if its final outcome is one of pass /
-// escalate / escalate-paywall AND, for the escalation cases, the task's
-// declared `expected_escalation` is `yes`. `expected_escalation` lives
-// inline in `tests/optimization/group-selftest.md` next to each task.
-//
-// No Claude API integration here. The subagent run is orchestrated by
-// the shell + seaportal-opt skill; this subcommand only consumes its
-// JSONL output. Default mode invokes `tests/optimization/selftest.sh`,
-// but `--input <path>` skips orchestration and replays an existing
-// JSONL — used by CI and by the unit tests.
-
 import (
 	"bufio"
 	"encoding/json"
@@ -33,9 +14,6 @@ import (
 	"time"
 )
 
-// SelftestStep is a single line of record.sh output. Fields that
-// record.sh might add later are tolerated by json.Unmarshal because we
-// ignore unknown keys (default behaviour).
 type SelftestStep struct {
 	TS      string `json:"ts"`
 	Step    string `json:"step"`
@@ -43,20 +21,17 @@ type SelftestStep struct {
 	Note    string `json:"note"`
 }
 
-// SelftestTask is one task's collapsed view: ordered steps + the
-// outcome we treat as "final" for scoring.
 type SelftestTask struct {
 	ID                  string         `json:"id"`
 	Steps               []SelftestStep `json:"steps"`
 	OpCount             int            `json:"op_count"`
 	FinalOutcome        string         `json:"final_outcome"`
-	ExpectedEscalation  string         `json:"expected_escalation"` // yes | no | unknown
+	ExpectedEscalation  string         `json:"expected_escalation"`
 	Passed              bool           `json:"passed"`
 	EscalationAttempted bool           `json:"escalation_attempted"`
 	EscalationCorrect   bool           `json:"escalation_correct"`
 }
 
-// SelftestMetrics is the three-number headline computed from tasks.
 type SelftestMetrics struct {
 	TotalTasks            int     `json:"total_tasks"`
 	PassedTasks           int     `json:"passed_tasks"`
@@ -68,19 +43,17 @@ type SelftestMetrics struct {
 	EscalationApplicable  bool    `json:"escalation_applicable"`
 }
 
-// SelftestDiff is the comparison against the most-recent prior run.
 type SelftestDiff struct {
 	PriorReport         string   `json:"prior_report,omitempty"`
 	CompletionRateDelta float64  `json:"completion_rate_delta"`
 	AvgOpsDelta         float64  `json:"avg_ops_delta"`
 	EscalationDelta     float64  `json:"escalation_correctness_delta"`
-	Regressed           []string `json:"regressed,omitempty"` // tasks that went pass→fail
-	Recovered           []string `json:"recovered,omitempty"` // tasks that went fail→pass
+	Regressed           []string `json:"regressed,omitempty"`
+	Recovered           []string `json:"recovered,omitempty"`
 	NewTasks            []string `json:"new_tasks,omitempty"`
 	DroppedTasks        []string `json:"dropped_tasks,omitempty"`
 }
 
-// SelftestReport is the on-disk JSON shape for a selftest run.
 type SelftestReport struct {
 	Version    int             `json:"version"`
 	CapturedAt string          `json:"captured_at"`
@@ -119,8 +92,6 @@ func runSelftest(args []string) {
 
 	expected, gerr := loadExpectedEscalations(*groupPath)
 	if gerr != nil {
-		// Missing or unreadable group file is non-fatal: every task
-		// just gets expected=unknown and escalation metric becomes N/A.
 		fmt.Fprintf(os.Stderr, "selftest: %v (escalation correctness will be N/A)\n", gerr)
 		expected = map[string]string{}
 	}
@@ -161,10 +132,6 @@ func runSelftest(args []string) {
 		metrics.CompletionRate, metrics.AvgOps, formatEscalationRate(metrics))
 }
 
-// invokeSelftestScript runs tests/optimization/selftest.sh with a
-// pre-computed SEAPORTAL_REPORT_FILE pointing into the output dir so we
-// know exactly where to parse from afterwards. Returns "" if the script
-// exited 0 but produced no records (no subagent runtime available).
 func invokeSelftestScript(outputDir string) (string, error) {
 	if err := os.MkdirAll(outputDir, 0o755); err != nil {
 		return "", err
@@ -196,9 +163,6 @@ func invokeSelftestScript(outputDir string) (string, error) {
 	return jsonl, nil
 }
 
-// parseSelftestJSONL reads one JSON object per non-empty line and
-// returns the steps in input order. Tolerant of trailing blank lines
-// and of unknown fields (json.Unmarshal default).
 func parseSelftestJSONL(path string) ([]SelftestStep, error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -208,8 +172,6 @@ func parseSelftestJSONL(path string) ([]SelftestStep, error) {
 
 	var steps []SelftestStep
 	scanner := bufio.NewScanner(f)
-	// record.sh writes a single JSON object per line; bump the buffer so
-	// long `note` fields don't trip the default 64k limit.
 	scanner.Buffer(make([]byte, 64*1024), 4*1024*1024)
 	lineNo := 0
 	for scanner.Scan() {
@@ -230,11 +192,6 @@ func parseSelftestJSONL(path string) ([]SelftestStep, error) {
 	return steps, nil
 }
 
-// collapseSteps groups steps by task. A "task" is the dotted prefix of
-// the step id (e.g. "1.3" → task "1"). The final outcome of the task
-// is the outcome of its last recorded step; the op count is the
-// number of steps in the group (a proxy for seaportal invocations,
-// since the agent records one step per logical action).
 func collapseSteps(steps []SelftestStep, expected map[string]string) []SelftestTask {
 	groups := make(map[string][]SelftestStep)
 	order := make([]string, 0)
@@ -272,10 +229,6 @@ func collapseSteps(steps []SelftestStep, expected map[string]string) []SelftestT
 	return tasks
 }
 
-// taskIDForStep returns the task identifier for a step. In selftest the
-// whole step id IS the task id: `group-selftest.md` headers are written
-// as "1.N" and record.sh emits the same ids, with no sub-steps below
-// them — so we return the id verbatim (trimmed).
 func taskIDForStep(step string) string {
 	if step == "" {
 		return ""
@@ -283,24 +236,9 @@ func taskIDForStep(step string) string {
 	return strings.TrimSpace(step)
 }
 
-// scoreTask collapses the final outcome + expectation into the three
-// booleans the metrics layer needs.
-//
-//   - passed: task counted as a success
-//   - attempted: agent decided to escalate (denominator for correctness)
-//   - correct: agent escalated AND ground truth says it should have
-//
-// Outcomes:
-//   - pass                : success when expected_escalation is "no" or "unknown"
-//   - escalate            : success only when expected_escalation == "yes"
-//   - escalate-paywall    : success only when expected_escalation == "yes"
-//   - fail / anything else: not a success
 func scoreTask(final, expected string) (passed, attempted, correct bool) {
 	switch final {
 	case "pass":
-		// A `pass` when escalation was expected is still credit for the
-		// agent — extracting content from a hard page is the goal. But
-		// it doesn't count toward the escalation-correctness numerator.
 		passed = true
 	case "escalate", "escalate-paywall":
 		attempted = true
@@ -312,10 +250,6 @@ func scoreTask(final, expected string) (passed, attempted, correct bool) {
 	return
 }
 
-// computeSelftestMetrics rolls task-level booleans into the three
-// scoreboard numbers. Escalation correctness is N/A (zero) when no
-// task escalated; callers should use EscalationApplicable to decide
-// whether to render a number or "N/A".
 func computeSelftestMetrics(tasks []SelftestTask) SelftestMetrics {
 	m := SelftestMetrics{TotalTasks: len(tasks)}
 	if len(tasks) == 0 {
@@ -343,18 +277,11 @@ func computeSelftestMetrics(tasks []SelftestTask) SelftestMetrics {
 	return m
 }
 
-// expectedEscalationRe matches the inline metadata line in
-// group-selftest.md: `**Expected escalation:** yes|no` (case-insensitive
-// value). The most-recent preceding header `### 1.3 …` provides the
-// task id we attach the value to.
 var (
 	expectedEscalationRe = regexp.MustCompile(`(?i)^\s*\*\*Expected escalation:\*\*\s*(yes|no)\s*$`)
 	taskHeaderRe         = regexp.MustCompile(`^###\s+(\S+)\s+`)
 )
 
-// loadExpectedEscalations parses `tests/optimization/group-selftest.md`
-// and builds task_id → "yes"|"no". Unknown / missing values are simply
-// absent from the map; the metrics layer treats absent as "unknown".
 func loadExpectedEscalations(path string) (map[string]string, error) {
 	out := map[string]string{}
 	f, err := os.Open(path)
@@ -381,8 +308,6 @@ func loadExpectedEscalations(path string) (map[string]string, error) {
 	return out, scanner.Err()
 }
 
-// findPriorSelftest returns the most-recent prior selftest_*.json in
-// the output dir, parsed. Returns (nil, "") if none exists.
 func findPriorSelftest(outputDir string) (*SelftestReport, string) {
 	entries, err := os.ReadDir(outputDir)
 	if err != nil {
@@ -413,10 +338,6 @@ func findPriorSelftest(outputDir string) (*SelftestReport, string) {
 	return &r, path
 }
 
-// diffSelftest builds the diff envelope by comparing task-level Passed
-// flags between prior and current. Returns deltas + lists of
-// regressed/recovered/new/dropped task ids. Lists are sorted for
-// stable rendering.
 func diffSelftest(prior, current *SelftestReport, priorPath string) *SelftestDiff {
 	d := &SelftestDiff{
 		PriorReport:         priorPath,

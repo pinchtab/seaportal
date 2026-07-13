@@ -2,49 +2,25 @@ package engine
 
 import "testing"
 
-// TestClassifyPageAudit is a standing regression guard over the page classifier
-// and coarse content-type inference. It exercises a matrix of representative
-// page shapes and pins the observable outputs a caller (e.g. PinchTab) routes on
-// — pageClass, isSpa, outcome, decision, browserRecommended, and the coarse
-// contentType — so a future classifier change that silently flips a field turns
-// a row red instead of surfacing weeks later in a production scrape.
-//
-// HTML rows run the byte/HTML literal through the real extraction pipeline
-// (FromHTMLWithOptions) so Confidence/Length/heading+paragraph counts and SPA
-// signals are computed, not hand-set; transport rows (binary/PDF) seed the
-// Result the fetch path would produce, because the HTTP Content-Type — not any
-// HTML — is the classifier's real input there.
-//
-// The expected column encodes the corrected behaviour established by ALP-038
-// (binary content-type → unsupported), ALP-039 (JS-shell content → needs a
-// browser), and ALP-041 (structural content-type fallback). Adding a new page
-// shape is one row; a regression is a red row. No network, no new dependency —
-// it runs in the normal `go test ./...` path.
 type classifyAuditCase struct {
 	name string
 
-	// HTML fixture: when non-empty, run through the real extractor at url.
 	url  string
 	html string
 
-	// Transport fixture: when html is empty, seed stands in for a fetch the HTML
-	// pipeline never runs — the ResponseContentType/Error carry the real signal.
 	seed *Result
 
-	// Observable classifier outputs. A field flip fails the row.
-	wantClass      PageClass
-	wantIsSPA      bool
-	wantOutcome    ExtractionOutcome
-	wantDecision   BrowserDecision
-	wantBrowserRec bool
-	// Coarse classifyContentType output; asserted only for HTML rows ("" skips).
+	wantClass       PageClass
+	wantIsSPA       bool
+	wantOutcome     ExtractionOutcome
+	wantDecision    BrowserDecision
+	wantBrowserRec  bool
 	wantContentType string
 }
 
 func TestClassifyPageAudit(t *testing.T) {
 	cases := []classifyAuditCase{
 		{
-			// Static article with JSON-LD @type=Article and og:type=article.
 			name: "static-article-jsonld-og",
 			url:  "https://example.com/blog/sourdough",
 			html: `<!doctype html><html><head>
@@ -69,10 +45,6 @@ func TestClassifyPageAudit(t *testing.T) {
 			wantContentType: "article",
 		},
 		{
-			// Metadata-poor docs page (MDN-shaped): no JSON-LD, no og:type. The
-			// coarse type comes from the ALP-041 structural fallback (the /docs/
-			// URL segment), not from metadata — a regression there collapses it
-			// back to "page"/"unknown".
 			name: "metadata-poor-docs-mdn",
 			url:  "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map",
 			html: `<!doctype html><html><head>
@@ -94,30 +66,20 @@ func TestClassifyPageAudit(t *testing.T) {
 			wantContentType: "article",
 		},
 		{
-			// SPA shell that advertises a root element and a <noscript> warning
-			// (excalidraw-shaped): DetectSPA fires on ≥2 raw-HTML markers, so the
-			// page is spa/needs-browser with nothing to extract.
 			name: "spa-noscript-excalidraw",
 			url:  "https://excalidraw.com/",
 			html: `<!doctype html><html><head><title>Excalidraw</title></head><body>
 <div id="root"></div>
 <noscript>You need to enable JavaScript to run this app.</noscript>
 </body></html>`,
-			wantClass:      PageSPA,
-			wantIsSPA:      true,
-			wantOutcome:    OutcomeNeedsBrowser,
-			wantDecision:   DecisionBrowserNeeded,
-			wantBrowserRec: true,
-			// T07: with classification reading the extraction Result instead of
-			// raw HTML, an empty SPA shell (nothing extractable) is honestly
-			// "unknown" rather than "page".
+			wantClass:       PageSPA,
+			wantIsSPA:       true,
+			wantOutcome:     OutcomeNeedsBrowser,
+			wantDecision:    DecisionBrowserNeeded,
+			wantBrowserRec:  true,
 			wantContentType: "unknown",
 		},
 		{
-			// JS-shell whose "enable JavaScript" warning sits in regular DOM, not
-			// <noscript> (diagrams.net-shaped): DetectSPA sees only one marker so
-			// isSpa stays false, and the content-side isJSShellContent check (ALP-039)
-			// is what escalates it to spa/needs-browser.
 			name: "js-shell-no-noscript-diagrams",
 			url:  "https://app.diagrams.net/",
 			html: `<!doctype html><html><head><title>Flowchart Maker &amp; Online Diagram Software</title></head><body>
@@ -134,9 +96,6 @@ func TestClassifyPageAudit(t *testing.T) {
 			wantContentType: "page",
 		},
 		{
-			// Binary image response: ALP-038 skips it before the HTML pipeline and
-			// preserves the Content-Type, so the decision is unsupported and no
-			// browser is spent.
 			name: "binary-image-png",
 			seed: &Result{
 				TransportInfo: TransportInfo{ResponseContentType: "image/png"},
@@ -150,8 +109,6 @@ func TestClassifyPageAudit(t *testing.T) {
 			wantBrowserRec: false,
 		},
 		{
-			// Opaque octet-stream download: same unsupported routing as any other
-			// binary content-type (ALP-038).
 			name: "binary-octet-stream",
 			seed: &Result{
 				TransportInfo: TransportInfo{ResponseContentType: "application/octet-stream"},
@@ -165,9 +122,6 @@ func TestClassifyPageAudit(t *testing.T) {
 			wantBrowserRec: false,
 		},
 		{
-			// PDF response: application/pdf is deliberately NOT binary — it flows
-			// through text extraction, so a well-extracted PDF classifies as an
-			// extractable static/ssr document, never unsupported.
 			name: "pdf-extractable",
 			seed: &Result{
 				TransportInfo:  TransportInfo{ResponseContentType: "application/pdf"},
@@ -212,8 +166,6 @@ func TestClassifyPageAudit(t *testing.T) {
 				t.Errorf("browserRecommended = %v, want %v", profile.BrowserRecommended, tc.wantBrowserRec)
 			}
 			if tc.wantContentType != "" {
-				// T07: classifyContentType consumes the extraction Result (the
-				// converged scrape path retains no raw HTML).
 				got := classifyContentType(r, tc.url)
 				if got != tc.wantContentType {
 					t.Errorf("contentType = %q, want %q", got, tc.wantContentType)

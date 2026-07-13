@@ -110,7 +110,6 @@ func TestFlattenSitemap_HonorsMaxDepth(t *testing.T) {
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
 
-	// depth chain: /d0 -> /d1 -> /d2 -> /d3 (urlset)
 	mux.HandleFunc("/d0", func(w http.ResponseWriter, r *http.Request) {
 		_, _ = fmt.Fprintf(w, `<?xml version="1.0"?><sitemapindex xmlns="x"><sitemap><loc>%s/d1</loc></sitemap></sitemapindex>`, srv.URL)
 	})
@@ -130,7 +129,6 @@ func TestFlattenSitemap_HonorsMaxDepth(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected err: %v", err)
 	}
-	// MaxDepth=2: traverses d0(0) -> d1(1) -> d2(2); d2 references d3 at depth 3 which is > 2, so d3 must NOT be fetched.
 	if atomic.LoadInt32(&d3Hits) != 0 {
 		t.Errorf("d3 was fetched despite MaxDepth=2 (hits=%d)", d3Hits)
 	}
@@ -264,7 +262,6 @@ func TestCLI_SitemapSubcommand(t *testing.T) {
 		_, _ = w.Write([]byte(`<?xml version="1.0"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://example.com/cli-1</loc></url><url><loc>https://example.com/cli-2</loc></url></urlset>`))
 	})
 
-	// Locate repo root (this file lives at internal/engine/sitemap_test.go).
 	_, thisFile, _, _ := runtime.Caller(0)
 	repoRoot := filepath.Join(filepath.Dir(thisFile), "..", "..")
 	bin := filepath.Join(t.TempDir(), "seaportal-cli-test")

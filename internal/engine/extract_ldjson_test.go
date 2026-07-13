@@ -74,12 +74,6 @@ func TestExtract_ExtractionMethodLabeling_Readability(t *testing.T) {
 }
 
 func TestExtract_ExtractionMethodLabeling_PruneFallback(t *testing.T) {
-	// Existing fixture-based behavior covers prune-fallback adoption. Here we
-	// directly verify the label by simulating the same path with a hand-crafted
-	// page where readability under-extracts but PruneToContent rescues a dense
-	// block. To force readability thin, we use comment/sidebar-flavored classes
-	// that readability heavily penalizes, while leaving a high-density region
-	// that the position+density prune heuristic still picks up.
 	rich := strings.Repeat("<p>"+strings.Repeat("Rescuable paragraph words. ", 8)+"</p>", 6)
 	html := `<html><head><title>T</title></head><body>
 		<div class="comment sidebar ad">` + rich + `</div>
@@ -95,9 +89,6 @@ func TestExtract_ExtractionMethodLabeling_PruneFallback(t *testing.T) {
 	if result.Error != "" {
 		t.Fatalf("unexpected error: %s", result.Error)
 	}
-	// If readability already returned >=500 chars, the prune-fallback gate
-	// never fires — skip rather than flake; the labelling itself is what we're
-	// asserting, and the path is covered by real fixtures in the smoke suite.
 	if !result.PruneFallbackUsed {
 		t.Skipf("prune-fallback did not fire (readability length=%d) — labelling path covered by smoke fixtures", result.Length)
 	}
@@ -107,20 +98,8 @@ func TestExtract_ExtractionMethodLabeling_PruneFallback(t *testing.T) {
 }
 
 func TestExtract_ExtractionMethodLabeling_TextFallback(t *testing.T) {
-	// Force a path where readability and prune both come up thin but TextFallback
-	// (which scans raw text density) finds the body. We opt-out of prune-fallback
-	// and JSON-LD primary via NoPruneFallback. The text is delivered via <span>
-	// elements (no <p>) inside the body so readability has nothing to grab onto,
-	// but raw text density is high.
 	var sb strings.Builder
 	sb.WriteString(`<html><head><title>T</title></head><body>`)
-	// Wrap text in deeply-nested table cells with low-signal classes —
-	// readability heavily penalises tables and class names matching the
-	// negative regex; meanwhile raw textLen for TextFallback stays high.
-	// Put text inside elements TextFallback walks (divs) but with tiny chunks
-	// that readability scores low. Each div has too little text on its own to
-	// be considered a candidate, but TextFallback aggregates them all. Add a
-	// large amount of HTML noise (data-* attrs) to clear the 10 KB gate.
 	for i := 0; i < 500; i++ {
 		sb.WriteString(`<div data-x="filler-attribute-to-pad-html-size">tiny chunk text. </div>`)
 	}
@@ -136,8 +115,6 @@ func TestExtract_ExtractionMethodLabeling_TextFallback(t *testing.T) {
 	if result.Error != "" {
 		t.Fatalf("unexpected error: %s", result.Error)
 	}
-	// If readability already found enough content, the text-fallback gate
-	// never fires — skip rather than flake.
 	if result.ExtractionMethod == "readability" && result.Length >= 500 {
 		t.Skipf("readability already extracted %d chars — text-fallback gate not exercised", result.Length)
 	}
@@ -147,7 +124,6 @@ func TestExtract_ExtractionMethodLabeling_TextFallback(t *testing.T) {
 }
 
 func TestExtract_ExtractionMethodLabeling_IndexPage(t *testing.T) {
-	// Build a clear index page: many articles with headline links.
 	var sb strings.Builder
 	sb.WriteString(`<html><head><title>Home</title></head><body>`)
 	for i := 0; i < 12; i++ {
@@ -191,10 +167,6 @@ func TestExtract_JSONLDArticleBodyRescuesThinReadability(t *testing.T) {
 	}))
 	defer server.Close()
 
-	// Disable prune-fallback path so we exercise the new JSON-LD-primary
-	// branch instead of the prune rescue (page is thin enough that prune
-	// would not find anything anyway, but be explicit). Note: --no-prune-fallback
-	// gates BOTH paths in our implementation, so DON'T set it here.
 	result := FromURL(server.URL)
 	if result.Error != "" {
 		t.Fatalf("unexpected error: %s", result.Error)

@@ -150,12 +150,10 @@ func TestDetectBlocked_AdditionalWAFs(t *testing.T) {
 		fixture string
 		want    bool
 	}{
-		// Positive: synthetic challenge fixtures.
 		{name: "akamai challenge fixture", fixture: "challenge-akamai.html", want: true},
 		{name: "datadome challenge fixture", fixture: "challenge-datadome.html", want: true},
 		{name: "imperva modern challenge fixture", fixture: "challenge-imperva-modern.html", want: true},
 
-		// Negative: marketing/docs/prose that mentions the WAFs without the challenge markers.
 		{
 			name: "akamai marketing page mentioning bot manager",
 			html: `<!DOCTYPE html><html><head><title>Bot Manager | Akamai</title></head>` +
@@ -199,8 +197,6 @@ func TestDetectBlocked_AdditionalWAFs(t *testing.T) {
 	}
 }
 
-// longFiller returns >1 KB of prose so negative cases skip the short-body
-// blockedPatterns sweep and only rely on headPatterns precision.
 func longFiller() string {
 	const sentence = "This is filler prose intended to push the body length past the short-page threshold so the detector relies only on high-precision head patterns. "
 	out := ""
@@ -210,11 +206,7 @@ func longFiller() string {
 	return out
 }
 
-// regression: detect-spa-non-ascii-panic
 func TestDetectSPA_HandlesNonASCIIBodyContent(t *testing.T) {
-	// Turkish capital İ lowercases to two-byte "i̇" — ToLower would shift
-	// byte offsets and the prior implementation panicked slicing the
-	// original string with indexes from the lowered copy.
 	html := `<html><head><title>İçindekiler</title></head><body><p>İstanbul ve İzmir hakkında.</p></body></html>`
 	defer func() {
 		if r := recover(); r != nil {
@@ -222,7 +214,6 @@ func TestDetectSPA_HandlesNonASCIIBodyContent(t *testing.T) {
 		}
 	}()
 	signals, _ := DetectSPA(html)
-	// Body text is short; expect minimal-body-content signal.
 	found := false
 	for _, s := range signals {
 		if s == "minimal-body-content" {
@@ -234,7 +225,6 @@ func TestDetectSPA_HandlesNonASCIIBodyContent(t *testing.T) {
 	}
 }
 
-// regression: detect-spa-non-ascii-panic
 func TestDetectSPA_HandlesEmptyBody(t *testing.T) {
 	html := `<html><head></head><body></body></html>`
 	signals, _ := DetectSPA(html)
@@ -249,7 +239,6 @@ func TestDetectSPA_HandlesEmptyBody(t *testing.T) {
 	}
 }
 
-// regression: detect-spa-non-ascii-panic
 func TestDetectSPA_NoBodyTag(t *testing.T) {
 	html := `<html><head><title>İstanbul</title></head></html>`
 	defer func() {
@@ -265,10 +254,6 @@ func TestDetectSPA_NoBodyTag(t *testing.T) {
 	}
 }
 
-// regression: classifier-round-2-fallback — DetectJSChallenge fires on
-// small HTML bodies that ship CDN/anti-bot challenge signatures. The
-// 1500-byte length cap is the key gatekeeper; large pages that merely
-// mention "cloudflare" in a footer must NOT match.
 func TestDetectJSChallenge_CloudflarePositive(t *testing.T) {
 	html := `<html><head><title>Just a moment...</title></head><body>` +
 		`<script>window._cf_chl_opt = {cType: 'managed'};</script>` +
@@ -288,8 +273,6 @@ func TestDetectJSChallenge_DataDomePositive(t *testing.T) {
 }
 
 func TestDetectJSChallenge_LargeBodyNegative(t *testing.T) {
-	// Pad past the 1500-byte cap: a real CDN-served page that mentions
-	// "cloudflare" in headers/scripts must NOT trip the heuristic.
 	padding := strings.Repeat("Lorem ipsum dolor sit amet. ", 100)
 	html := `<html><body><p>Welcome. We use Cloudflare to serve this page.</p>` +
 		padding + `</body></html>`

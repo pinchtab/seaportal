@@ -9,8 +9,6 @@ import (
 	"testing"
 )
 
-// loadSamplePDF reads testdata/sample.pdf walking up from CWD to find the repo
-// testdata directory (tests run from the package dir).
 func loadSamplePDF(t *testing.T) []byte {
 	t.Helper()
 	candidates := []string{
@@ -55,24 +53,15 @@ func TestExtractPDFText_MalformedPDF(t *testing.T) {
 }
 
 func TestExtractPDFText_HandlesNullPage(t *testing.T) {
-	// Build a PDF that claims one page but the content stream is malformed.
-	// safeGetPlainText should recover and emit an "[extraction failed: ...]"
-	// marker rather than aborting.
 	body := loadSamplePDF(t)
-	// Corrupt the content stream by replacing a printable byte inside the
-	// BT...ET block with junk. The reader still parses the structure but
-	// GetPlainText may panic / error — either way we want a clean outcome.
 	corrupted := make([]byte, len(body))
 	copy(corrupted, body)
 	idx := strings.Index(string(corrupted), "BT /F1")
 	if idx > 0 {
-		// Mangle the operator. Pdf still parses; text extraction may fail.
 		corrupted[idx] = 0x01
 		corrupted[idx+1] = 0x02
 	}
 	out, err := ExtractPDFText(corrupted)
-	// Either ExtractPDFText errors out (acceptable for severe corruption) or
-	// it returns a string with the extraction-failed marker (preferred).
 	if err == nil && !strings.Contains(out, "page 1") {
 		t.Fatalf("expected page marker even when extraction degrades, got: %q", out)
 	}
@@ -127,17 +116,7 @@ func TestExtract_NoPDFFlagSkips(t *testing.T) {
 	}
 }
 
-// regression: pdf-malformed-xref-panic
-//
-// Surfaced by FuzzPDF. The upstream `ledongthuc/pdf` library panics
-// (rather than returning an error) when `startxref` points past EOF.
-// Before the fix, ExtractPDFText's only recover was inside
-// safeGetPlainText (per-page), so the panic from NewReader/NumPage
-// killed the whole process. Now the top-level defer recover() converts
-// the panic into an error.
 func TestExtractPDFText_MalformedXrefReturnsError(t *testing.T) {
-	// %PDF-1.0\n + 96 zero bytes + \nstartxref\n100%%EOF — startxref
-	// claims offset 100 but the body is shorter; upstream panics.
 	var body []byte
 	body = append(body, []byte("%PDF-1.0\n")...)
 	body = append(body, make([]byte, 96)...)

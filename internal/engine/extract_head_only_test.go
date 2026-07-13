@@ -9,7 +9,6 @@ import (
 	"testing"
 )
 
-// headOnlyHTML returns a small HTML head with the requested overrides.
 func headOnlyHTML(extra string) string {
 	return `<!doctype html><html lang="en"><head>
 <meta charset="utf-8">
@@ -109,17 +108,12 @@ func TestHeadOnly_RespectsRangeWhenSent(t *testing.T) {
 }
 
 func TestHeadOnly_CapsAt16KBWhenServerIgnoresRange(t *testing.T) {
-	// Server ignores Range and returns ~50 KB with a sentinel string placed
-	// well past the 16 KB cap. Reading it would yield a parseable canonical;
-	// since head-only caps the read, the sentinel must NOT be reflected.
 	bigPadding := strings.Repeat("X", 30000)
 	sentinelCanonical := `<link rel="canonical" href="https://example.com/SHOULD-NOT-APPEAR">`
 	page := `<!doctype html><html><head>
 <title>Capped</title>
 ` + sentinelCanonical + `
 </head><body><div>` + bigPadding + `</div></body></html>`
-	// Place a *second* canonical-like marker beyond 16 KB so we can prove the
-	// reader truly stopped early. To do that, push canonical to the back.
 	prefix := `<!doctype html><html><head>
 <title>Capped</title>
 ` + strings.Repeat(" ", headOnlyByteCap) + `
@@ -128,7 +122,6 @@ func TestHeadOnly_CapsAt16KBWhenServerIgnoresRange(t *testing.T) {
 
 	var sentBytes int64
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Ignore Range entirely.
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
 		n, _ := w.Write([]byte(prefix))
@@ -136,7 +129,7 @@ func TestHeadOnly_CapsAt16KBWhenServerIgnoresRange(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	_ = page // keep the more readable variant referenced
+	_ = page
 	result := FromURLWithOptions(srv.URL, Options{HeadOnly: true})
 
 	if result.CanonicalURL == "https://example.com/SHOULD-NOT-APPEAR" {
@@ -164,9 +157,6 @@ func TestHeadOnly_SetsHeadOnlyFlag(t *testing.T) {
 }
 
 func TestHeadOnly_EmptyContent(t *testing.T) {
-	// Include a meta author to force applyMetadata's content-prepend path —
-	// head-only must zero Content/Length AFTER metadata so the prepend is
-	// discarded.
 	extra := `<meta name="author" content="Jane Doe">`
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -187,9 +177,6 @@ func TestHeadOnly_EmptyContent(t *testing.T) {
 }
 
 func TestExtract_HeadOnlyFlag(t *testing.T) {
-	// Integration: HeadOnly=true must short-circuit the full FromURLWithOptions
-	// pipeline. We assert by providing a fully-stocked head, then confirming
-	// that body-only fields (HeadingCount, ParagraphCount) stay zero.
 	extra := `
 <meta property="og:description" content="integration-desc">
 <link rel="canonical" href="https://example.com/canonical">

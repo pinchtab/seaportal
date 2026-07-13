@@ -8,8 +8,6 @@ import (
 	"testing"
 )
 
-// writeJSONL is a small test helper that writes one record per line so
-// the parser sees exactly what record.sh would produce in the wild.
 func writeJSONL(t *testing.T, dir, name string, lines []string) string {
 	t.Helper()
 	p := filepath.Join(dir, name)
@@ -19,8 +17,6 @@ func writeJSONL(t *testing.T, dir, name string, lines []string) string {
 	return p
 }
 
-// writeGroup writes a minimal group-selftest.md containing only the
-// inline `**Expected escalation:** …` lines the parser cares about.
 func writeGroup(t *testing.T, dir string, entries map[string]string) string {
 	t.Helper()
 	var b strings.Builder
@@ -37,9 +33,6 @@ func writeGroup(t *testing.T, dir string, entries map[string]string) string {
 	return p
 }
 
-// TestSelftest_ParseJSONLAndCompute feeds a synthetic transcript with a
-// mix of pass / fail / escalate outcomes and asserts the headline
-// numbers match a hand-calculation, including escalation correctness.
 func TestSelftest_ParseJSONLAndCompute(t *testing.T) {
 	dir := t.TempDir()
 	jsonl := writeJSONL(t, dir, "run.jsonl", []string{
@@ -48,8 +41,6 @@ func TestSelftest_ParseJSONLAndCompute(t *testing.T) {
 		`{"ts":"2026-05-17T10:00:02Z","step":"1.3","outcome":"fail","note":"missed"}`,
 		`{"ts":"2026-05-17T10:00:03Z","step":"1.4","outcome":"escalate","note":"blocked"}`,
 		`{"ts":"2026-05-17T10:00:04Z","step":"1.5","outcome":"escalate","note":"spa"}`,
-		// Task 1.6 takes two ops before passing — exercises op-count averaging
-		// and "final outcome = last step" behaviour.
 		`{"ts":"2026-05-17T10:00:05Z","step":"1.6","outcome":"fail","note":"first try"}`,
 		`{"ts":"2026-05-17T10:00:06Z","step":"1.6","outcome":"pass","note":"retry"}`,
 	})
@@ -59,7 +50,7 @@ func TestSelftest_ParseJSONLAndCompute(t *testing.T) {
 		"1.2": "no",
 		"1.3": "no",
 		"1.4": "yes",
-		"1.5": "no", // escalation expected NO but agent escalated → wrong
+		"1.5": "no",
 		"1.6": "no",
 	}
 	group := writeGroup(t, dir, expected)
@@ -87,16 +78,6 @@ func TestSelftest_ParseJSONLAndCompute(t *testing.T) {
 
 	m := computeSelftestMetrics(tasks)
 
-	// Hand-calc:
-	//  1.1 pass (no)        → passed
-	//  1.2 pass (no)        → passed
-	//  1.3 fail (no)        → not passed
-	//  1.4 escalate (yes)   → passed, correct escalation
-	//  1.5 escalate (no)    → not passed, wrong escalation
-	//  1.6 pass (no)        → passed (2 ops)
-	// passed=4 of 6 → 0.6667
-	// total ops = 1+1+1+1+1+2 = 7 → avg 7/6 = 1.1667
-	// escalations: 2 total, 1 correct → 0.5
 	if m.TotalTasks != 6 || m.PassedTasks != 4 {
 		t.Fatalf("counts: %+v", m)
 	}
@@ -114,10 +95,6 @@ func TestSelftest_ParseJSONLAndCompute(t *testing.T) {
 	}
 }
 
-// TestSelftest_DiffsAgainstPrior writes a prior report.json then runs
-// the diff helper against a synthetic current and asserts that
-// regressed / recovered task ids are surfaced correctly along with
-// deltas.
 func TestSelftest_DiffsAgainstPrior(t *testing.T) {
 	prior := SelftestReport{
 		Metrics: SelftestMetrics{
@@ -140,10 +117,10 @@ func TestSelftest_DiffsAgainstPrior(t *testing.T) {
 		},
 		Tasks: []SelftestTask{
 			{ID: "1.1", Passed: true},
-			{ID: "1.2", Passed: false}, // regressed
-			{ID: "1.3", Passed: true},  // recovered
-			{ID: "1.4", Passed: false}, // regressed
-			{ID: "1.5", Passed: true},  // new task
+			{ID: "1.2", Passed: false},
+			{ID: "1.3", Passed: true},
+			{ID: "1.4", Passed: false},
+			{ID: "1.5", Passed: true},
 		},
 	}
 
@@ -175,10 +152,6 @@ func TestSelftest_DiffsAgainstPrior(t *testing.T) {
 	}
 }
 
-// TestSelftest_HandlesMissingPrior exercises the "no prior selftest_*.json
-// in the output directory" branch end-to-end: findPriorSelftest must
-// return (nil, "") and a full parse → metrics → write cycle must
-// succeed with no diff section in the JSON.
 func TestSelftest_HandlesMissingPrior(t *testing.T) {
 	dir := t.TempDir()
 
@@ -245,8 +218,6 @@ func TestSelftest_HandlesMissingPrior(t *testing.T) {
 	}
 }
 
-// selftestAlmostEqual is a tiny epsilon comparator for the float metrics —
-// avoids cross-platform fp drift in test failures.
 func selftestAlmostEqual(a, b float64) bool {
 	d := a - b
 	if d < 0 {

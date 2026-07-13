@@ -4,8 +4,6 @@ import (
 	"testing"
 )
 
-// firstDiff returns a short snippet around the first byte where a and b differ.
-// If they don't differ, returns an empty string.
 func firstDiff(a, b string) string {
 	n := len(a)
 	if len(b) < n {
@@ -93,13 +91,7 @@ func TestIdempotency(t *testing.T) {
 		{"with-dups", "Hello world\n\nHello world\n\nUnique"},
 	}
 
-	// nonIdempotent marks (transform, input-name) cells that are observed
-	// to NOT be idempotent today. Those cells log instead of fail so the
-	// suite remains green while a follow-up todo tracks the fix.
-	// See todo.md for the corresponding follow-up entries.
-	nonIdempotent := map[string]bool{
-		// observed-non-idempotent: filled in after first run
-	}
+	nonIdempotent := map[string]bool{}
 
 	check := func(t *testing.T, key, name string, out1, out2 string) {
 		t.Helper()

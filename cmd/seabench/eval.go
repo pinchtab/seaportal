@@ -19,20 +19,11 @@ import (
 	"github.com/pinchtab/seaportal/internal/corpus"
 )
 
-// extractor wraps a single extraction implementation under test.
 type extractor struct {
 	name string
 	fn   func(html, baseURL string) (string, error)
 }
 
-// scoreCard captures the per-(extractor, fixture) measurement.
-//
-// TimeNanos is the median wall-clock time across N=3 runs. Skipped fires
-// when the extractor produced fewer than 50 chars (treated as failure for
-// robustness reporting but excluded from the precision/recall numbers).
-// NoSignal fires when the fixture has neither must_include nor must_exclude
-// substrings — there's nothing to score, so the entry is reported but
-// excluded from aggregate math.
 type scoreCard struct {
 	Extractor string
 	Fixture   string
@@ -45,8 +36,6 @@ type scoreCard struct {
 	NoSignal  bool
 }
 
-// aggregate is the per-extractor headline view, micro-averaged across all
-// fixtures with signal.
 type aggregate struct {
 	Extractor    string
 	Precision    float64
@@ -57,14 +46,8 @@ type aggregate struct {
 	Total        int
 }
 
-// runs is the per-fixture repetition count used for median-time estimation.
-// Three runs is a cheap compromise — corpus × 4 extractors × 3 runs stays
-// in the low-seconds range while damping out single-shot jitter.
 const runs = 3
 
-// skipThreshold marks an extractor's output as "skipped" (produced nothing
-// useful) when it falls below this many bytes. Chosen to be smaller than
-// any realistic article body but larger than incidental boilerplate.
 const skipThreshold = 50
 
 func runEval(args []string) {
@@ -108,8 +91,6 @@ func runEval(args []string) {
 		fmt.Println("wrote", baselinePath)
 	}
 
-	// One-line headline so `./dev bench all` (and a quick eyeball) can read the
-	// result without opening the report.
 	for _, a := range aggregates {
 		if a.Extractor == "seaportal" {
 			fmt.Printf("eval: seaportal F1=%.3f (P=%.3f R=%.3f). See %s\n", a.F1, a.Precision, a.Recall, out)
@@ -118,9 +99,6 @@ func runEval(args []string) {
 	}
 }
 
-// buildExtractors returns the fixed roster of in-process extractors. Order
-// matters: strip-tags is last so the headline table renders the baseline at
-// the bottom, and time ratios are taken against it explicitly by name.
 func buildExtractors() []extractor {
 	htmConv := converter.NewConverter(
 		converter.WithPlugins(
@@ -144,9 +122,6 @@ func buildExtractors() []extractor {
 				if err != nil {
 					return "", err
 				}
-				// Article.Content is HTML; reuse the same html-to-markdown
-				// converter the seaportal pipeline uses so the comparison
-				// is "readability shape" without seaportal's cleanup pass.
 				md, mdErr := htmConv.ConvertString(article.Content)
 				if mdErr != nil {
 					return article.TextContent, nil
@@ -178,10 +153,6 @@ var (
 	commentRE  = regexp.MustCompile(`(?s)<!--.*?-->`)
 )
 
-// stripTags is the deliberately-dumb baseline. Strips <script>/<style>
-// bodies first (otherwise their JS / CSS source dominates the output and
-// the must_include hits are pure noise) then nukes every remaining tag and
-// collapses whitespace. No entity decoding — that's part of the realism.
 func stripTags(html string) string {
 	html = scriptRE.ReplaceAllString(html, " ")
 	html = styleRE.ReplaceAllString(html, " ")
@@ -192,10 +163,6 @@ func stripTags(html string) string {
 	return strings.TrimSpace(html)
 }
 
-// scoreCorpus runs every extractor over every fixture, returns the flat
-// scoreCard list plus a fixture-indexed map for the per-fixture detail
-// table. Charset fixtures reach each extractor as raw bytes (seaportal
-// decodes; others may mojibake — that's a real signal, don't fix it).
 func scoreCorpus(corpusPath string, extractors []extractor) ([]scoreCard, map[string][]scoreCard, error) {
 	var cards []scoreCard
 	perFixture := make(map[string][]scoreCard)
@@ -217,8 +184,6 @@ func scoreCorpus(corpusPath string, extractors []extractor) ([]scoreCard, map[st
 				elapsed := time.Since(start).Nanoseconds()
 				times = append(times, elapsed)
 				if exErr != nil {
-					// Extractor error or panic: treat as empty output for
-					// skip detection, but keep timing in for ratio math.
 					o = ""
 				}
 				out = o
@@ -242,11 +207,6 @@ func scoreCorpus(corpusPath string, extractors []extractor) ([]scoreCard, map[st
 	return cards, perFixture, nil
 }
 
-// safeExtract calls fn with a recover guard so that an extractor panic on
-// one fixture (e.g. seaportal's DetectSPA index-into-multibyte-lowered
-// string on certain charset fixtures) does not abort the entire bake-off.
-// The panic is reported as an error; the timing collected so far is kept
-// in the caller's loop so ratios remain meaningful.
 func safeExtract(fn func(html, baseURL string) (string, error), html, baseURL string) (out string, err error) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -257,9 +217,6 @@ func safeExtract(fn func(html, baseURL string) (string, error), html, baseURL st
 	return fn(html, baseURL)
 }
 
-// countMatches returns (present, absent) — the count of `needles` that
-// appear (TP for must_include / FP for must_exclude) and that don't (FN /
-// TN respectively). Empty needle slices yield (0, 0) by definition.
 func countMatches(haystack string, needles []string) (present, absent int) {
 	for _, n := range needles {
 		if n == "" {
@@ -274,9 +231,6 @@ func countMatches(haystack string, needles []string) (present, absent int) {
 	return present, absent
 }
 
-// aggregateCards micro-averages TP/FP/FN across all signal-bearing fixtures
-// per extractor and computes the mean time ratio relative to strip-tags on
-// the same fixtures.
 func aggregateCards(cards []scoreCard, extractors []extractor) []aggregate {
 	type acc struct {
 		tp, fp, fn int
@@ -284,8 +238,6 @@ func aggregateCards(cards []scoreCard, extractors []extractor) []aggregate {
 		skipped    int
 		total      int
 	}
-	// Build a fixture → strip-tags-time map first so ratios are deterministic
-	// regardless of map iteration order downstream.
 	stripTime := make(map[string]int64)
 	for _, c := range cards {
 		if c.Extractor == "strip-tags" {
@@ -331,9 +283,6 @@ func aggregateCards(cards []scoreCard, extractors []extractor) []aggregate {
 	return out
 }
 
-// precisionRecallF1 computes the three values, returning zero for any of
-// them when the denominator would be zero. The "no signal" case (TP=FP=FN=0)
-// collapses to 0/0/0, which matches the convention used in the headline.
 func precisionRecallF1(tp, fp, fn int) (precision, recall, f1 float64) {
 	if tp+fp > 0 {
 		precision = float64(tp) / float64(tp+fp)

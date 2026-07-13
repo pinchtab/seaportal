@@ -13,13 +13,9 @@ import (
 	"time"
 )
 
-// TestCLI_MCPSubcommand exec's the built binary with `mcp`, feeds a sequence
-// of JSON-RPC requests on stdin (initialize → tools/list → tools/call
-// parse_sitemap → EOF), and asserts the matching responses on stdout.
 func TestCLI_MCPSubcommand(t *testing.T) {
 	bin := buildBinary(t)
 
-	// Synthetic sitemap server so parse_sitemap has something to fetch.
 	mux := http.NewServeMux()
 	mux.HandleFunc("/sitemap.xml", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/xml")
@@ -51,7 +47,7 @@ func TestCLI_MCPSubcommand(t *testing.T) {
 		fmt.Sprintf(`{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"parse_sitemap","arguments":{"url":%q,"allow_internal":true}}}`, srv.URL+"/sitemap.xml"),
 	}
 	go func() {
-		defer func() { _ = stdin.Close() }() // triggers clean EOF shutdown on server side
+		defer func() { _ = stdin.Close() }()
 		for _, req := range requests {
 			if _, err := io.WriteString(stdin, req+"\n"); err != nil {
 				return
@@ -59,7 +55,6 @@ func TestCLI_MCPSubcommand(t *testing.T) {
 		}
 	}()
 
-	// Read 3 line-delimited responses.
 	reader := bufio.NewReaderSize(stdout, 1<<20)
 	responses := make([]map[string]interface{}, 0, 3)
 	done := make(chan error, 1)
@@ -91,13 +86,11 @@ func TestCLI_MCPSubcommand(t *testing.T) {
 		t.Fatalf("timed out waiting for MCP responses")
 	}
 
-	// initialize
 	initResult := responses[0]["result"].(map[string]interface{})
 	if initResult["protocolVersion"] != "2024-11-05" {
 		t.Errorf("initialize.protocolVersion = %v", initResult["protocolVersion"])
 	}
 
-	// tools/list — assert all 4 tool names present.
 	listResult := responses[1]["result"].(map[string]interface{})
 	rawTools, _ := listResult["tools"].([]interface{})
 	gotNames := map[string]bool{}
@@ -111,7 +104,6 @@ func TestCLI_MCPSubcommand(t *testing.T) {
 		}
 	}
 
-	// tools/call parse_sitemap
 	callResult, ok := responses[2]["result"].(map[string]interface{})
 	if !ok {
 		t.Fatalf("parse_sitemap response missing result: %+v", responses[2])
@@ -125,7 +117,6 @@ func TestCLI_MCPSubcommand(t *testing.T) {
 		t.Errorf("parse_sitemap text missing expected URLs: %s", text)
 	}
 
-	// EOF (stdin already closed by writer goroutine) → server exits cleanly.
 	waitErr := make(chan error, 1)
 	go func() { waitErr <- cmd.Wait() }()
 	select {

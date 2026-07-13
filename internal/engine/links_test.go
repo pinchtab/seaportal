@@ -128,7 +128,6 @@ func TestExtractLinks_HandlesNestedTags(t *testing.T) {
 	}
 }
 
-// linkTestProse provides enough body text to pass readability extraction.
 var linkTestProse = strings.Repeat("This page exists to exercise the link extractor end-to-end with realistic text. ", 10)
 
 var linksTestPage = `<!doctype html><html><head><title>Links Test</title></head><body>
@@ -151,7 +150,6 @@ func TestExtract_LinksFlagOn(t *testing.T) {
 		t.Fatalf("len(Links) = %d, want 5: %#v", len(result.Links), result.Links)
 	}
 
-	// Spot-check first entry resolves against base server URL.
 	if !strings.HasPrefix(result.Links[0].Href, srv.URL) {
 		t.Errorf("Links[0].Href = %q, want prefix %q", result.Links[0].Href, srv.URL)
 	}
@@ -162,7 +160,6 @@ func TestExtract_LinksFlagOn(t *testing.T) {
 		t.Errorf("Links[0].Rel = %q, want next", result.Links[0].Rel)
 	}
 
-	// Absolute href to a different host must be preserved verbatim.
 	if result.Links[2].Href != "https://other.example.org/three" {
 		t.Errorf("Links[2].Href = %q, want absolute other-host", result.Links[2].Href)
 	}

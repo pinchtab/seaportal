@@ -5,9 +5,6 @@ import (
 	"testing"
 )
 
-// TestFingerprintCDN_Providers exercises the provider fingerprint table:
-// each distinctive header maps to its provider constant and reports the
-// header(s) that identified it as signals.
 func TestFingerprintCDN_Providers(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -156,9 +153,6 @@ func TestFingerprintCDN_Providers(t *testing.T) {
 	}
 }
 
-// TestFingerprintCDN_Priority documents the fingerprint precedence: Cloudflare
-// outranks CloudFront, which outranks Fastly, and any distinctive header
-// outranks the generic X-CDN and Via fallbacks.
 func TestFingerprintCDN_Priority(t *testing.T) {
 	h := ResponseHeaders{
 		ResponseCFCacheStatus:    "HIT",

@@ -7,11 +7,7 @@ import (
 	"strings"
 )
 
-// trackingParams is a curated, host-agnostic denylist of query-string parameters
-// that identify ad/analytics/referral tracking rather than the resource itself.
-// Keys are stored lowercased; lookups must lowercase the incoming param name.
 var trackingParams = map[string]bool{
-	// Google Analytics / UTM
 	"utm_source":          true,
 	"utm_medium":          true,
 	"utm_campaign":        true,
@@ -21,7 +17,6 @@ var trackingParams = map[string]bool{
 	"utm_brand":           true,
 	"utm_creative_format": true,
 
-	// Click identifiers
 	"fbclid":  true,
 	"gclid":   true,
 	"dclid":   true,
@@ -30,7 +25,6 @@ var trackingParams = map[string]bool{
 	"msclkid": true,
 	"yclid":   true,
 
-	// GA / GTM / HubSpot / Mailchimp / Marketo
 	"_ga":     true,
 	"_gl":     true,
 	"_hsenc":  true,
@@ -39,28 +33,22 @@ var trackingParams = map[string]bool{
 	"mc_eid":  true,
 	"mc_cid":  true,
 
-	// Social / share / referral
 	"igshid":  true,
 	"ref":     true,
 	"ref_src": true,
 	"ref_url": true,
-	"s":       true, // Twitter share param
-	"t":       true, // Twitter timestamp param
+	"s":       true,
+	"t":       true,
 	"feature": true,
 
-	// Piwik / generic campaign
 	"pk_campaign": true,
 	"pk_kwd":      true,
 	"cmpid":       true,
 	"wt.mc_id":    true,
 }
 
-// trackingPrefixes drops any param whose lowercased name starts with one of
-// these prefixes — catches suffixed variants like _ga_ABC123, utm_brand_xxx.
 var trackingPrefixes = []string{"_ga", "_gid", "_fb", "_hs", "utm_"}
 
-// canonicalLinkRE pulls the href out of a <link rel="canonical"> tag.
-// Case-insensitive on tag/attribute names; tolerates attribute reordering.
 var (
 	canonicalLinkRelFirstRE  = regexp.MustCompile(`(?is)<link\b[^>]*\brel\s*=\s*["']?canonical["']?[^>]*\bhref\s*=\s*["']([^"'>\s]+)["']?[^>]*>`)
 	canonicalLinkHrefFirstRE = regexp.MustCompile(`(?is)<link\b[^>]*\bhref\s*=\s*["']([^"'>\s]+)["'][^>]*\brel\s*=\s*["']?canonical["']?[^>]*>`)
@@ -70,8 +58,6 @@ var (
 
 const canonicalScanWindow = 4096
 
-// isTrackingParam reports whether a query parameter name matches the
-// host-agnostic tracking denylist or any tracking prefix (case-insensitive).
 func isTrackingParam(name string) bool {
 	lower := strings.ToLower(name)
 	if trackingParams[lower] {
@@ -85,10 +71,6 @@ func isTrackingParam(name string) bool {
 	return false
 }
 
-// CanonicalizeURL normalises a URL by lowercasing the host, dropping the
-// fragment, removing default ports, stripping tracking parameters, sorting
-// remaining params, and collapsing duplicate path slashes. Malformed input is
-// returned unchanged alongside the parse error — never crashes.
 func CanonicalizeURL(rawURL string) (string, error) {
 	if rawURL == "" {
 		return rawURL, nil
@@ -132,7 +114,6 @@ func CanonicalizeURL(rawURL string) (string, error) {
 		}
 	}
 
-	// Collapse duplicate slashes in path while preserving the single leading /.
 	if u.Path != "" {
 		leading := ""
 		p := u.Path
@@ -142,15 +123,12 @@ func CanonicalizeURL(rawURL string) (string, error) {
 		}
 		p = multiSlashRE.ReplaceAllString(p, "/")
 		u.Path = leading + p
-		u.RawPath = "" // force re-encoding from Path
+		u.RawPath = ""
 	}
 
 	return u.String(), nil
 }
 
-// ResolveCanonicalLink finds <link rel="canonical" href="…"> in the first 4 KB
-// of HTML and resolves the href against baseURL. Returns "" if absent or if the
-// href uses a non-http(s) scheme.
 func ResolveCanonicalLink(htmlStr string, baseURL string) string {
 	if htmlStr == "" {
 		return ""
@@ -195,9 +173,6 @@ func ResolveCanonicalLink(htmlStr string, baseURL string) string {
 	return resolved.String()
 }
 
-// PickCanonical orchestrates canonical-URL selection. A <link rel="canonical">
-// in the HTML wins; otherwise we fall back to algorithmic canonicalisation.
-// Returns "" when the canonical is empty or equal to the raw URL.
 func PickCanonical(rawURL, html string) string {
 	if linked := ResolveCanonicalLink(html, rawURL); linked != "" {
 		return linked

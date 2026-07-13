@@ -12,9 +12,6 @@ import (
 	utls "github.com/refraction-networking/utls"
 )
 
-// testTLSTrust returns a utls.Config trusting srv's self-signed certificate,
-// for injection into a specific chromeTransport instance via its tlsConfig
-// field (T16). No package-global state — no cleanup, t.Parallel()-safe.
 func testTLSTrust(t *testing.T, srv *httptest.Server) *utls.Config {
 	t.Helper()
 	pool := x509.NewCertPool()
@@ -22,9 +19,6 @@ func testTLSTrust(t *testing.T, srv *httptest.Server) *utls.Config {
 	return &utls.Config{RootCAs: pool}
 }
 
-// startTLSServer spins up an httptest TLS server with the given ALPN protocol
-// list. When "h2" is offered the server is started with EnableHTTP2 so Go's
-// h2 server actually handles the connection.
 func startTLSServer(t *testing.T, nextProtos []string, handler http.HandlerFunc) *httptest.Server {
 	t.Helper()
 	srv := httptest.NewUnstartedServer(handler)
@@ -36,7 +30,6 @@ func startTLSServer(t *testing.T, nextProtos []string, handler http.HandlerFunc)
 		}
 	}
 	srv.StartTLS()
-	// Override NextProtos after StartTLS so we can force "http/1.1"-only.
 	if srv.TLS != nil {
 		srv.TLS.NextProtos = nextProtos
 	}
@@ -90,8 +83,6 @@ func TestExtract_ProtocolFieldPopulatedOnHTTPS(t *testing.T) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		_, _ = fmt.Fprintln(w, "<html><head><title>P</title></head><body><p>hi</p></body></html>")
 	})
-	// The trusted transport rides in through the Options.Transport seam; it is
-	// still the real chromeTransport, so ALPN/Protocol behaviour is exercised.
 	result := FromURLWithOptions(srv.URL, Options{Transport: &chromeTransport{tlsConfig: testTLSTrust(t, srv)}})
 	if result.Error != "" {
 		t.Fatalf("extraction error: %s", result.Error)

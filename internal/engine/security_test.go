@@ -13,16 +13,12 @@ import (
 	"testing"
 )
 
-// resolverFunc adapts a func to the IPResolver seam.
 type resolverFunc func(ctx context.Context, network, host string) ([]net.IP, error)
 
 func (f resolverFunc) LookupIP(ctx context.Context, network, host string) ([]net.IP, error) {
 	return f(ctx, network, host)
 }
 
-// stubResolver returns a map-backed IPResolver so SSRF/rebinding checks are
-// hermetic. Assign it to SecurityPolicy.Resolver (T16) — no package-global
-// state, so tests using it are t.Parallel()-safe.
 func stubResolver(m map[string][]net.IP) IPResolver {
 	return resolverFunc(func(_ context.Context, _ string, host string) ([]net.IP, error) {
 		if ips, ok := m[host]; ok {
@@ -34,17 +30,17 @@ func stubResolver(m map[string][]net.IP) IPResolver {
 
 func TestValidatePublicIP_BlocksNonPublic(t *testing.T) {
 	blocked := []string{
-		"127.0.0.1",       // loopback
-		"10.0.0.5",        // RFC1918
-		"192.168.1.1",     // RFC1918
-		"172.16.0.1",      // RFC1918
-		"169.254.169.254", // link-local / cloud metadata
-		"100.64.0.1",      // carrier-grade NAT
-		"198.18.0.1",      // benchmarking
-		"0.0.0.0",         // unspecified
-		"::1",             // IPv6 loopback
-		"fe80::1",         // IPv6 link-local
-		"fc00::1",         // IPv6 ULA
+		"127.0.0.1",
+		"10.0.0.5",
+		"192.168.1.1",
+		"172.16.0.1",
+		"169.254.169.254",
+		"100.64.0.1",
+		"198.18.0.1",
+		"0.0.0.0",
+		"::1",
+		"fe80::1",
+		"fc00::1",
 	}
 	for _, s := range blocked {
 		if err := validatePublicIP(net.ParseIP(s)); err == nil {
@@ -63,7 +59,7 @@ func TestValidateURL_BlocksPrivateResolution(t *testing.T) {
 	p.Resolver = stubResolver(map[string][]net.IP{
 		"internal.example.com": {net.ParseIP("10.0.0.7")},
 		"meta.example.com":     {net.ParseIP("169.254.169.254")},
-		"mixed.example.com":    {net.ParseIP("8.8.8.8"), net.ParseIP("127.0.0.1")}, // one bad ⇒ blocked
+		"mixed.example.com":    {net.ParseIP("8.8.8.8"), net.ParseIP("127.0.0.1")},
 		"public.example.com":   {net.ParseIP("93.184.216.34")},
 	})
 
@@ -76,7 +72,6 @@ func TestValidateURL_BlocksPrivateResolution(t *testing.T) {
 	if err := p.ValidateURL(context.Background(), "https://public.example.com/x"); err != nil {
 		t.Errorf("ValidateURL(public) = %v, want nil", err)
 	}
-	// Literal private IP host, no DNS.
 	if err := p.ValidateURL(context.Background(), "https://10.1.2.3/x"); !errors.Is(err, ErrPrivateIPBlocked) {
 		t.Errorf("ValidateURL(literal 10.1.2.3) = %v, want blocked", err)
 	}
@@ -91,7 +86,6 @@ func TestValidateURL_TrustedResolveCIDRAllowsInternal(t *testing.T) {
 	if err := p.ValidateURL(context.Background(), "https://db.internal/x"); err != nil {
 		t.Errorf("with trusted CIDR 10.0.0.0/8, ValidateURL = %v, want nil", err)
 	}
-	// A loopback literal IP allowed by an explicit /32.
 	p2 := DefaultSecurityPolicy()
 	p2.TrustedResolveCIDRs = []string{"127.0.0.1"}
 	if err := p2.ValidateURL(context.Background(), "https://127.0.0.1:8080/x"); err != nil {
@@ -107,7 +101,6 @@ func TestValidateURL_SchemeAndDomainRules(t *testing.T) {
 		}
 	}
 
-	// Deny list wins.
 	resolver := stubResolver(map[string][]net.IP{"evil.com": {net.ParseIP("8.8.8.8")}, "ok.com": {net.ParseIP("8.8.8.8")}})
 	pd := DefaultSecurityPolicy()
 	pd.Resolver = resolver
@@ -119,7 +112,6 @@ func TestValidateURL_SchemeAndDomainRules(t *testing.T) {
 		t.Errorf("ok.com should pass deny-only policy: %v", err)
 	}
 
-	// Allow list excludes everything else.
 	pa := DefaultSecurityPolicy()
 	pa.Resolver = resolver
 	pa.AllowedDomains = []string{"ok.com"}
@@ -136,7 +128,6 @@ func TestRedirectChecker_MaxRedirects(t *testing.T) {
 		r, _ := http.NewRequest("GET", "https://example.com/x", nil)
 		return r
 	}
-	// via must hold real requests — the http client never passes nils.
 	mkVia := func(n int) []*http.Request {
 		v := make([]*http.Request, n)
 		for i := range v {
@@ -157,7 +148,7 @@ func TestRedirectChecker_MaxRedirects(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			p := &SecurityPolicy{MaxRedirects: c.max} // RevalidateRedirects off
+			p := &SecurityPolicy{MaxRedirects: c.max}
 			check := p.redirectChecker(&redirectTracker{})
 			err := check(mk(), mkVia(c.viaLen))
 			stopped := errors.Is(err, http.ErrUseLastResponse)
@@ -169,7 +160,7 @@ func TestRedirectChecker_MaxRedirects(t *testing.T) {
 }
 
 func TestRedirectChecker_RevalidatesToInternal(t *testing.T) {
-	p := DefaultSecurityPolicy() // RevalidateRedirects = true
+	p := DefaultSecurityPolicy()
 	p.Resolver = stubResolver(map[string][]net.IP{"evil-redirect.com": {net.ParseIP("10.0.0.9")}})
 	check := p.redirectChecker(&redirectTracker{})
 	req, _ := http.NewRequest("GET", "https://evil-redirect.com/internal", nil)
@@ -180,8 +171,6 @@ func TestRedirectChecker_RevalidatesToInternal(t *testing.T) {
 	}
 }
 
-// cannedRT serves one fixed response for every request — the injected-transport
-// pattern from extract_negotiation_test.go.
 type cannedRT struct {
 	status int
 	header http.Header
@@ -203,12 +192,11 @@ func (rt *cannedRT) RoundTrip(req *http.Request) (*http.Response, error) {
 }
 
 func TestFetch_ResponseSizeCapped(t *testing.T) {
-	big := bytes.Repeat([]byte("<p>spam</p>"), 300_000) // ~3.3 MB
+	big := bytes.Repeat([]byte("<p>spam</p>"), 300_000)
 	rt := &cannedRT{status: 200, header: http.Header{"Content-Type": {"text/html"}}, body: big}
 	opts := Options{
 		Transport: rt,
-		// BlockPrivateIPs off ⇒ ValidateURL skips DNS and stays hermetic.
-		Security: &SecurityPolicy{MaxResponseBytes: 1 << 20},
+		Security:  &SecurityPolicy{MaxResponseBytes: 1 << 20},
 	}
 	res := FromURLWithOptions("https://example.com/big", opts)
 	if !strings.Contains(res.Error, "size cap") || res.SecurityBlock == "" {
@@ -219,7 +207,7 @@ func TestFetch_ResponseSizeCapped(t *testing.T) {
 func TestFetch_DecompressionBombCapped(t *testing.T) {
 	var buf bytes.Buffer
 	zw := gzip.NewWriter(&buf)
-	if _, err := zw.Write(bytes.Repeat([]byte{'A'}, 20<<20)); err != nil { // 20 MB → tiny gzip
+	if _, err := zw.Write(bytes.Repeat([]byte{'A'}, 20<<20)); err != nil {
 		t.Fatal(err)
 	}
 	_ = zw.Close()
@@ -231,7 +219,7 @@ func TestFetch_DecompressionBombCapped(t *testing.T) {
 	}
 	opts := Options{
 		Transport: rt,
-		Security:  &SecurityPolicy{MaxDecompressedBytes: 1 << 20}, // 1 MB cap
+		Security:  &SecurityPolicy{MaxDecompressedBytes: 1 << 20},
 	}
 	res := FromURLWithOptions("https://example.com/bomb", opts)
 	if !strings.Contains(res.Error, "decompressed body exceeds") {
@@ -243,8 +231,6 @@ func TestFetch_DecompressionBombCapped(t *testing.T) {
 }
 
 func TestFetch_NoPolicyIsUnguarded(t *testing.T) {
-	// Sanity: with Security nil, the size/decompress guards are inert and a
-	// small body extracts normally through the injected transport.
 	rt := &cannedRT{status: 200, header: http.Header{"Content-Type": {"text/html"}}, body: []byte("<html><body><h1>hi</h1><p>world</p></body></html>")}
 	res := FromURLWithOptions("https://example.com/ok", Options{Transport: rt})
 	if res.Error != "" {

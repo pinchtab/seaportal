@@ -1,20 +1,12 @@
 package engine
 
-// preprocessBaseline encodes the regression contract from the pre-refactor
-// run of the five host-gated scope* functions (captured via the
-// `baseline` build-tag harness). The values are pre-refactor extracted
-// markdown lengths; minLength is 85% of that (the ±15% tolerance gate).
-//
-// The matrix is **data only** — it is consulted by TestPreprocessBaseline_*
-// integration tests in this package. Update both the value and the markers
-// when a fixture is replaced.
 type preprocessBaselineRow struct {
 	fixture       string
 	url           string
 	preLength     int
-	minLength     int      // ≈ preLength * 0.85
-	markers       []string // substrings that must appear in extracted Content
-	acceptedDelta string   // empty if no regression accepted; otherwise a note
+	minLength     int
+	markers       []string
+	acceptedDelta string
 }
 
 var preprocessBaseline = []preprocessBaselineRow{
@@ -26,20 +18,11 @@ var preprocessBaseline = []preprocessBaselineRow{
 		markers:   []string{"LinkedIn"},
 	},
 	{
-		fixture:   "gitlab-project.html",
-		url:       "https://gitlab.com/gitlab-org/gitlab",
-		preLength: 471,
-		minLength: 0, // see acceptedDelta
-		markers:   []string{"GitLab"},
-		// The pre-refactor extraction value (471) was produced by a
-		// hostname-gated synthetic content reconstruction
-		// (scopeGitLabContent) that injected literal "Project information",
-		// "Topics:" and stats text from SSR fragments. With host gates
-		// removed there is no generic way to reconstruct those — GitLab
-		// project pages defer the README to client-side XHR. The generic
-		// preprocess still returns the project name and avatar (~107 chars),
-		// well below the 15% tolerance. Accepted as an architectural cost
-		// of the host-agnostic refactor.
+		fixture:       "gitlab-project.html",
+		url:           "https://gitlab.com/gitlab-org/gitlab",
+		preLength:     471,
+		minLength:     0,
+		markers:       []string{"GitLab"},
 		acceptedDelta: "regression accepted: synthetic SSR rebuild not reproducible without host gating",
 	},
 	{

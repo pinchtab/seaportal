@@ -24,15 +24,11 @@ func newReq(t *testing.T, url string) *http.Request {
 	return req
 }
 
-// fakeClock is a manually-advanced clock for DiskCache TTL/SWR unit tests, so
-// freshness boundaries are asserted with hour-scale margins instead of racy
-// millisecond sleeps.
 type fakeClock struct{ t time.Time }
 
 func (c *fakeClock) Now() time.Time          { return c.t }
 func (c *fakeClock) Advance(d time.Duration) { c.t = c.t.Add(d) }
 
-// newFakeClockCache builds a DiskCache in a temp dir pinned to a fake clock.
 func newFakeClockCache(t *testing.T, ttl time.Duration) (*DiskCache, *fakeClock) {
 	t.Helper()
 	cache, err := NewDiskCache(t.TempDir(), ttl)
@@ -44,10 +40,6 @@ func newFakeClockCache(t *testing.T, ttl time.Duration) (*DiskCache, *fakeClock)
 	return cache, clk
 }
 
-// backdateEntry rewrites the FetchedAt stamp of an existing cache entry to
-// `age` in the past. The FromURL* integration tests use it to age an entry
-// deterministically — the engine constructs its own DiskCache internally, so
-// its clock can't be faked from here.
 func backdateEntry(t *testing.T, cache *DiskCache, url string, req *http.Request, age time.Duration) {
 	t.Helper()
 	key := cache.cacheKey(url, req)
@@ -118,9 +110,6 @@ func TestDiskCache_TTLExpiry(t *testing.T) {
 	}
 }
 
-// TestDiskCache_TTLExpiry_RealClock is the single sanctioned real-sleep test:
-// an end-to-end sanity check that the default time.Now wiring expires entries.
-// Every other freshness test drives the fake clock.
 func TestDiskCache_TTLExpiry_RealClock(t *testing.T) {
 	if testing.Short() {
 		t.Skip("real-sleep sanity test skipped under -short")
@@ -135,7 +124,7 @@ func TestDiskCache_TTLExpiry_RealClock(t *testing.T) {
 	if err := cache.Put(url, req, 200, http.Header{}, []byte("x")); err != nil {
 		t.Fatalf("Put: %v", err)
 	}
-	time.Sleep(250 * time.Millisecond) // 5x TTL: generous margin for loaded CI
+	time.Sleep(250 * time.Millisecond)
 	if _, _, ok := cache.Get(url, req); ok {
 		t.Fatalf("Get: expected miss (TTL expired), got hit")
 	}
@@ -157,7 +146,7 @@ func TestDiskCache_KeyVariesByURL(t *testing.T) {
 	_ = cache.Put("https://example.com/b", r2, 200, http.Header{}, []byte("B"))
 
 	entries, _ := os.ReadDir(dir)
-	if len(entries) != 4 { // 2 headers + 2 bodies
+	if len(entries) != 4 {
 		t.Fatalf("expected 4 cache files, got %d", len(entries))
 	}
 }
@@ -193,8 +182,6 @@ func TestDiskCache_MissingHeadersFileIsMiss(t *testing.T) {
 	}
 }
 
-// ── Integration ─────────────────────────────────────────────────────
-
 func TestExtract_CacheHitSkipsNetwork(t *testing.T) {
 	var hits int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -208,7 +195,6 @@ func TestExtract_CacheHitSkipsNetwork(t *testing.T) {
 	dir := t.TempDir()
 	cache, _ := NewDiskCache(dir, time.Hour)
 
-	// Pre-populate cache with a body matching what extract expects.
 	req := newReq(t, srv.URL)
 	headers := http.Header{}
 	headers.Set("Content-Type", "text/html; charset=utf-8")
@@ -255,7 +241,6 @@ func TestExtract_NoCacheBypassesReadsButWritesNew(t *testing.T) {
 		t.Errorf("expected 1 network hit, got %d", got)
 	}
 
-	// The cache write must have overwritten the stale entry.
 	_, body, ok := cache.Get(srv.URL, req)
 	if !ok {
 		t.Fatalf("expected cache entry to still exist")
@@ -264,8 +249,6 @@ func TestExtract_NoCacheBypassesReadsButWritesNew(t *testing.T) {
 		t.Errorf("expected cache to be refreshed, still stale: %q", body)
 	}
 }
-
-// ── Re-validation unit tests ─────────────────────────────────────────
 
 func TestDiskCache_GetStale_ReturnsStaleWithValidators(t *testing.T) {
 	cache, clk := newFakeClockCache(t, time.Hour)
@@ -365,8 +348,6 @@ func TestConditionalHeaders_Neither(t *testing.T) {
 	}
 }
 
-// ── Re-validation integration tests ──────────────────────────────────
-
 func TestExtract_RevalidationHit_304(t *testing.T) {
 	const etag = `"revalidate-me"`
 	var hits int32
@@ -395,7 +376,7 @@ func TestExtract_RevalidationHit_304(t *testing.T) {
 	if err := cache.Put(srv.URL, req, 200, headers, cachedBody); err != nil {
 		t.Fatalf("Put: %v", err)
 	}
-	backdateEntry(t, cache, srv.URL, req, 2*time.Hour) // past TTL → must revalidate
+	backdateEntry(t, cache, srv.URL, req, 2*time.Hour)
 
 	result := FromURLWithOptions(srv.URL, Options{CacheDir: dir, CacheTTL: time.Hour})
 	if !result.CacheRevalidated {
@@ -410,7 +391,6 @@ func TestExtract_RevalidationHit_304(t *testing.T) {
 	if !strings.Contains(result.Content, "from-revalidated-cache") {
 		t.Errorf("expected cached body extraction, got %q", result.Content)
 	}
-	// FetchedAt should have been refreshed → a longer-TTL view sees it fresh.
 	verify, _ := NewDiskCache(dir, time.Hour)
 	if _, _, ok := verify.Get(srv.URL, req); !ok {
 		t.Errorf("expected entry to be fresh after revalidation Touch")
@@ -420,7 +400,6 @@ func TestExtract_RevalidationHit_304(t *testing.T) {
 func TestExtract_RevalidationMiss_200(t *testing.T) {
 	const etag = `"stale-tag"`
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Always serve fresh 200, even when conditional headers present.
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.Header().Set("ETag", `"new-tag"`)
 		w.WriteHeader(200)
@@ -438,7 +417,7 @@ func TestExtract_RevalidationMiss_200(t *testing.T) {
 	if err := cache.Put(srv.URL, req, 200, headers, staleBody); err != nil {
 		t.Fatalf("Put: %v", err)
 	}
-	backdateEntry(t, cache, srv.URL, req, 2*time.Hour) // past TTL → must revalidate
+	backdateEntry(t, cache, srv.URL, req, 2*time.Hour)
 
 	result := FromURLWithOptions(srv.URL, Options{CacheDir: dir, CacheTTL: time.Hour})
 	if result.CacheRevalidated {
@@ -450,7 +429,6 @@ func TestExtract_RevalidationMiss_200(t *testing.T) {
 	if !strings.Contains(result.Content, "brand-new-body") {
 		t.Errorf("expected fresh body, got %q", result.Content)
 	}
-	// Cache entry should have been replaced with the new body.
 	verify, _ := NewDiskCache(dir, time.Hour)
 	_, body, ok := verify.Get(srv.URL, req)
 	if !ok {
@@ -476,11 +454,10 @@ func TestExtract_NoValidatorsFallsThroughToFreshFetch(t *testing.T) {
 	dir := t.TempDir()
 	cache, _ := NewDiskCache(dir, time.Hour)
 	req := newReq(t, srv.URL)
-	// No ETag / Last-Modified on the cached entry.
 	if err := cache.Put(srv.URL, req, 200, http.Header{"Content-Type": []string{"text/html"}}, []byte("<html><body>old</body></html>")); err != nil {
 		t.Fatalf("Put: %v", err)
 	}
-	backdateEntry(t, cache, srv.URL, req, 2*time.Hour) // past TTL, no validators
+	backdateEntry(t, cache, srv.URL, req, 2*time.Hour)
 
 	result := FromURLWithOptions(srv.URL, Options{CacheDir: dir, CacheTTL: time.Hour})
 	if result.CacheRevalidated {
@@ -513,20 +490,16 @@ func TestExtract_OnlyCachesSuccessfulResponses(t *testing.T) {
 	cache, _ := NewDiskCache(dir, time.Hour)
 	req := newReq(t, srv.URL)
 
-	// First call: 500 → must NOT be cached. Disable retries so the 500 surfaces.
 	_ = FromURLWithOptions(srv.URL, Options{CacheDir: dir, CacheTTL: time.Hour, MaxRetries: 0})
 	if _, _, ok := cache.Get(srv.URL, req); ok {
 		t.Fatalf("500 response should not have been cached")
 	}
 
-	// Second call: 200 → should be cached.
 	_ = FromURLWithOptions(srv.URL, Options{CacheDir: dir, CacheTTL: time.Hour, MaxRetries: 0})
 	if _, _, ok := cache.Get(srv.URL, req); !ok {
 		t.Fatalf("200 response should have been cached")
 	}
 }
-
-// ── Stale-while-revalidate (SWR) unit tests ──────────────────────────
 
 func TestDiskCache_GetStaleWithTolerance_FreshBand(t *testing.T) {
 	dir := t.TempDir()
@@ -556,7 +529,7 @@ func TestDiskCache_GetStaleWithTolerance_SWRBand(t *testing.T) {
 	if err := cache.Put(url, req, 200, http.Header{}, []byte("body")); err != nil {
 		t.Fatalf("Put: %v", err)
 	}
-	clk.Advance(90 * time.Minute) // past TTL (1h) but within tolerance (2h)
+	clk.Advance(90 * time.Minute)
 
 	meta, body, fresh, stale, beyond := cache.GetStaleWithTolerance(url, req, 2*time.Hour)
 	if fresh || beyond {
@@ -579,7 +552,7 @@ func TestDiskCache_GetStaleWithTolerance_BeyondBand(t *testing.T) {
 	if err := cache.Put(url, req, 200, headers, []byte("body")); err != nil {
 		t.Fatalf("Put: %v", err)
 	}
-	clk.Advance(4 * time.Hour) // past TTL (1h) + tolerance (1h)
+	clk.Advance(4 * time.Hour)
 
 	meta, body, fresh, stale, beyond := cache.GetStaleWithTolerance(url, req, time.Hour)
 	if fresh || stale {
@@ -603,7 +576,7 @@ func TestDiskCache_GetStaleWithTolerance_NoValidators(t *testing.T) {
 	if err := cache.Put(url, req, 200, http.Header{}, []byte("body")); err != nil {
 		t.Fatalf("Put: %v", err)
 	}
-	clk.Advance(4 * time.Hour) // past TTL (1h) + tolerance (1h)
+	clk.Advance(4 * time.Hour)
 
 	meta, body, fresh, stale, beyond := cache.GetStaleWithTolerance(url, req, time.Hour)
 	if fresh || stale || beyond {
@@ -613,8 +586,6 @@ func TestDiskCache_GetStaleWithTolerance_NoValidators(t *testing.T) {
 		t.Fatalf("expected nil meta+body on no-validator miss")
 	}
 }
-
-// ── SWR integration tests ────────────────────────────────────────────
 
 func TestExtract_SWRServesStaleAndRefreshesInBackground(t *testing.T) {
 	const etag = `"swr-tag"`
@@ -638,7 +609,7 @@ func TestExtract_SWRServesStaleAndRefreshesInBackground(t *testing.T) {
 	if err := cache.Put(srv.URL, req, 200, headers, cachedBody); err != nil {
 		t.Fatalf("Put: %v", err)
 	}
-	backdateEntry(t, cache, srv.URL, req, 2*time.Hour) // past TTL, inside tolerance below
+	backdateEntry(t, cache, srv.URL, req, 2*time.Hour)
 
 	result := FromURLWithOptions(srv.URL, Options{
 		CacheDir:            dir,
@@ -658,7 +629,6 @@ func TestExtract_SWRServesStaleAndRefreshesInBackground(t *testing.T) {
 		t.Errorf("expected stale cached body in content, got %q", result.Content)
 	}
 
-	// Background refresh should fire and replace cache. Poll briefly.
 	deadline := time.Now().Add(2 * time.Second)
 	verify, _ := NewDiskCache(dir, time.Hour)
 	var got []byte
@@ -704,12 +674,12 @@ func TestExtract_SWRBeyondToleranceFallsBackToSyncRevalidate(t *testing.T) {
 	if err := cache.Put(srv.URL, req, 200, headers, cachedBody); err != nil {
 		t.Fatalf("Put: %v", err)
 	}
-	backdateEntry(t, cache, srv.URL, req, 3*time.Hour) // past TTL+tolerance below
+	backdateEntry(t, cache, srv.URL, req, 3*time.Hour)
 
 	result := FromURLWithOptions(srv.URL, Options{
 		CacheDir:            dir,
 		CacheTTL:            time.Hour,
-		CacheStaleTolerance: time.Minute, // tiny tolerance → past it
+		CacheStaleTolerance: time.Minute,
 	})
 	if result.CacheStale {
 		t.Errorf("expected CacheStale=false beyond tolerance")

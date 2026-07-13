@@ -23,21 +23,6 @@ func serveFixture(t *testing.T, path, contentType string) *httptest.Server {
 	}))
 }
 
-// TestExtract_CharsetMatrix exercises the three realistic header/meta
-// combinations for non-UTF-8 source bodies:
-//
-//  1. header-correct-latin1     — Content-Type declares iso-8859-1 (matches body).
-//  2. no-charset-shiftjis       — Content-Type omits charset; <meta charset>
-//     in the body is the only signal (shift_jis).
-//  3. header-misdeclared-gb2312 — Content-Type lies (gb2312) about an
-//     iso-8859-1 body whose <meta http-equiv> correctly says ISO-8859-1.
-//
-// Case (3) exercises the post-decode recovery path in sniffAndDecode: the
-// header-declared gb2312 decode produces CJK mojibake on the French body
-// (high U+FFFD / control-char density), the body's <meta http-equiv> says
-// ISO-8859-1, the two disagree, and the meta-driven re-decode is cleaner —
-// so the recovered charset wins. The previously locked-in mojibake markers
-// (鏰 / 鑣 / 鏾) must no longer appear.
 func TestExtract_CharsetMatrix(t *testing.T) {
 	leakcheck.CheckLeak(t)
 	cases := []struct {
@@ -47,21 +32,16 @@ func TestExtract_CharsetMatrix(t *testing.T) {
 		wantCharset    string
 		wantContains   []string
 		wantNotContain []string
-		// mustBeValidUTF8 always true — decoders are required to emit UTF-8
-		// even when the chosen encoding is wrong.
 	}{
 		{
-			// Header is authoritative and correct — straight latin-1 → UTF-8.
-			name:         "header-correct-latin1",
-			fixture:      "../../testdata/static/charset-latin1.html",
-			contentType:  "text/html; charset=ISO-8859-1",
-			wantCharset:  "iso-8859-1",
-			wantContains: []string{"café", "français", "à", "François"},
-			// Mojibake guard: if decode failed, "é" would surface as "Ã©".
+			name:           "header-correct-latin1",
+			fixture:        "../../testdata/static/charset-latin1.html",
+			contentType:    "text/html; charset=ISO-8859-1",
+			wantCharset:    "iso-8859-1",
+			wantContains:   []string{"café", "français", "à", "François"},
 			wantNotContain: []string{"Ã©", "Ã "},
 		},
 		{
-			// No charset on the wire — sniff falls back to <meta charset>.
 			name:         "no-charset-shiftjis",
 			fixture:      "../../testdata/static/charset-shiftjis.html",
 			contentType:  "text/html",
@@ -69,26 +49,9 @@ func TestExtract_CharsetMatrix(t *testing.T) {
 			wantContains: []string{"日本語"},
 		},
 		{
-			// LOCK-IN of current behaviour: header beats meta, so a lying
-			// gb2312 header decodes latin-1 bytes through the GBK table and
-			// the French text comes out as CJK mojibake. The body's own
-			// <meta http-equiv="Content-Type" ... charset=ISO-8859-1"> is
-			// IGNORED because step 2 (header) of detectCharset succeeded.
-			//
-			// Documented limitation, NOT desired behaviour. A real recovery
-			// pass would either:
-			//   - prefer <meta> when the header's charset is unknown/rare, OR
-			//   - validate the decoded output and retry on high replacement-
-			//     char density.
-			// Both are out of scope for this observational test. See
-			// todo.md "Mis-declared Content-Type charset recovery" for the
-			// follow-up.
-			name:        "header-misdeclared-gb2312",
-			fixture:     "../../testdata/static/charset-latin1.html",
-			contentType: "text/html; charset=gb2312",
-			// Recovery: header lies, decoded output is CJK mojibake, the
-			// body's <meta http-equiv> truthfully says ISO-8859-1, retry
-			// wins.
+			name:           "header-misdeclared-gb2312",
+			fixture:        "../../testdata/static/charset-latin1.html",
+			contentType:    "text/html; charset=gb2312",
 			wantCharset:    "iso-8859-1",
 			wantContains:   []string{"café", "français", "François"},
 			wantNotContain: []string{"fran鏰is", "pr鑣", "Fran鏾is"},

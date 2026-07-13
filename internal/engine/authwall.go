@@ -6,61 +6,23 @@ import (
 	"strings"
 )
 
-// authWallTitlePatterns match a <title> that *is* a login/signup prompt
-// ("Log In or Sign Up") — anchored so "How to sign in to X" / "Signing bonus"
-// don't match. High precision: real articles don't title themselves this way.
 var authWallTitlePatterns = []*regexp.Regexp{
 	regexp.MustCompile(`(?i)\b(log ?in|sign ?in|join)\b[^.]{0,20}\bor\b[^.]{0,20}\b(sign ?up|register|log ?in|join)\b`),
 	regexp.MustCompile(`(?i)^\s*(log ?in|sign ?in|sign ?up)\b`),
 }
 
-// authWallURLPathHints are URL path substrings that strongly suggest the page
-// IS a login/signup wall (the URL is honest about its purpose).
 var authWallURLPathHints = []string{"/login", "/sign-in", "/signin", "/sign-up", "/signup", "/auth"}
 
-// authWallQueryHints are query keys that indicate a post-login redirect
-// target — pages reached via these hints are typically auth walls.
 var authWallQueryHints = []string{"next", "return_to", "returnto", "redirect", "redirect_to", "continue"}
 
-// authWallCTAs is the CTA vocabulary counted for signal 3. Each distinct
-// match counts once. Includes both spaced and unspaced forms ("sign up" and
-// "signup") because anchor hrefs like /signup and button labels both surface
-// in the readability-extracted markdown body.
 var authWallCTAs = []string{
 	"log in", "sign in", "sign up", "join now", "continue with",
 	"create account", "create an account", "register", "welcome back",
 	"signup", "signin", "login",
 }
 
-// authWallLinkPaths are URL-path fragments that, when they appear inside
-// markdown link targets (e.g. `](…/signup)`), indicate the
-// chrome of the page is dominated by auth/onboarding links. This is a purely
-// generic content signal — no host knowledge is involved.
 var authWallLinkPaths = []string{"/signup", "/sign-up", "/signin", "/sign-in", "/login", "/register", "/join"}
 
-// detectAuthWallByContent decides whether a successfully-extracted page is
-// actually a logged-out auth wall, based purely on content + URL signals
-// (no host list, no per-property allow/deny rules). Trigger requires QUORUM:
-// at least 2 independent signals must fire. Reason returned: "auth-wall-content".
-//
-// Backward-compat: downstream consumers may still see the older reason
-// "auth-wall-marketing"; both strings denote the same outcome.
-//
-// Signals:
-//  1. Structural login form (hasLoginFormMarkers). Counts as 2 signals when
-//     the surrounding content has no article structure (ParagraphCount<3
-//     AND Length<1500) — a form-shaped page with no prose is almost
-//     certainly the login wall itself.
-//  2. URL hints — path or query indicates login/redirect.
-//  3. CTA density without article structure: >=3 distinct CTAs AND
-//     ParagraphCount<3.
-//  4. Content-absence + CTA dominance: Length<1500 AND ctaHits/wordCount>0.05.
-//  5. Auth-link dominance: >=2 occurrences of `/signup`, `/login`, `/register`
-//     etc. inside markdown link targets in the body. Catches landing pages
-//     whose chrome links to signup/login from many nav/footer positions even
-//     when the visible prose looks article-shaped.
-//  6. Auth-prompt title ("Log In or Sign Up"): catches content-rich logged-out
-//     walls whose marketing prose defeats signals 3/4. Pairs with 5 (LinkedIn).
 func detectAuthWallByContent(result Result) (bool, string) {
 	parsedURL, err := url.Parse(result.URL)
 	if err != nil {
@@ -72,7 +34,6 @@ func detectAuthWallByContent(result Result) (bool, string) {
 
 	signals := 0
 
-	// Pre-count CTA hits — used by signals 1 (form boost), 3, and 4.
 	distinctCTAs := 0
 	totalCTAHits := 0
 	for _, cta := range authWallCTAs {
@@ -82,9 +43,6 @@ func detectAuthWallByContent(result Result) (bool, string) {
 		}
 	}
 
-	// The email-field + password pair almost never appears in real article
-	// content (docs/wikis talk ABOUT passwords but don't render a credential
-	// prompt), so it reinforces to 2 signals when paired with another hint.
 	if hasLoginFormMarkers(content) {
 		signals++
 		if (result.ParagraphCount < 3 && result.Length < 1500) || distinctCTAs >= 2 {
@@ -92,7 +50,6 @@ func detectAuthWallByContent(result Result) (bool, string) {
 		}
 	}
 
-	// Signal 2 — URL hints (path or query)
 	urlHint := false
 	for _, hint := range authWallURLPathHints {
 		if strings.Contains(path, hint) {
@@ -112,12 +69,10 @@ func detectAuthWallByContent(result Result) (bool, string) {
 		signals++
 	}
 
-	// Signal 3 — CTA density on a non-article page.
 	if distinctCTAs >= 3 && result.ParagraphCount < 3 {
 		signals++
 	}
 
-	// Signal 4 — content-absence + CTA dominance
 	if result.Length < 1500 && result.Length > 0 {
 		words := len(strings.Fields(content))
 		if words > 0 {
@@ -128,20 +83,18 @@ func detectAuthWallByContent(result Result) (bool, string) {
 		}
 	}
 
-	// Signal 5 — auth-link dominance.
 	authLinkHits := 0
 	for _, p := range authWallLinkPaths {
-		authLinkHits += strings.Count(content, p+")")     // `](…/signup)` ending
-		authLinkHits += strings.Count(content, p+"?")     // `](…/signup?next=…)`
-		authLinkHits += strings.Count(content, p+"/)")    // `](…/signup/)`
-		authLinkHits += strings.Count(content, p+"/?")    // `](…/signup/?…)`
-		authLinkHits += strings.Count(content, "("+p+")") // bare `(/login)` form (HN style)
+		authLinkHits += strings.Count(content, p+")")
+		authLinkHits += strings.Count(content, p+"?")
+		authLinkHits += strings.Count(content, p+"/)")
+		authLinkHits += strings.Count(content, p+"/?")
+		authLinkHits += strings.Count(content, "("+p+")")
 	}
 	if authLinkHits >= 2 {
 		signals++
 	}
 
-	// Signal 6 — auth-prompt title.
 	for _, re := range authWallTitlePatterns {
 		if re.MatchString(result.Title) {
 			signals++

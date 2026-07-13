@@ -84,7 +84,6 @@ func TestLoad_MalformedYAML(t *testing.T) {
 }
 
 func TestLoad_WrongShapeYAML(t *testing.T) {
-	// Valid YAML, wrong shape (map instead of list) must fail decoding.
 	path := writeCorpusFile(t, "path: not-a-list\n")
 	_, err := Load(path)
 	if err == nil {

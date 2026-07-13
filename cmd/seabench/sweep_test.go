@@ -23,10 +23,10 @@ func TestParseSiteList_AutoDetectsFormats(t *testing.T) {
 	path := writeSiteList(t, strings.Join([]string{
 		"# comment line",
 		"",
-		"rank,domain", // Tranco header, skipped
+		"rank,domain",
 		"1,example.com",
 		"docs\thttps://docs.example.com/guide\tstatic\tmarker",
-		"news\thttps://news.example.com\tany\t-", // "any" label collapses to unlabelled
+		"news\thttps://news.example.com\tany\t-",
 		"bare-domain.org",
 		"https://already-url.example.net/page",
 	}, "\n"))
@@ -70,7 +70,6 @@ func TestParseSiteList_MissingFile(t *testing.T) {
 	}
 }
 
-// sweepArticleHTML is a small static page that extracts cleanly.
 const sweepArticleHTML = `<!doctype html><html><head><title>Sweep Fixture</title>
 <meta name="description" content="An article used by the sweep lane test.">
 </head><body><article><h1>Sweep Fixture</h1>
@@ -80,10 +79,6 @@ length, sentence after sentence, so readability has something to chew on.</p>
 <p>A second paragraph rounds out the fixture with more plain text content.</p>
 </article></body></html>`
 
-// TestSweepLane_EndToEnd drives the smallest corpus through executeSweep →
-// buildSweepReport → renderSweepMarkdown against in-process fixture servers:
-// one healthy article page, one 404, and one unfetchable target. Assertions
-// cover report structure, never timing numbers.
 func TestSweepLane_EndToEnd(t *testing.T) {
 	srv := fixture.New().
 		Route("GET", "/{$}", fixture.Body([]byte(sweepArticleHTML), "text/html; charset=utf-8")).
@@ -93,7 +88,6 @@ func TestSweepLane_EndToEnd(t *testing.T) {
 	targets := []sweepTarget{
 		{Rank: 1, URL: srv.URL() + "/", Domain: "ok.fixture"},
 		{Rank: 2, URL: srv.URL() + "/missing", Domain: "notfound.fixture"},
-		// Unsupported scheme: fails fast and non-retryably (no backoff sleeps).
 		{Rank: 3, URL: "ftp://127.0.0.1:1/x", Domain: "err.fixture"},
 	}
 
@@ -112,9 +106,6 @@ func TestSweepLane_EndToEnd(t *testing.T) {
 	if ok.Class == "" || ok.Outcome == "" {
 		t.Errorf("healthy site should carry class/outcome: %+v", ok)
 	}
-	// Documented sweep semantics: an HTTP 404 is NOT an "error" row — the
-	// engine returns a Result with an empty Error, so the sweep counts it as
-	// ok with StatusCode 404 and a not-found routing decision.
 	if !notFound.OK || notFound.Error != "" {
 		t.Fatalf("404 target is expected to count as ok: %+v", notFound)
 	}
@@ -177,14 +168,11 @@ func TestSweepLane_EndToEnd(t *testing.T) {
 	}
 }
 
-// TestBuildSweepReport_LabelledAccuracy checks the labelled path on synthetic
-// results — deterministic accuracy, per-class metrics and confusion cells
-// without depending on live classification of fixtures.
 func TestBuildSweepReport_LabelledAccuracy(t *testing.T) {
 	results := []SiteResult{
 		{URL: "a", Class: "static", Expected: "static", OK: true, TimeMs: 10},
 		{URL: "b", Class: "spa", Expected: "spa", OK: true, TimeMs: 20},
-		{URL: "c", Class: "static", Expected: "spa", OK: true, TimeMs: 30}, // misclassified
+		{URL: "c", Class: "static", Expected: "spa", OK: true, TimeMs: 30},
 		{URL: "d", Class: "blocked", IsBlocked: true, OK: true, TimeMs: 40},
 	}
 

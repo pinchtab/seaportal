@@ -11,10 +11,6 @@ import (
 	"github.com/pinchtab/seaportal/internal/mcp"
 )
 
-// runToolRequests registers the tool surface on a fresh mcp.Server and drives
-// it over ServeStdio with os.Stdin/os.Stdout temporarily swapped for pipes —
-// the only wire into the server from outside package mcp. Returns one parsed
-// response per stdout line. Not parallel-safe (mutates process globals).
 func runToolRequests(t *testing.T, requests ...string) []map[string]interface{} {
 	t.Helper()
 	srv := mcp.NewServer()
@@ -65,7 +61,6 @@ func runToolRequests(t *testing.T, requests ...string) []map[string]interface{} 
 	return responses
 }
 
-// expectedTools is the wire contract: five tools, registration order.
 var expectedTools = []struct {
 	name       string
 	schemaKeys []string
@@ -140,7 +135,6 @@ func TestRegister_FiveToolsInOrderWithSchemas(t *testing.T) {
 	}
 }
 
-// callToolError extracts the isError text content from a tools/call response.
 func callToolError(t *testing.T, resp map[string]interface{}) string {
 	t.Helper()
 	result, ok := resp["result"].(map[string]interface{})

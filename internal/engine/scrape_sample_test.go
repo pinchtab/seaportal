@@ -7,8 +7,6 @@ import (
 	"testing"
 )
 
-// bigCorpus returns pattern groups for a synthetic site: 1 homepage, 20
-// /blog/*/post, 15 /products/*/detail, and 2 flat top-level pages.
 func bigCorpus() []PatternGroup {
 	urls := []string{"https://ex.com/", "https://ex.com/about", "https://ex.com/contact"}
 	for i := 1; i <= 20; i++ {
@@ -48,21 +46,16 @@ func TestSampleCapsEnforced(t *testing.T) {
 }
 
 func TestSampleFullBypassesPerPatternCap(t *testing.T) {
-	// Full disables the per-pattern cap: with a budget large enough for the
-	// whole corpus, every URL comes back despite MaxPerPattern 1.
 	groups := bigCorpus()
 	opts := ScrapeOptions{BaseURL: "https://ex.com", MaxPages: 100, MaxPerPattern: 1, Full: true}
 	got := sample(groups, opts)
-	if len(got) != 38 { // 1 + 20 + 15 + 2
+	if len(got) != 38 {
 		t.Errorf("Full sample = %d URLs, want all 38", len(got))
 	}
 }
 
 func TestSampleFullRespectsMaxPages(t *testing.T) {
-	// Full still honors MaxPages as a total upper bound — a large sitemap must
-	// not blow past the budget (ALP-034). This mirrors the crawl-fallback path,
-	// which already caps discovery at MaxPages.
-	groups := bigCorpus() // 38 URLs
+	groups := bigCorpus()
 	opts := ScrapeOptions{BaseURL: "https://ex.com", MaxPages: 5, MaxPerPattern: 1, Full: true}
 	got := sample(groups, opts)
 	if len(got) != 5 {
@@ -72,7 +65,6 @@ func TestSampleFullRespectsMaxPages(t *testing.T) {
 		t.Errorf("result has duplicates: %v", got)
 	}
 
-	// Small site (fewer URLs than budget): Full returns everything, unchanged.
 	small := groupByPattern([]string{"https://ex.com/", "https://ex.com/about"})
 	if g := sample(small, ScrapeOptions{BaseURL: "https://ex.com", MaxPages: 50, Full: true}); len(g) != 2 {
 		t.Errorf("Full on small site sampled %d URLs, want 2", len(g))
@@ -121,7 +113,6 @@ func TestSamplePriorityHomepageAndSections(t *testing.T) {
 	if !set["/"] {
 		t.Errorf("priority did not include homepage: %v", got)
 	}
-	// The two shallowest sections (about, contact) should be represented first.
 	if !set["/about"] || !set["/contact"] {
 		t.Errorf("priority missed top-level sections: %v", got)
 	}
@@ -145,8 +136,8 @@ func TestGlobToRegex(t *testing.T) {
 		want       bool
 	}{
 		{"/blog/*", "/blog/1", true},
-		{"/blog/*", "/blog/1/post", false}, // * stays within a segment
-		{"/blog/**", "/blog/1/post", true}, // ** crosses segments
+		{"/blog/*", "/blog/1/post", false},
+		{"/blog/**", "/blog/1/post", true},
 		{"/products/*/detail", "/products/9/detail", true},
 		{"/about", "/about", true},
 		{"/about", "/about-us", false},

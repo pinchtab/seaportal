@@ -5,14 +5,6 @@ import (
 	"net/http"
 )
 
-// MultiPageSite builds an in-process fixture serving a small synthetic website
-// for ScrapeSite integration tests: robots.txt (disallowing /private) with a
-// Sitemap directive, a sitemap.xml listing every page, a homepage linking the
-// sections, hyphenated /blog/<slug> articles (JSON-LD Article), numeric
-// /products/<id> pages (JSON-LD Product), and a robots-disallowed /private page.
-//
-// Blog slugs are hyphenated and product ids numeric so they collapse to the
-// /blog/* and /products/* pattern groups.
 func MultiPageSite() *Server {
 	s := New()
 	base := s.URL()

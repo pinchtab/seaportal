@@ -28,7 +28,6 @@ func TestFromHTMLWithOptions_PassesThroughFlags(t *testing.T) {
 		t.Fatalf("expected Links populated when WithLinks=true, got 0")
 	}
 
-	// Relative link should be resolved against the base URL.
 	foundResolved := false
 	for _, l := range res.Links {
 		if strings.Contains(l.Href, "example.com/docs") {

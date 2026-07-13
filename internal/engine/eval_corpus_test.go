@@ -6,11 +6,8 @@ import (
 	"testing"
 )
 
-// corpusPath is the eval corpus relative to this package's directory.
 const corpusPath = "../../tests/eval/corpus.yaml"
 
-// repoRoot points back to the seaportal repo root from internal/engine; used
-// to resolve corpus entry paths which are stored repo-relative.
 const repoRoot = "../.."
 
 func TestLoadCorpus_ParsesCleanly(t *testing.T) {

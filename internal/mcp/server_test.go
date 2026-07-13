@@ -9,8 +9,6 @@ import (
 	"time"
 )
 
-// runRequests pipes the given JSON-RPC request lines through a fresh server
-// and returns parsed response objects (one per non-empty stdout line).
 func runRequests(t *testing.T, s *Server, requests ...string) []map[string]interface{} {
 	t.Helper()
 	in := strings.NewReader(strings.Join(requests, "\n") + "\n")
@@ -198,7 +196,6 @@ func TestMCPServer_Notification(t *testing.T) {
 	s.RegisterTool("echo", "", map[string]interface{}{"type": "object"},
 		func(context.Context, map[string]interface{}) (string, error) { return "x", nil },
 	)
-	// No id field => notification. No response expected.
 	resp := runRequests(t, s, `{"jsonrpc":"2.0","method":"tools/call","params":{"name":"echo","arguments":{}}}`)
 	if len(resp) != 0 {
 		t.Errorf("expected no response to notification, got %d", len(resp))

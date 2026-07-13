@@ -24,9 +24,6 @@ const (
 	OutcomeNeedsBrowser   ExtractionOutcome = "needs-browser"
 )
 
-// BrowserDecision is the single routing category a caller (e.g. PinchTab) reads
-// to decide whether to fall through to a real browser. It refines Outcome with
-// transport/status context; BrowserRecommended is the one boolean to branch on.
 type BrowserDecision string
 
 const (
@@ -40,44 +37,25 @@ const (
 	DecisionUnsupported          BrowserDecision = "unsupported"
 )
 
-// Confidence gates for page classification.
 const (
-	// confHighGate: at/above this the extractor's signal is trusted outright.
-	confHighGate = 80
-	// confMediumGate: entry to the medium-confidence band.
-	confMediumGate = 50
-	// confTrustworthyGate: medium-band results are marked trustworthy at/above this.
+	confHighGate        = 80
+	confMediumGate      = 50
 	confTrustworthyGate = 60
-	// confVeryLowGate: below this, extraction quality is too poor to trust at
-	// all (fail fast / flag very-low quality).
-	confVeryLowGate = 30
+	confVeryLowGate     = 30
 )
 
-// Hydrated-SPA thresholds: a SPA bootstrap with this much real prose is
-// server-rendered for first paint and safe to extract.
 const (
 	hydratedMinLength     = 2000
 	hydratedMinHeadings   = 2
 	hydratedMinParagraphs = 3
 )
 
-// Content-shape gates for the medium-confidence static fallbacks.
 const (
-	// fallbackStaticMinLength: default-branch "hasContent" floor — below this
-	// (with no headings/paragraphs) a no-signal page stays dynamic.
-	fallbackStaticMinLength = 500
-	// staticBulkMinLength: a body this long is reliably static even with no
-	// paragraph or heading structure (e.g. index/listing pages).
-	staticBulkMinLength = 2000
-	// staticShortMinConfidence: short-body static needs this confidence so we
-	// don't catch medium-confidence dynamic shells.
+	fallbackStaticMinLength  = 500
+	staticBulkMinLength      = 2000
 	staticShortMinConfidence = 70
-	// staticShortMinLength: chrome-only listing pages (H=0, P=0) at high-ish
-	// confidence still count as static from this length.
-	staticShortMinLength = 800
-	// staticThinMinLength: thin bodies need at least one paragraph plus this
-	// length to count as static.
-	staticThinMinLength = 300
+	staticShortMinLength     = 800
+	staticThinMinLength      = 300
 )
 
 type PageProfile struct {
@@ -90,7 +68,6 @@ type PageProfile struct {
 	Trustworthy        bool              `json:"trustworthy"`
 }
 
-// ClassifyPage determines the page profile and the browser-routing decision.
 func ClassifyPage(result Result) PageProfile {
 	profile := classifyPageInternal(result)
 	profile.Decision, profile.BrowserRecommended = deriveDecision(result, profile)
@@ -111,12 +88,6 @@ func classifyPageInternal(result Result) PageProfile {
 	}
 
 	if result.IsSPA {
-		// SPA-bootstrap-with-rendered-content: if the page advertises a SPA
-		// root but the extractor pulled out real prose (headings, paragraphs,
-		// non-trivial length), it is server-rendered for first paint. Call it
-		// `hydrated`, not `spa`, so callers extract instead of escalating to a
-		// browser. Thresholds picked to keep round-1 corpus accuracy at 1.000
-		// while catching real docs/forum pages with hydration markers.
 		if result.Length > hydratedMinLength && result.HeadingCount >= hydratedMinHeadings && result.ParagraphCount >= hydratedMinParagraphs {
 			profile.Class = PageHydrated
 			profile.Outcome = OutcomeExtract
@@ -193,12 +164,6 @@ func classifyPageInternal(result Result) PageProfile {
 	return profile
 }
 
-// classifyMediumConfidence resolves the medium-confidence band
-// (confMediumGate <= confidence < confHighGate): positive hydration/SSR/static
-// signals win; otherwise fall back to static only when there is substantive
-// content, else dynamic. Extract-class outcomes (everything but the dynamic
-// fallback, which emits OutcomeExtractWarning) are re-checked against the
-// auth-wall detector before returning.
 func classifyMediumConfidence(result Result) PageProfile {
 	profile := PageProfile{
 		Confidence: result.Confidence,
@@ -222,25 +187,7 @@ func classifyMediumConfidence(result Result) PageProfile {
 		profile.Reasons = append(profile.Reasons, "medium-confidence", "plain-html", "no-spa-signals")
 		profile.Outcome = OutcomeExtract
 	default:
-		// regression: classifier-round-2-fallback — the prior `default:
-		// PageDynamic` swallowed every unmatched medium-confidence page,
-		// labelling plain SSR/news/forum responses as "personalized".
-		// Only call it dynamic when there's an actual positive signal
-		// (SPA root / hydration scaffolding) or low confidence. Otherwise
-		// treat as best-effort static: agents don't have to escalate, and
-		// the static label still carries the medium-confidence reason
-		// chain so callers can downgrade trust if they want.
-		// Static fallback gate: ONLY downgrade to static when there is
-		// also substantive extracted content (Length>=500 OR ≥1 heading
-		// OR ≥2 paragraphs). Short/thin extractions with no positive
-		// signals are usually login/auth/paywall stubs — honest call is
-		// still `dynamic` because the agent should re-evaluate, not
-		// trust the few bytes that survived extraction.
 		hasContent := result.Length >= fallbackStaticMinLength || result.HeadingCount >= 1 || result.ParagraphCount >= 2
-		// Error responses (4xx/5xx) must never be promoted to `static`
-		// regardless of body shape — the body may render fine but the
-		// transport said "not OK", and callers rely on the outcome to
-		// avoid trusting error bodies as primary content.
 		isErrorResponse := result.StatusCode >= 400
 		if len(result.SPASignals) > 0 || result.Confidence < confMediumGate || !hasContent || isErrorResponse {
 			profile.Class = PageDynamic
@@ -264,25 +211,16 @@ func classifyMediumConfidence(result Result) PageProfile {
 	return profile
 }
 
-// deriveDecision maps a resolved profile + result onto the BrowserDecision
-// contract (docs/reference/browser-discriminator.md). Terminal/transport states
-// win first; then the classifier's Outcome drives the static tiers. It routes on
-// outcome/class/trustworthy/length rather than the `quality` float, which is too
-// noisy to be a standalone routing signal (good SSR pages can score near zero).
 func deriveDecision(result Result, profile PageProfile) (BrowserDecision, bool) {
-	// Resource type SeaPortal can't evaluate (binary/image/etc.).
 	if isBinarySkipError(result.Error) || isBinaryContentType(result.ResponseContentType) {
 		return DecisionUnsupported, false
 	}
-	// Transport failure with no usable HTTP response (DNS/TLS/conn/timeout).
 	if result.Error != "" && result.StatusCode == 0 {
 		return DecisionUnreachable, false
 	}
-	// Hard or soft 404.
 	if result.StatusCode == 404 || result.IsSoft404 || reasonsContain(profile.Reasons, "http-404-not-found") {
 		return DecisionNotFound, false
 	}
-	// Bot protection / captcha / access denied. Chrome may still need a policy.
 	if result.IsBlocked || profile.Class == PageBlocked {
 		return DecisionBlocked, true
 	}
@@ -291,8 +229,6 @@ func deriveDecision(result Result, profile PageProfile) (BrowserDecision, bool) 
 
 	switch profile.Outcome {
 	case OutcomeNeedsBrowser, OutcomeFailFast:
-		// needs-browser dominates length/quality: an auth-wall or SPA shell can
-		// carry many bytes and still require a browser.
 		return DecisionBrowserNeeded, true
 	case OutcomeExtract:
 		staticClass := profile.Class == PageStatic || profile.Class == PageSSR || profile.Class == PageHydrated
@@ -302,9 +238,6 @@ func deriveDecision(result Result, profile PageProfile) (BrowserDecision, bool) 
 		if okStatus && result.Length >= 500 {
 			return DecisionStaticOK, false
 		}
-		// Extract succeeded but the body is thin (incl. intentionally minimal
-		// pages). The classifier trusted it, so don't spend a browser — flag
-		// caution so callers can still escalate for completeness checks.
 		return DecisionStaticCaution, false
 	case OutcomeExtractWarning:
 		if result.Length >= 500 {
@@ -329,8 +262,6 @@ func reasonsContain(reasons []string, want string) bool {
 	return false
 }
 
-// jsShellPhrases are content-side "this page needs JavaScript" tells, matched
-// against the lowered extracted content.
 var jsShellPhrases = []string{
 	"enable javascript",
 	"javascript is enabled",
@@ -343,11 +274,6 @@ var jsShellPhrases = []string{
 	"turn on javascript",
 }
 
-// isJSShellContent reports whether a successfully-extracted page is really a
-// client-rendered shell: short extracted content dominated by a JS-required
-// warning or a bare loading screen. Complements DetectSPA, which keys on
-// raw-HTML markers (<noscript> warnings, spa-root ids) and misses shells that
-// render the warning as regular DOM (e.g. app.diagrams.net).
 func isJSShellContent(result Result) bool {
 	if result.Length <= 0 || result.Length >= 500 {
 		return false
@@ -358,8 +284,6 @@ func isJSShellContent(result Result) bool {
 			return true
 		}
 	}
-	// A bare loading screen only counts when there is no paragraph prose
-	// around it — short static pages can legitimately mention "loading...".
 	if result.ParagraphCount == 0 &&
 		(strings.Contains(content, "loading...") || strings.Contains(content, "loading…")) {
 		return true
@@ -445,25 +369,13 @@ func hasMediumStaticShape(result Result) bool {
 	if !hasOnlyBenignSPASignals(result) {
 		return false
 	}
-	// Bulk-shape static: long body is reliably static even with no paragraph
-	// or heading structure (e.g. index/listing pages). Floor preserved at
-	// 2000 to keep TestClassifyPage_RFC2616Static and friends green.
 	if result.Length >= staticBulkMinLength {
 		return true
 	}
-	// Short-body static needs a stronger confidence gate so we don't catch
-	// medium-confidence dynamic shells. At conf>=70 the extractor has good
-	// enough signal that the absence of SPA markers means it really is
-	// pre-rendered HTML.
 	if result.Confidence >= staticShortMinConfidence {
-		// hn-frontpage-fragment.html: H=0, P=0, Len=848 — chrome-only listing
-		// page; conf=75; needs to land as static, not dynamic.
-		// github-readme-with-login-example.html: H=0, P=0, Len=1095; conf=75.
 		if result.Length >= staticShortMinLength {
 			return true
 		}
-		// article-ldjson.html: H=0, P=2, Len=650; conf=70.
-		// article-og-full.html: H=0, P=1, Len=390; conf=70.
 		if result.Length >= staticThinMinLength && result.ParagraphCount >= 1 {
 			return true
 		}
@@ -479,10 +391,6 @@ func ensureProfile(result *Result) {
 		result.Profile = ClassifyPage(*result)
 	}
 	result.PageClass = result.Profile.Class
-	// Re-derive on the final result so paths that set Profile directly (404,
-	// binary, blocked, QuickNeedsBrowser) and any post-classify reason edits are
-	// reflected in the routing decision. Pure function of result+profile, so
-	// recomputing when ClassifyPage already ran is harmless.
 	result.Profile.Decision, result.Profile.BrowserRecommended = deriveDecision(*result, result.Profile)
 }
 

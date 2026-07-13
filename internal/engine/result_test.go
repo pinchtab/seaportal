@@ -81,11 +81,8 @@ func TestResult_PageClassPopulatedOnErrorPath(t *testing.T) {
 	}
 }
 
-// T17: Result.Err() must preserve sentinel identity through real fetch paths
-// — the JSON Error string alone forces consumers into string matching.
 func TestResultErr_PreservesSentinels(t *testing.T) {
 	t.Run("ssrf-blocked private IP", func(t *testing.T) {
-		// Literal loopback IP: ValidateURL blocks it without any DNS lookup.
 		res := FromURLWithOptions("http://127.0.0.1:1/", Options{Security: DefaultSecurityPolicy()})
 		if res.Error == "" || res.SecurityBlock == "" {
 			t.Fatalf("expected a security block, got error=%q securityBlock=%q", res.Error, res.SecurityBlock)

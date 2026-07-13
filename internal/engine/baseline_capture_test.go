@@ -8,10 +8,6 @@ import (
 	"testing"
 )
 
-// Run with: go test -tags=baseline -v ./internal/engine -run TestBaselineCapture
-// This is a one-shot baseline capture used during the host-gate-removal refactor;
-// not part of the regular test suite. Refer to preprocess_baseline_test.go for
-// the regression contract derived from this capture.
 func TestBaselineCapture(t *testing.T) {
 	type fixture struct {
 		path string

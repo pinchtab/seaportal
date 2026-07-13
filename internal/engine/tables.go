@@ -10,14 +10,8 @@ import (
 	"golang.org/x/net/html/atom"
 )
 
-// maxCellSpan caps colspan/rowspan attribute values to defend against
-// pathological inputs that would otherwise produce huge expanded rows.
 const maxCellSpan = 100
 
-// TableKind classifies whether a <table> carries semantic tabular data or is
-// being used purely for visual layout. Layout tables get flattened during
-// preprocess; data tables are preserved (and optionally extracted as
-// structured TableRef values when Options.WithTables is set).
 type TableKind int
 
 const (
@@ -25,30 +19,12 @@ const (
 	TableLayout
 )
 
-// TableRef is a structured, host-agnostic representation of an HTML <table>
-// classified as data. Surfaced on Result.Tables when the caller opts in via
-// Options.WithTables.
-//
-// Cells with colspan/rowspan expand into a regular grid; rows in
-// TableRef.Rows have the same column count as headers when present.
-// Cell-internal HTML (<a>, <strong>, etc.) is flattened to text; HTML
-// entities are decoded; internal whitespace is collapsed.
 type TableRef struct {
 	Caption string     `json:"caption,omitempty"`
 	Headers []string   `json:"headers,omitempty"`
 	Rows    [][]string `json:"rows"`
 }
 
-// classifyTable applies a host-agnostic heuristic to decide whether n is a
-// data or layout table.
-//
-//	semantic markers → TableData:
-//	  - any <th> descendant
-//	  - any <caption> descendant
-//	  - any <thead> descendant
-//
-//	otherwise count <tr> rows and per-row cell counts; rows ≥ 2 AND
-//	avgCols ≥ 2 AND stddev(cols) < 0.5 * avgCols → TableData. Else TableLayout.
 func classifyTable(n *xhtml.Node) TableKind {
 	if n == nil {
 		return TableLayout
@@ -64,7 +40,6 @@ func classifyTable(n *xhtml.Node) TableKind {
 		if node == nil {
 			return
 		}
-		// Skip nested <table> subtrees — only count rows of THIS table.
 		if node != n && node.Type == xhtml.ElementNode && node.DataAtom == atom.Table {
 			return
 		}
@@ -110,15 +85,6 @@ func classifyTable(n *xhtml.Node) TableKind {
 	return TableLayout
 }
 
-// unwrapLayoutTables walks the document, classifies every (outer) <table>, and
-// replaces TableLayout tables with the visible text of their cells wrapped in
-// <div> blocks. Data tables are left untouched.
-//
-// Nested tables are not processed independently: when an outer table is
-// classified as layout and unwrapped, its nested children disappear with it.
-// When an outer table is data, nested children are left in place.
-//
-// If nothing is unwrapped the original string is returned unchanged.
 func unwrapLayoutTables(htmlStr string) string {
 	if htmlStr == "" {
 		return htmlStr
@@ -142,12 +108,6 @@ func unwrapLayoutTables(htmlStr string) string {
 		if parent == nil {
 			continue
 		}
-		// Build a <div> per cell, re-parenting the cell's child *nodes* (links,
-		// formatting, and crucially any nested tables that hold the real
-		// content) instead of flattening to text. A previous text-only flatten
-		// silently discarded everything inside nested tables, which destroyed
-		// table-laid-out pages (e.g. classic nested-<table> layouts where the
-		// article/list lives in an inner table).
 		var divs []*xhtml.Node
 		for _, cell := range collectOwnCells(t) {
 			div := &xhtml.Node{Type: xhtml.ElementNode, Data: "div", DataAtom: atom.Div}
@@ -180,9 +140,6 @@ func unwrapLayoutTables(htmlStr string) string {
 	return renderNode(doc)
 }
 
-// ExtractTables walks htmlStr and returns one TableRef per <table> classified
-// as data. baseURL is reserved for future use (e.g. resolving in-cell hrefs);
-// V1 only extracts text.
 func ExtractTables(htmlStr string, _ string) []TableRef {
 	if htmlStr == "" {
 		return nil
@@ -207,8 +164,6 @@ func ExtractTables(htmlStr string, _ string) []TableRef {
 	return out
 }
 
-// collectOuterTables returns every <table> element that has no <table>
-// ancestor — i.e. the outermost tables only.
 func collectOuterTables(root *xhtml.Node) []*xhtml.Node {
 	var out []*xhtml.Node
 	var visit func(n *xhtml.Node)
@@ -218,7 +173,7 @@ func collectOuterTables(root *xhtml.Node) []*xhtml.Node {
 		}
 		if n.Type == xhtml.ElementNode && n.DataAtom == atom.Table {
 			out = append(out, n)
-			return // Don't descend — nested tables are handled when their outer is processed.
+			return
 		}
 		for c := n.FirstChild; c != nil; c = c.NextSibling {
 			visit(c)
@@ -228,11 +183,6 @@ func collectOuterTables(root *xhtml.Node) []*xhtml.Node {
 	return out
 }
 
-// collectOwnCells returns the <td>/<th> cells that belong directly to table,
-// in document order, without descending into nested tables. A nested table is
-// treated as opaque content that travels with its enclosing cell — so the
-// caller can re-parent each cell's full subtree (including the nested table)
-// rather than discarding it.
 func collectOwnCells(table *xhtml.Node) []*xhtml.Node {
 	var out []*xhtml.Node
 	var visit func(n *xhtml.Node)
@@ -255,7 +205,6 @@ func collectOwnCells(table *xhtml.Node) []*xhtml.Node {
 	return out
 }
 
-// buildTableRef extracts caption + header + rows from a TableData node.
 func buildTableRef(table *xhtml.Node) TableRef {
 	ref := TableRef{Rows: [][]string{}}
 
@@ -263,9 +212,6 @@ func buildTableRef(table *xhtml.Node) TableRef {
 		ref.Caption = cellText(cap)
 	}
 
-	// Walk rows in document order. The first <tr> that contains any <th>
-	// cells becomes the headers row; all subsequent <tr> contribute data rows.
-	// If no <th>-bearing row exists, every <tr> is a data row.
 	var rows []*xhtml.Node
 	var visit func(n *xhtml.Node)
 	visit = func(n *xhtml.Node) {
@@ -312,16 +258,11 @@ func rowHasTH(tr *xhtml.Node) bool {
 	return false
 }
 
-// pendingSpan tracks a cell whose rowspan extends into rows below the one
-// that physically declared it. `remaining` is the number of additional rows
-// that still need to receive `text` at this column index.
 type pendingSpan struct {
 	text      string
 	remaining int
 }
 
-// childCellNodes returns the direct-child <td>/<th> nodes of a <tr> in
-// document order.
 func childCellNodes(tr *xhtml.Node) []*xhtml.Node {
 	var out []*xhtml.Node
 	for c := tr.FirstChild; c != nil; c = c.NextSibling {
@@ -332,9 +273,6 @@ func childCellNodes(tr *xhtml.Node) []*xhtml.Node {
 	return out
 }
 
-// cellSpan parses colspan/rowspan attributes on n. Returns (cols, rows) with
-// defaults of 1 each and a maxCellSpan cap per axis to defend against
-// pathological inputs. Non-numeric, zero, or negative values fall back to 1.
 func cellSpan(n *xhtml.Node) (cols, rows int) {
 	cols, rows = 1, 1
 	for _, attr := range n.Attr {
@@ -358,9 +296,6 @@ func cellSpan(n *xhtml.Node) (cols, rows int) {
 	return
 }
 
-// expandRow places cells from tr into a logical-column-indexed slice,
-// honouring colspan + the carry-over from prior rows' rowspans. After
-// returning, pending is updated for the NEXT row.
 func expandRow(tr *xhtml.Node, pending map[int]pendingSpan) []string {
 	var row []string
 	col := 0
@@ -387,8 +322,6 @@ func expandRow(tr *xhtml.Node, pending map[int]pendingSpan) []string {
 	}
 
 	for _, cell := range cells {
-		// Fill any columns claimed by a still-pending rowspan before placing
-		// the next physical cell.
 		consumePending()
 
 		text := cellText(cell)
@@ -404,15 +337,10 @@ func expandRow(tr *xhtml.Node, pending map[int]pendingSpan) []string {
 			col++
 		}
 	}
-	// After all physical cells: fill any trailing pending columns (some rows
-	// end before later spans).
 	consumePending()
 	return row
 }
 
-// cellText walks descendant text nodes (skipping script/style), joins them
-// with single spaces, decodes HTML entities, trims, and collapses internal
-// whitespace runs.
 func cellText(n *xhtml.Node) string {
 	text := nodeTextOpts(n, textOptions{spaceJoin: true, skipScriptStyle: true})
 	return collapseWhitespace(html.UnescapeString(text))

@@ -6,12 +6,8 @@ import (
 	"strings"
 )
 
-// ldjson.go — Extract structured data from <script type="application/ld+json"> blocks.
-// Rich metadata source for news sites (NYT, BBC), academic pages (arXiv), etc.
-
 var reLDJSON = regexp.MustCompile(`(?is)<script\s+type\s*=\s*["']application/ld\+json["'][^>]*>([\s\S]*?)</script>`)
 
-// LDJSONBlock represents a single LD+JSON structured data block.
 type LDJSONBlock struct {
 	Type        string `json:"type,omitempty"`
 	Headline    string `json:"headline,omitempty"`
@@ -21,12 +17,11 @@ type LDJSONBlock struct {
 	Publisher   string `json:"publisher,omitempty"`
 	URL         string `json:"url,omitempty"`
 	Keywords    string `json:"keywords,omitempty"`
-	Language    string `json:"inLanguage,omitempty"` // BCP-47 language tag
+	Language    string `json:"inLanguage,omitempty"`
 	Section     string `json:"articleSection,omitempty"`
-	Body        string `json:"articleBody,omitempty"` // may be HTML or plain text
+	Body        string `json:"articleBody,omitempty"`
 }
 
-// ExtractLDJSON extracts and parses all LD+JSON blocks from HTML.
 func ExtractLDJSON(html string) []LDJSONBlock {
 	matches := reLDJSON.FindAllStringSubmatch(html, 10)
 	if len(matches) == 0 {
@@ -51,8 +46,6 @@ func ExtractLDJSON(html string) []LDJSONBlock {
 	return blocks
 }
 
-// LDJSONToMarkdown converts LD+JSON blocks into supplementary markdown content.
-// Returns empty string if no useful content found.
 func LDJSONToMarkdown(blocks []LDJSONBlock) string {
 	if len(blocks) == 0 {
 		return ""
@@ -95,8 +88,6 @@ func parseLDJSONBlock(raw string) LDJSONBlock {
 
 	var obj map[string]interface{}
 	if err := json.Unmarshal([]byte(raw), &obj); err != nil {
-		// Some sites wrap the block in an array. Use []interface{} so mixed
-		// element types (object | string | nested array) parse cleanly.
 		var arr []interface{}
 		if err2 := json.Unmarshal([]byte(raw), &arr); err2 != nil || len(arr) == 0 {
 			return block
@@ -118,7 +109,6 @@ func parseLDJSONBlock(raw string) LDJSONBlock {
 		return first
 	}
 
-	// Check for @graph pattern (used by many news sites).
 	if graph, ok := obj["@graph"]; ok {
 		if items, ok := graph.([]interface{}); ok {
 			for _, item := range items {
@@ -145,19 +135,14 @@ func extractFromObj(obj map[string]interface{}) LDJSONBlock {
 		Keywords:    jsonStr(obj, "keywords"),
 	}
 
-	// Author can be string, object, or array.
 	block.Author = extractAuthor(obj["author"])
 
-	// inLanguage: string or {"@type":"Language","name":"English"}.
 	block.Language = extractStringOrNamedObj(obj["inLanguage"])
 
-	// articleSection: string or array of strings (take first).
 	block.Section = extractFirstString(obj["articleSection"])
 
-	// articleBody: prose content; may be HTML or plain text.
 	block.Body = strings.TrimSpace(jsonStr(obj, "articleBody"))
 
-	// Publisher can be object with name.
 	if pub, ok := obj["publisher"].(map[string]interface{}); ok {
 		block.Publisher = jsonStr(pub, "name")
 	} else {
@@ -197,8 +182,6 @@ func extractAuthor(v interface{}) string {
 	return ""
 }
 
-// extractStringOrNamedObj returns the value if it's a string, or `name` if it's
-// a {"@type":"...","name":"..."} object. Empty string otherwise.
 func extractStringOrNamedObj(v interface{}) string {
 	if v == nil {
 		return ""
@@ -212,8 +195,6 @@ func extractStringOrNamedObj(v interface{}) string {
 	return ""
 }
 
-// extractFirstString returns the value if it's a string, or the first string
-// element if it's an array. Empty string otherwise.
 func extractFirstString(v interface{}) string {
 	if v == nil {
 		return ""
@@ -240,7 +221,6 @@ func jsonStr(obj map[string]interface{}, key string) string {
 	case string:
 		return s
 	case []interface{}:
-		// keywords can be an array of strings.
 		var parts []string
 		for _, item := range s {
 			if str, ok := item.(string); ok {

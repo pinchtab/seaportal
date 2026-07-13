@@ -10,7 +10,6 @@ import (
 	"golang.org/x/net/html/atom"
 )
 
-// firstTable parses an HTML snippet and returns its first <table> element.
 func firstTable(t *testing.T, snippet string) *xhtml.Node {
 	t.Helper()
 	doc, err := xhtml.Parse(strings.NewReader(snippet))
@@ -108,11 +107,6 @@ func TestUnwrapLayoutTables_FlattensLayoutTable(t *testing.T) {
 }
 
 func TestUnwrapLayoutTables_PreservesNestedTableContent(t *testing.T) {
-	// regression: layout-table-nested-content-dropped — classic nested-<table>
-	// layout where the real content (links + a nested list table) lives inside
-	// an outer single-column layout table. Unwrapping the outer table must NOT
-	// discard the inner content; a prior text-only flatten dropped everything
-	// inside nested tables, gutting table-laid-out pages (e.g. Hacker News).
 	in := `<html><body><table id="outer"><tr><td>` +
 		`<a href="/story">Headline Story</a>` +
 		`<table class="inner"><tr><td><a href="/c1">comment one</a></td></tr>` +
@@ -263,8 +257,6 @@ func TestExtractTables_RowspanExpandsCell(t *testing.T) {
 }
 
 func TestExtractTables_MixedColspanRowspan(t *testing.T) {
-	// Infobox-style: header spans 2 cols; first data row has a label that
-	// rowspans into the next row.
 	html := `<table>
         <tr><th colspan="2">Title</th></tr>
         <tr><td rowspan="2">Label</td><td>val1</td></tr>

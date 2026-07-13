@@ -5,9 +5,6 @@ import (
 	"testing"
 )
 
-// BenchmarkPreprocess_Wikipedia drives PreprocessHTML over the 1.3 MB
-// wikipedia-latin-phrases.html fixture. Baseline summary lives at
-// tests/bench/profiles/BenchmarkPreprocess_Wikipedia.pprof.txt.
 func BenchmarkPreprocess_Wikipedia(b *testing.B) {
 	htmlBytes, err := os.ReadFile("../../testdata/static/wikipedia-latin-phrases.html")
 	if err != nil {

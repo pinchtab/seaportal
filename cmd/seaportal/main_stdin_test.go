@@ -10,13 +10,11 @@ import (
 	"testing"
 )
 
-// buildBinary builds the seaportal CLI into a temp path and returns it.
 func buildBinary(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
 	bin := filepath.Join(dir, "seaportal-test")
 
-	// Locate the module root by walking up from the test file.
 	wd, err := os.Getwd()
 	if err != nil {
 		t.Fatalf("getwd: %v", err)
@@ -123,7 +121,6 @@ func TestCLI_StdinEmpty(t *testing.T) {
 }
 
 func TestCLI_StdinNoArgUsesStdin(t *testing.T) {
-	// When no positional arg is provided at all, stdin mode should engage.
 	bin := buildBinary(t)
 
 	cmd := exec.Command(bin, "--base-url", "https://example.com", "--json")

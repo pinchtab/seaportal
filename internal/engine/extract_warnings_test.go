@@ -8,8 +8,6 @@ import (
 	"testing"
 )
 
-// containsWarning is a small helper: returns true when any warning entry
-// contains the given substring (case-sensitive).
 func containsWarning(warnings []string, substr string) bool {
 	for _, w := range warnings {
 		if strings.Contains(w, substr) {
@@ -19,9 +17,6 @@ func containsWarning(warnings []string, substr string) bool {
 	return false
 }
 
-// TestExtract_WarningOnCharsetDecodeFailure declares an unknown charset on a
-// synthetic HTML page. The extraction must succeed (raw UTF-8 bytes pass
-// through), and a "charset decode" warning must appear.
 func TestExtract_WarningOnCharsetDecodeFailure(t *testing.T) {
 	const body = `<!DOCTYPE html>
 <html>
@@ -39,8 +34,6 @@ func TestExtract_WarningOnCharsetDecodeFailure(t *testing.T) {
 </html>`
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Omit charset on the wire so the in-body <meta http-equiv> wins the
-		// detection chain (which makes the bogus label trigger the warning).
 		w.Header().Set("Content-Type", "text/html")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(body))
@@ -60,9 +53,6 @@ func TestExtract_WarningOnCharsetDecodeFailure(t *testing.T) {
 	}
 }
 
-// TestExtract_WarningOnCacheWriteFailure points CacheDir at a read-only
-// directory so atomicWrite fails after Get succeeds. The fetch itself
-// completes; the cache write surfaces as a "cache write" warning.
 func TestExtract_WarningOnCacheWriteFailure(t *testing.T) {
 	const body = `<!DOCTYPE html>
 <html>
@@ -82,14 +72,11 @@ func TestExtract_WarningOnCacheWriteFailure(t *testing.T) {
 	}))
 	defer server.Close()
 
-	// Build a writable temp dir first so NewDiskCache succeeds (it MkdirAll's
-	// the directory), then chmod to read-only to break the body/headers writes.
 	dir := t.TempDir()
 	if err := os.Chmod(dir, 0o500); err != nil {
 		t.Fatalf("chmod failed: %v", err)
 	}
 	t.Cleanup(func() {
-		// Restore so t.TempDir's auto-cleanup can recurse.
 		_ = os.Chmod(dir, 0o700)
 	})
 
@@ -103,9 +90,6 @@ func TestExtract_WarningOnCacheWriteFailure(t *testing.T) {
 	}
 }
 
-// TestExtract_NoWarningsOnHappyPath asserts that a clean fetch with no flags
-// produces nil/empty Warnings. Regression guard against accidentally wiring
-// warnings into the success path.
 func TestExtract_NoWarningsOnHappyPath(t *testing.T) {
 	const body = `<!DOCTYPE html>
 <html>

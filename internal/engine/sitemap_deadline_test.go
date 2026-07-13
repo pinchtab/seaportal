@@ -11,13 +11,9 @@ import (
 	"time"
 )
 
-// A sitemap index whose children are individually slow must abort at the
-// deadline rather than flatten every child (ALP-051). The flatten now checks
-// ctx mid-walk, and FlattenSitemap returns whatever it collected so far — a
-// timed-out discovery keeps its partial URLs instead of throwing them away.
 func TestFlattenSitemap_DeadlineBoundsAndKeepsPartial(t *testing.T) {
 	const children = 10
-	const perChildDelay = 150 * time.Millisecond // full walk ≈ 1.5s
+	const perChildDelay = 150 * time.Millisecond
 	const budget = 300 * time.Millisecond
 
 	var fetched int32
@@ -55,15 +51,12 @@ func TestFlattenSitemap_DeadlineBoundsAndKeepsPartial(t *testing.T) {
 	if !errors.Is(err, context.DeadlineExceeded) {
 		t.Errorf("err = %v, want context.DeadlineExceeded (did the whole index flatten?)", err)
 	}
-	// Aborts near the budget, not after all 10 children (~1.5s).
 	if elapsed > budget+600*time.Millisecond {
 		t.Errorf("flatten ran %v, expected to abort near the %v budget", elapsed, budget)
 	}
-	// The URLs gathered before the deadline are preserved, not discarded.
 	if len(entries) == 0 {
 		t.Error("expected partial entries collected before the deadline")
 	}
-	// It did not fetch every child.
 	if got := atomic.LoadInt32(&fetched); int(got) >= children {
 		t.Errorf("fetched %d children; expected to stop well before all %d", got, children)
 	}

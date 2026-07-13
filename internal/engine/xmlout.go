@@ -7,10 +7,6 @@ import (
 	"strings"
 )
 
-// TEI-Lite output. Stdlib encoding/xml only — no new deps.
-// Best-effort Markdown → TEI conversion. Out of scope: full TEI ODD
-// validation, mathML, footnotes, cross-references.
-
 type teiDoc struct {
 	XMLName xml.Name  `xml:"TEI"`
 	Xmlns   string    `xml:"xmlns,attr"`
@@ -72,8 +68,6 @@ type teiBody struct {
 	Nodes []teiNode `xml:",any"`
 }
 
-// teiNode is a polymorphic body element. We choose XMLName per instance so
-// encoding/xml emits the right tag. Optional attrs are set only when used.
 type teiNode struct {
 	XMLName  xml.Name
 	Type     string    `xml:"type,attr,omitempty"`
@@ -86,7 +80,6 @@ var headingRE = regexp.MustCompile(`^(#{1,6})\s+(.+)$`)
 var orderedItemRE = regexp.MustCompile(`^\d+\.\s+(.+)$`)
 var fenceRE = regexp.MustCompile("(?s)^```([^\\n]*)\\n(.*?)```$")
 
-// ResultToTEIXML wraps a Result into a TEI-Lite XML document.
 func ResultToTEIXML(r Result) ([]byte, error) {
 	doc := teiDoc{
 		Xmlns: "http://www.tei-c.org/ns/1.0",
@@ -131,9 +124,6 @@ func ResultToTEIXML(r Result) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// markdownToTEI walks Markdown line-by-line, flushing runs of consecutive
-// list items or prose paragraphs into single elements. Code fences are
-// masked first to keep their content out of the state machine.
 func markdownToTEI(md string) []teiNode {
 	if strings.TrimSpace(md) == "" {
 		return nil
@@ -157,7 +147,6 @@ func markdownToTEI(md string) []teiNode {
 		if text == "" {
 			return
 		}
-		// Restore any code-fence/inline-code tokens inside prose.
 		text = unmaskCode(text, store)
 		out = append(out, teiNode{
 			XMLName:  xml.Name{Local: "p"},
@@ -215,7 +204,6 @@ func markdownToTEI(md string) []teiNode {
 			continue
 		}
 
-		// Code-fence sentinel on its own line → emit <code>.
 		if strings.HasPrefix(trimmed, "\x00CB") && strings.HasSuffix(trimmed, "\x00") {
 			flushAll()
 			restored := unmaskCode(trimmed, store)
@@ -256,7 +244,6 @@ func markdownToTEI(md string) []teiNode {
 			continue
 		}
 
-		// Plain prose breaks any pending list run.
 		flushUL()
 		flushOL()
 		prose = append(prose, trimmed)
@@ -283,8 +270,6 @@ func headingType(level int) string {
 	}
 }
 
-// parseCodeFence extracts the info-string language and body from a restored
-// fenced block of the form ```lang\nBODY\n```.
 func parseCodeFence(s string) (string, string) {
 	if m := fenceRE.FindStringSubmatch(s); m != nil {
 		return strings.TrimSpace(m[1]), strings.TrimRight(m[2], "\n")

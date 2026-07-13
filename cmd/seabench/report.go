@@ -10,8 +10,6 @@ import (
 	"time"
 )
 
-// writeReportJSON marshals v with two-space indentation and atomically
-// writes it (plus a trailing newline) to path.
 func writeReportJSON(path string, v any) error {
 	raw, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
@@ -20,11 +18,6 @@ func writeReportJSON(path string, v any) error {
 	return atomicWrite(path, string(raw)+"\n")
 }
 
-// emitReports writes the shared JSON + Markdown report pair for a
-// subcommand — <outputDir>/<cmdName>_<UTC timestamp>.{json,md} — creating
-// the output directory first and printing the standard "wrote <path>"
-// lines. Both paths are returned so callers can derive siblings (e.g.
-// classify's CSV) or reference the Markdown in their headline line.
 func emitReports(outputDir, cmdName string, report any, markdown string) (jsonPath, mdPath string, err error) {
 	if err := os.MkdirAll(outputDir, 0o755); err != nil {
 		return "", "", fmt.Errorf("mkdir output: %w", err)
@@ -43,9 +36,6 @@ func emitReports(outputDir, cmdName string, report any, markdown string) (jsonPa
 	return jsonPath, mdPath, nil
 }
 
-// reportHeader writes the shared Markdown preamble — "# <title>", a blank
-// line, then one "- key: value" bullet per pair. Callers append any
-// lane-specific bullets plus the closing blank line themselves.
 func reportHeader(b *strings.Builder, title string, kv ...string) {
 	fmt.Fprintf(b, "# %s\n\n", title)
 	for i := 0; i+1 < len(kv); i += 2 {
@@ -53,8 +43,6 @@ func reportHeader(b *strings.Builder, title string, kv ...string) {
 	}
 }
 
-// atomicWrite writes to <path>.tmp then renames into place so a partial
-// run can't corrupt a previously-written report.
 func atomicWrite(path string, content string) error {
 	tmp := path + ".tmp"
 	if err := os.WriteFile(tmp, []byte(content), 0o644); err != nil {
@@ -63,15 +51,6 @@ func atomicWrite(path string, content string) error {
 	return os.Rename(tmp, path)
 }
 
-// renderReport produces the Markdown report. Two sections:
-//   - Headline table: micro-averaged Precision / Recall / F1 per extractor,
-//     plus the mean time ratio against strip-tags and a skipped count.
-//   - Per-fixture detail: one row per (fixture, extractor) with raw
-//     TP/FP/FN, P/R/F1, and absolute median time in microseconds.
-//
-// Absolute milliseconds appear only in the detail section; the headline
-// table is kept machine-independent (ratios only) so report diffs across
-// hardware are meaningful.
 func renderReport(corpusPath string, extractors []extractor, agg []aggregate, perFixture map[string][]scoreCard) string {
 	var b strings.Builder
 

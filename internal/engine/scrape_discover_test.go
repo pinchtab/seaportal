@@ -30,10 +30,6 @@ func sitemapIndex(locs ...string) string {
 
 func isXML(p string) bool { return len(p) >= 4 && p[len(p)-4:] == ".xml" }
 
-// runDiscover starts an httptest server whose routes are built from its own
-// base URL, runs discover against it, and returns the result plus the base URL
-// so callers can strip it when comparing candidate paths. (ALP-002 unit
-// coverage; the internal/testserver multi-page fixture is ALP-013/ALP-014.)
 func runDiscover(t *testing.T, build func(base string) map[string]string, respectRobots *bool) (discoveryResult, string) {
 	t.Helper()
 	mux := http.NewServeMux()

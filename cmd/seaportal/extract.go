@@ -14,25 +14,13 @@ import (
 	"github.com/pinchtab/seaportal"
 )
 
-// CLI retry-flag defaults (T19). --retries defaults to 3 because an
-// interactive invocation should absorb transient 5xx/429 blips without the
-// user re-running. The wait budgets are deliberately TIGHTER than the library
-// defaults (seaportal.DefaultMaxRetryWait = 60s, DefaultTotalRetryTimeout =
-// 120s, applied when a library caller leaves Options zero): a person at a
-// terminal should get an answer sooner than an embedded batch caller. These
-// three values are CLI-facing contract; changing them is a user-visible
-// change.
 const (
 	cliDefaultRetries      = 3
 	cliDefaultMaxRetryWait = 30 * time.Second
 	cliDefaultRetryTimeout = 90 * time.Second
 )
 
-// extractFlags holds every flag of the default extract verb, grouped by
-// concern. Register with registerExtractFlags; convert to engine Options with
-// buildExtractOptions.
 type extractFlags struct {
-	// Content shaping.
 	noDedupe        *bool
 	noNearDedupe    *bool
 	fast            *bool
@@ -54,7 +42,6 @@ type extractFlags struct {
 	filterByQuery   *bool
 	maxTokens       *int
 
-	// Output routing.
 	jsonOut        *bool
 	xmlOut         *bool
 	snapshot       *bool
@@ -64,7 +51,6 @@ type extractFlags struct {
 	splitBytes     *int
 	saveDir        *string
 
-	// Fetch behaviour.
 	retries       *int
 	maxRetryWait  *time.Duration
 	retryTimeout  *time.Duration
@@ -75,13 +61,11 @@ type extractFlags struct {
 	proxy         *string
 	noPDF         *bool
 
-	// Cache.
 	cacheDir            *string
 	cacheTTL            *time.Duration
 	cacheStaleTolerance *time.Duration
 	noCache             *bool
 
-	// Security policy.
 	blockPrivateIPs      *bool
 	allowInternal        *bool
 	maxRedirects         *int
@@ -94,7 +78,6 @@ type extractFlags struct {
 	showVersion *bool
 }
 
-// registerExtractFlags defines the extract verb's flag surface on cli.
 func registerExtractFlags(cli *flag.FlagSet) *extractFlags {
 	f := &extractFlags{}
 	f.noDedupe = cli.Bool("no-dedupe", false, "Disable deduplication (enabled by default)")
@@ -139,9 +122,6 @@ func registerExtractFlags(cli *flag.FlagSet) *extractFlags {
 	f.splitBytes = cli.Int("split-bytes", 0, "Approximate bytes per split file (default: --max-tokens × 4 or 32768)")
 	f.saveDir = cli.String("save-dir", "", "Also write the rendered Markdown + JSON to <dir>/<domain>_<timestamp>.{md,json} (default: stdout only, no files)")
 
-	// Security policy (safe-by-default: private-IP block on). Library callers
-	// opt in via Options.Security; the CLI applies DefaultSecurityPolicy and
-	// lets these flags tune it.
 	f.blockPrivateIPs = cli.Bool("block-private-ips", true, "SSRF guard: reject targets resolving to private/internal IPs")
 	f.allowInternal = cli.Bool("allow-internal", false, "Escape hatch: allow private/internal IP targets (turns off --block-private-ips)")
 	cli.BoolVar(f.allowInternal, "allow-private-ips", false, "Alias for --allow-internal")
@@ -157,7 +137,6 @@ func registerExtractFlags(cli *flag.FlagSet) *extractFlags {
 	return f
 }
 
-// securityPolicy builds the CLI SecurityPolicy from the security flag group.
 func (f *extractFlags) securityPolicy() *seaportal.SecurityPolicy {
 	return &seaportal.SecurityPolicy{
 		BlockPrivateIPs:      *f.blockPrivateIPs && !*f.allowInternal,
@@ -172,20 +151,15 @@ func (f *extractFlags) securityPolicy() *seaportal.SecurityPolicy {
 	}
 }
 
-// outputConfig routes the extract result to one of the four renderers and
-// carries the renderer-specific knobs.
 type outputConfig struct {
 	json       bool
 	xml        bool
-	splitOut   string // --split-out directory ("" = off)
+	splitOut   string
 	splitBytes int
 	maxTokens  int
-	saveDir    string // --save-dir directory ("" = stdout only, no file writes)
+	saveDir    string
 }
 
-// buildExtractOptions converts the parsed extract flags into engine Options
-// plus the output-routing config. Flag-value errors (bad --links / --chunk)
-// are returned for the caller to report and exit 2.
 func buildExtractOptions(f *extractFlags) (seaportal.Options, outputConfig, error) {
 	mode, err := seaportal.ParseLinkRetention(*f.linksMode)
 	if err != nil {
@@ -247,8 +221,6 @@ func buildExtractOptions(f *extractFlags) (seaportal.Options, outputConfig, erro
 	return opts, cfg, nil
 }
 
-// runExtract implements the default verb: fetch a URL (or read HTML from
-// stdin), extract, and render in the selected output format.
 func runExtract(ctx context.Context, rawArgs []string) {
 	cli := flag.NewFlagSet("seaportal", flag.ExitOnError)
 	f := registerExtractFlags(cli)
@@ -261,9 +233,6 @@ func runExtract(ctx context.Context, rawArgs []string) {
 	}
 	cli.Usage = func() { usage(os.Stderr) }
 
-	// Explicitly-requested help goes to stdout and exits 0, per CLI convention;
-	// usage shown on a parse error stays on stderr. Only flags before the first
-	// positional arg can be help requests (flag stops parsing there anyway).
 	for _, a := range rawArgs {
 		if a == "--" || !strings.HasPrefix(a, "-") {
 			break
@@ -293,8 +262,6 @@ func runExtract(ctx context.Context, rawArgs []string) {
 	targetURL, stdinHTML, stdinMode := resolveExtractInput(cli, f)
 
 	if *f.snapshot {
-		// Deprecated alias for `seaportal snapshot <url>`, kept so existing
-		// callers don't break; stdin mode still flows through here.
 		htmlContent := stdinHTML
 		if !stdinMode {
 			h, err := fetchHTML(ctx, targetURL, f.securityPolicy())
@@ -320,7 +287,6 @@ func runExtract(ctx context.Context, rawArgs []string) {
 	if stdinMode {
 		result = seaportal.FromHTMLWithOptions(stdinHTML, targetURL, opts)
 	} else {
-		// Ctrl-C / SIGTERM cancels the in-flight fetch.
 		result = seaportal.FromURLContext(ctx, targetURL, opts)
 	}
 
@@ -330,9 +296,6 @@ func runExtract(ctx context.Context, rawArgs []string) {
 	}
 }
 
-// resolveExtractInput determines the extraction target: a positional URL, or
-// HTML read from stdin (explicit `-`, or no positional arg with --base-url
-// set). In stdin mode it also disables fetch-only flags with a warning.
 func resolveExtractInput(cli *flag.FlagSet, f *extractFlags) (targetURL, stdinHTML string, stdinMode bool) {
 	args := cli.Args()
 	stdinMode = len(args) == 0 || (len(args) == 1 && args[0] == "-")
@@ -340,9 +303,6 @@ func resolveExtractInput(cli *flag.FlagSet, f *extractFlags) (targetURL, stdinHT
 		return args[0], "", false
 	}
 	if *f.baseURL == "" {
-		// A bare `seaportal` (no URL, no --base-url) is a misinvocation,
-		// not a stdin pipe — show usage. An explicit `-` still opts into
-		// stdin mode and requires --base-url.
 		if len(args) == 0 {
 			cli.Usage()
 			os.Exit(2)
@@ -374,9 +334,6 @@ func resolveExtractInput(cli *flag.FlagSet, f *extractFlags) (targetURL, stdinHT
 	return *f.baseURL, string(htmlBytes), true
 }
 
-// renderResult writes result to w in the format selected by cfg: split files
-// (manifest on w), JSON, TEI-XML, or Markdown with YAML front matter. The
-// returned error message is print-ready; the caller reports it and exits 1.
 func renderResult(w io.Writer, result *seaportal.Result, cfg outputConfig, targetURL string) error {
 	switch {
 	case cfg.splitOut != "":
@@ -390,9 +347,6 @@ func renderResult(w io.Writer, result *seaportal.Result, cfg outputConfig, targe
 	}
 }
 
-// renderSplitFiles writes the rendered content to multiple files under
-// cfg.splitOut and emits a path/index/bytes manifest line per file on w in
-// place of the content body.
 func renderSplitFiles(w io.Writer, result *seaportal.Result, cfg outputConfig) error {
 	format := "md"
 	if cfg.json {
@@ -440,10 +394,6 @@ func renderTEIXML(w io.Writer, result *seaportal.Result) error {
 	return nil
 }
 
-// renderMarkdown emits the YAML-front-matter Markdown document on w. With
-// saveDir set it also writes <domain>_<timestamp>.{md,json} copies there and
-// prints the save/classification status lines (the pre---save-dir default
-// behaviour, now opt-in).
 func renderMarkdown(w io.Writer, result *seaportal.Result, saveDir, targetURL string) error {
 	doc := markdownDocument(result)
 	if saveDir == "" {
@@ -480,7 +430,6 @@ func renderMarkdown(w io.Writer, result *seaportal.Result, saveDir, targetURL st
 	return nil
 }
 
-// markdownDocument renders the YAML front matter + extracted content.
 func markdownDocument(result *seaportal.Result) string {
 	var output strings.Builder
 	output.WriteString("---\n")
@@ -528,11 +477,6 @@ func markdownDocument(result *seaportal.Result) string {
 	return output.String()
 }
 
-// renderSlug derives the saved-file slug from the target URL.
-//
-// regression: cli-file-path-panic — guard against args without a `//`
-// separator (file paths, data: URIs, malformed input). Falls back to a
-// synthetic `local` slug so the --save-dir filename is still valid.
 func renderSlug(targetURL string) string {
 	parts := strings.SplitN(targetURL, "//", 2)
 	domain := "local"

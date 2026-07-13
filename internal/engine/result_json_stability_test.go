@@ -10,22 +10,6 @@ import (
 	"testing"
 )
 
-// result_json_stability_test.go — locks the Result JSON wire format.
-//
-// The goldens pin BOTH the key set/order (encoding/json emits struct fields
-// in declaration order, inlining anonymous embedded structs at the embedding
-// position) and the omitempty behaviour (via the zero-value golden). Any
-// restructuring of Result — such as the T13 embedded sub-struct decomposition
-// — must keep both goldens byte-identical.
-//
-// Sentinel values are derived from Go field NAMES only (never from index or
-// nesting path), so moving a field into an anonymous embedded struct does not
-// change its sentinel — only a genuine wire-format change fails the test.
-//
-// Regenerate (only for an intentional wire-format change):
-//
-//	UPDATE_GOLDEN=1 go test ./internal/engine/ -run TestResultJSONWireStability
-
 func TestResultJSONWireStability(t *testing.T) {
 	update := os.Getenv("UPDATE_GOLDEN") == "1"
 	cases := []struct {
@@ -34,8 +18,6 @@ func TestResultJSONWireStability(t *testing.T) {
 		build  func() Result
 	}{
 		{
-			// Every field populated with a distinct sentinel: locks the full
-			// key ordering of the wire format.
 			name:   "full",
 			golden: "full.golden.json",
 			build: func() Result {
@@ -45,7 +27,6 @@ func TestResultJSONWireStability(t *testing.T) {
 			},
 		},
 		{
-			// Zero value: locks which keys survive omitempty when empty.
 			name:   "zero",
 			golden: "zero.golden.json",
 			build:  func() Result { return Result{} },
@@ -61,7 +42,6 @@ func TestResultJSONWireStability(t *testing.T) {
 			got = append(got, '\n')
 
 			if tc.name == "full" {
-				// Guard against the filler silently skipping fields.
 				for _, key := range []string{`"ttfbMs"`, `"responseXAmzCfId"`, `"cacheCostAnalysis"`, `"uniqueBlockCount"`, `"traceCorrelation"`} {
 					if !bytes.Contains(got, []byte(key)) {
 						t.Fatalf("sentinel Result JSON is missing %s — filler regression?", key)
@@ -92,10 +72,6 @@ func TestResultJSONWireStability(t *testing.T) {
 	}
 }
 
-// fillStructSentinels sets every settable field of a struct to a non-zero
-// sentinel derived from the field name. Anonymous embedded structs are
-// traversed transparently (no prefix contribution), mirroring how both Go
-// field promotion and encoding/json treat them.
 func fillStructSentinels(v reflect.Value, prefix string) {
 	t := v.Type()
 	for i := 0; i < t.NumField(); i++ {
@@ -112,7 +88,6 @@ func fillStructSentinels(v reflect.Value, prefix string) {
 	}
 }
 
-// setSentinel writes a deterministic non-zero value derived from seed.
 func setSentinel(v reflect.Value, seed string) {
 	switch v.Kind() {
 	case reflect.String:
@@ -148,7 +123,6 @@ func setSentinel(v reflect.Value, seed string) {
 	}
 }
 
-// seedNum maps a seed string to a stable positive number (1000..9999).
 func seedNum(seed string) int64 {
 	h := fnv.New32a()
 	_, _ = h.Write([]byte(seed))

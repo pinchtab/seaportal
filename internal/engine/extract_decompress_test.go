@@ -39,8 +39,6 @@ func TestDecompressBody_Zstd_Malformed(t *testing.T) {
 }
 
 func TestDecompressBody_Zstd_Empty(t *testing.T) {
-	// Empty input: zstd.NewReader returns a reader, ReadAll yields empty bytes.
-	// Either no-error empty output OR an error is acceptable — must not crash.
 	out, err := decompressBody([]byte{}, "zstd")
 	if err == nil && len(out) != 0 {
 		t.Errorf("expected empty output or error, got %d bytes (no err)", len(out))

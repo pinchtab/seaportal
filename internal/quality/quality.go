@@ -1,4 +1,3 @@
-// Package quality provides extraction quality analysis for markdown content.
 package quality
 
 import (
@@ -8,7 +7,6 @@ import (
 	"unicode"
 )
 
-// Metrics holds detailed quality assessment of extracted content
 type Metrics struct {
 	ContentLength  int     `json:"contentLength"`
 	HeadingCount   int     `json:"headingCount"`
@@ -20,7 +18,6 @@ type Metrics struct {
 	Score          float64 `json:"score"`
 }
 
-// Compute analyzes markdown content and returns quality metrics
 func Compute(markdown string) Metrics {
 	m := Metrics{}
 	m.ContentLength = len(markdown)
@@ -131,7 +128,6 @@ func computeScore(m Metrics) float64 {
 		return 5.0
 	}
 
-	// Content length (0-30 pts)
 	if m.ContentLength >= 1000 && m.ContentLength <= 5000 { //nolint:gocritic
 		score += 30.0
 	} else if m.ContentLength < 1000 {
@@ -140,7 +136,6 @@ func computeScore(m Metrics) float64 {
 		score += 30.0 * math.Min(1.0, 1.0-(float64(m.ContentLength-5000)/10000.0))
 	}
 
-	// Structure (0-40 pts)
 	structureScore := 0.0
 	if m.HeadingCount > 0 {
 		structureScore += 10.0
@@ -156,10 +151,8 @@ func computeScore(m Metrics) float64 {
 	}
 	score += math.Min(40.0, structureScore)
 
-	// Links (0-10 pts)
 	score += math.Min(10.0, float64(m.LinkCount)*2.0)
 
-	// Text density (0-20 pts)
 	if m.TextDensity > 0.6 {
 		score += 20.0
 	} else {

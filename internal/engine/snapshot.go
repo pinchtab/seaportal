@@ -7,13 +7,11 @@ import (
 	"golang.org/x/net/html"
 )
 
-// SnapshotOptions configures snapshot generation
 type SnapshotOptions struct {
-	FilterInteractive bool // Only include interactive elements
-	MaxTokens         int  // Approximate token limit (0 = unlimited)
+	FilterInteractive bool
+	MaxTokens         int
 }
 
-// SnapshotNode represents a node in the accessibility tree
 type SnapshotNode struct {
 	Role        string         `json:"role"`
 	Name        string         `json:"name,omitempty"`
@@ -30,12 +28,10 @@ type SnapshotNode struct {
 	Children    []SnapshotNode `json:"children,omitempty"`
 }
 
-// BuildSnapshot parses HTML and returns an accessibility tree
 func BuildSnapshot(htmlStr string) (*SnapshotNode, error) {
 	return BuildSnapshotWithOptions(htmlStr, SnapshotOptions{})
 }
 
-// BuildSnapshotWithOptions parses HTML with configurable options
 func BuildSnapshotWithOptions(htmlStr string, opts SnapshotOptions) (*SnapshotNode, error) {
 	doc, err := html.Parse(strings.NewReader(htmlStr))
 	if err != nil {
@@ -52,7 +48,6 @@ func BuildSnapshotWithOptions(htmlStr string, opts SnapshotOptions) (*SnapshotNo
 
 	ctx.traverseInto(doc, root, 0)
 
-	// Apply max tokens if specified
 	if opts.MaxTokens > 0 {
 		root = truncateToTokens(root, opts.MaxTokens)
 	}
@@ -63,7 +58,7 @@ func BuildSnapshotWithOptions(htmlStr string, opts SnapshotOptions) (*SnapshotNo
 type snapshotContext struct {
 	refCounter        int
 	filterInteractive bool
-	tagCounts         map[string]int // for selector generation
+	tagCounts         map[string]int
 }
 
 func (ctx *snapshotContext) traverseInto(n *html.Node, parent *SnapshotNode, depth int) {
@@ -73,7 +68,6 @@ func (ctx *snapshotContext) traverseInto(n *html.Node, parent *SnapshotNode, dep
 			for c := n.FirstChild; c != nil; c = c.NextSibling {
 				ctx.traverseInto(c, node, depth+1)
 			}
-			// Filter: only add if interactive or has interactive children
 			if ctx.filterInteractive {
 				if node.Interactive || hasInteractiveChildren(node) {
 					parent.Children = append(parent.Children, *node)
@@ -109,7 +103,6 @@ func (ctx *snapshotContext) buildNode(n *html.Node, depth int) *SnapshotNode {
 		Children:    []SnapshotNode{},
 	}
 
-	// Add role-specific attributes
 	switch role {
 	case "heading":
 		node.Level = getHeadingLevel(n.Data)
@@ -132,16 +125,13 @@ func (ctx *snapshotContext) buildNode(n *html.Node, depth int) *SnapshotNode {
 func (ctx *snapshotContext) buildSelector(n *html.Node) string {
 	tag := strings.ToLower(n.Data)
 
-	// Priority 1: ID selector
 	if id := getAttr(n, "id"); id != "" {
 		return "#" + id
 	}
 
-	// Priority 2: Unique class selector
 	if class := getAttr(n, "class"); class != "" {
 		classes := strings.Fields(class)
 		if len(classes) > 0 {
-			// Use first meaningful class
 			for _, c := range classes {
 				if !strings.HasPrefix(c, "js-") && len(c) > 1 {
 					return tag + "." + c
@@ -151,7 +141,6 @@ func (ctx *snapshotContext) buildSelector(n *html.Node) string {
 		}
 	}
 
-	// Priority 3: Tag with nth-of-type
 	ctx.tagCounts[tag]++
 	return fmt.Sprintf("%s:nth-of-type(%d)", tag, ctx.tagCounts[tag])
 }

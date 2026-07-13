@@ -9,22 +9,11 @@ import (
 	"strings"
 )
 
-// sample selects which discovered URLs actually get fetched, honoring MaxPages
-// (total budget), MaxPerPattern (per-group cap), Full (disable sampling), and
-// Include/ExcludePatterns. groups come from groupByPattern (ALP-003).
-//
-// Determinism: balanced and priority derive purely from the sorted URL set;
-// random shuffles with a seed derived from a FNV-1a hash of opts.BaseURL (plus
-// the group index), so a given site samples identically across reruns.
 func sample(groups []PatternGroup, opts ScrapeOptions) []string {
 	o := opts.normalized()
 	filtered := filterGroups(groups, o.IncludePatterns, o.ExcludePatterns)
 
 	if o.Full {
-		// Full disables per-pattern sampling but MaxPages stays a real upper
-		// bound: sitemap discovery can return thousands of URLs, and without
-		// this cap --full would fetch them all (the crawl-fallback path already
-		// caps discovery at MaxPages, so this keeps both paths consistent).
 		urls := allURLs(filtered)
 		if len(urls) > o.MaxPages {
 			urls = urls[:o.MaxPages]
@@ -40,16 +29,13 @@ func sample(groups []PatternGroup, opts ScrapeOptions) []string {
 		})
 	case SamplePriority:
 		return samplePriority(filtered, o.MaxPages, o.MaxPerPattern)
-	default: // balanced
+	default:
 		return roundRobin(filtered, o.MaxPages, o.MaxPerPattern, func(_ int, g PatternGroup) []string {
-			return g.URLs // already sorted, deterministic
+			return g.URLs
 		})
 	}
 }
 
-// roundRobin spreads the budget across groups one URL at a time so no single
-// large group starves the others. order yields each group's URLs in the desired
-// order (sorted for balanced, shuffled for random), truncated to maxPerPattern.
 func roundRobin(groups []PatternGroup, maxPages, maxPerPattern int, order func(i int, g PatternGroup) []string) []string {
 	lists := make([][]string, len(groups))
 	for i, g := range groups {
@@ -80,8 +66,6 @@ func roundRobin(groups []PatternGroup, maxPages, maxPerPattern int, order func(i
 	return out
 }
 
-// samplePriority guarantees the homepage and one representative per top-level
-// section first (budget permitting), then fills the rest shallowest-first.
 func samplePriority(groups []PatternGroup, maxPages, maxPerPattern int) []string {
 	type item struct {
 		url, pattern, section string
@@ -113,13 +97,11 @@ func samplePriority(groups []PatternGroup, maxPages, maxPerPattern int) []string
 		out = append(out, it.url)
 	}
 
-	// Pass 1: homepage(s).
 	for _, it := range items {
 		if it.depth == 0 && canTake(it) {
 			take(it)
 		}
 	}
-	// Pass 2: one representative per top-level section.
 	seenSection := map[string]bool{}
 	for _, it := range items {
 		if len(out) >= maxPages {
@@ -133,7 +115,6 @@ func samplePriority(groups []PatternGroup, maxPages, maxPerPattern int) []string
 			seenSection[it.section] = true
 		}
 	}
-	// Pass 3: fill remaining budget shallowest-first.
 	for _, it := range items {
 		if len(out) >= maxPages {
 			break
@@ -145,9 +126,6 @@ func samplePriority(groups []PatternGroup, maxPages, maxPerPattern int) []string
 	return out
 }
 
-// filterGroups drops URLs failing the include/exclude globs (matched against the
-// URL path). A URL is kept when it matches some include (or none are given) and
-// matches no exclude. Empty groups are removed.
 func filterGroups(groups []PatternGroup, include, exclude []string) []PatternGroup {
 	inc := compileGlobs(include)
 	exc := compileGlobs(exclude)
@@ -171,7 +149,6 @@ func filterGroups(groups []PatternGroup, include, exclude []string) []PatternGro
 	return out
 }
 
-// allURLs returns every URL across groups, de-duplicated and sorted (Full mode).
 func allURLs(groups []PatternGroup) []string {
 	seen := map[string]bool{}
 	var out []string
@@ -194,8 +171,6 @@ func seededShuffle(urls []string, seed int64) []string {
 	return cp
 }
 
-// seedFor derives a stable per-site seed from the base URL (FNV-1a), so random
-// sampling is reproducible for a given site without depending on wall-clock.
 func seedFor(base string) int64 {
 	h := fnv.New64a()
 	_, _ = h.Write([]byte(base))
@@ -229,9 +204,6 @@ func sectionOf(raw string) string {
 	return strings.SplitN(p, "/", 2)[0]
 }
 
-// compileGlobs splits comma-separated glob strings and compiles each to a regex.
-// `*` matches within a path segment, `**` matches across segments, `?` matches a
-// single non-slash char.
 func compileGlobs(patterns []string) []*regexp.Regexp {
 	var out []*regexp.Regexp
 	for _, raw := range patterns {

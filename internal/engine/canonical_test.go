@@ -33,7 +33,7 @@ func TestCanonicalize_RemovesDefaultPort(t *testing.T) {
 	cases := map[string]string{
 		"https://example.com:443/x":  "https://example.com/x",
 		"http://example.com:80/x":    "http://example.com/x",
-		"https://example.com:8443/x": "https://example.com:8443/x", // non-default kept
+		"https://example.com:8443/x": "https://example.com:8443/x",
 	}
 	for in, want := range cases {
 		got, _ := CanonicalizeURL(in)
@@ -148,7 +148,6 @@ func TestPickCanonical_NoChangeReturnsEmpty(t *testing.T) {
 }
 
 func TestResolveCanonicalLink_OutsideScanWindow(t *testing.T) {
-	// Push the canonical link past the 4 KB window — must be ignored.
 	pad := strings.Repeat(" ", 5000)
 	html := "<html><head>" + pad + `<link rel="canonical" href="https://example.com/late"></head></html>`
 	got := ResolveCanonicalLink(html, "https://example.com/")

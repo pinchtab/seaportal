@@ -179,7 +179,6 @@ func TestApplyMetadata_AuthorsPrependIdempotent(t *testing.T) {
 	if !strings.HasPrefix(first, "**Authors:** X\n\n") {
 		t.Fatalf("expected prepend, got %q", first)
 	}
-	// second pass on same content should NOT double-prepend
 	applyMetadata(r, Metadata{Author: "X"})
 	if r.Content != first {
 		t.Errorf("double-prepended: %q", r.Content)

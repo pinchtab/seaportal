@@ -9,15 +9,10 @@ import (
 	"golang.org/x/net/html/atom"
 )
 
-// PreprocessHTML applies a host-agnostic preprocessing pass: replace twoslash
-// buttons, strip common chrome (nav/aside/footer/sidebar/cookie banners), then
-// scope to the most likely main-content container.
 func PreprocessHTML(htmlStr string) string {
 	return PreprocessHTMLWithURL(htmlStr, nil)
 }
 
-// PreprocessHTMLWithURL keeps the URL parameter for API compatibility but the
-// preprocessing pipeline is now entirely host-agnostic.
 func PreprocessHTMLWithURL(htmlStr string, _ *url.URL) string {
 	htmlStr = replaceTwoslashButtons(htmlStr)
 	htmlStr = stripCommonChrome(htmlStr)
@@ -28,9 +23,6 @@ func PreprocessHTMLWithURL(htmlStr string, _ *url.URL) string {
 	return htmlStr
 }
 
-// visibleTextLenOf parses htmlStr and returns its visible-text length (script/
-// style/noscript excluded). Returns 0 on parse failure so callers treat the
-// measurement as unavailable rather than as "empty".
 func visibleTextLenOf(htmlStr string) int {
 	doc, err := html.Parse(strings.NewReader(htmlStr))
 	if err != nil {
@@ -45,9 +37,6 @@ func replaceTwoslashButtons(htmlStr string) string {
 	return twoslashButtonPattern.ReplaceAllString(htmlStr, "<span>$1</span>")
 }
 
-// chromeClassNeedles is matched case-insensitively against the class/id
-// attribute string. Selectors are deliberately conservative to avoid eating
-// real article content.
 var chromeClassNeedles = []string{
 	"sidebar",
 	"navbox",
@@ -68,9 +57,6 @@ var chromeAriaNeedles = []string{
 	"consent banner",
 }
 
-// stripCommonChrome removes well-known chrome elements from the HTML before
-// the main-content anchor pass runs, so chrome can't dominate the
-// largest-text-bearing-div fallback.
 func stripCommonChrome(htmlStr string) string {
 	doc, err := html.Parse(strings.NewReader(htmlStr))
 	if err != nil {
@@ -81,7 +67,6 @@ func stripCommonChrome(htmlStr string) string {
 }
 
 func stripChromeNodes(n *html.Node) {
-	// Snapshot children into a list so we can mutate during iteration.
 	var children []*html.Node
 	for c := n.FirstChild; c != nil; c = c.NextSibling {
 		children = append(children, c)
@@ -101,8 +86,6 @@ func shouldStripAsChrome(n *html.Node) bool {
 	case atom.Nav, atom.Aside, atom.Footer:
 		return true
 	case atom.Header:
-		// Strip a <header> only if it contains a <nav> child — bare headers
-		// frequently carry the article title.
 		if hasDescendant(n, atom.Nav) {
 			return true
 		}
@@ -117,8 +100,6 @@ func shouldStripAsChrome(n *html.Node) bool {
 	classes := tokenize(strings.ToLower(getAttr(n, "class")))
 	id := strings.ToLower(getAttr(n, "id"))
 	for _, needle := range chromeClassNeedles {
-		// Match exact class token, or exact id, to avoid eating containers
-		// like "layout__2-sidebars-inline" or "page-content".
 		if classes[needle] || id == needle {
 			return true
 		}
@@ -157,13 +138,6 @@ func hasDescendant(n *html.Node, a atom.Atom) bool {
 	return false
 }
 
-// scopeMainContent rewrites the document body to contain just the most likely
-// main-content container, wrapped in <article> so go-readability locks onto it.
-//
-// Anchor priority: <main> → <article> → largest text-bearing <div>/<section>
-// at depth ≥ 2 (≥ 200 chars of visible text).
-//
-// If no anchor is found, the input is returned unchanged.
 func scopeMainContent(htmlStr string) string {
 	doc, err := html.Parse(strings.NewReader(htmlStr))
 	if err != nil {
@@ -177,9 +151,6 @@ func scopeMainContent(htmlStr string) string {
 
 	anchor := findFirstByAtom(body, atom.Main)
 	if anchor == nil {
-		// Only anchor on <article> when there's exactly one — multiple
-		// siblings (blog index, feed) means the real content shell is the
-		// parent container, not any single article.
 		articles := findAllByAtom(body, atom.Article)
 		if len(articles) == 1 && visibleTextLen(articles[0]) >= 200 {
 			anchor = articles[0]
@@ -243,9 +214,6 @@ func findFirstByAtom(root *html.Node, a atom.Atom) *html.Node {
 	return nil
 }
 
-// findLargestContainer picks the <div> or <section> at depth ≥ 2 (relative to
-// body) with the highest visible-text length. Returns nil if no candidate has
-// at least 200 chars of text.
 func findLargestContainer(body *html.Node) *html.Node {
 	const minTextLen = 200
 
@@ -274,10 +242,6 @@ func findLargestContainer(body *html.Node) *html.Node {
 	return best
 }
 
-// containsContentShell reports whether n contains a <main>, an <article>, or
-// a prose <p> (a paragraph with ≥ 50 chars of non-link text). Used by
-// stripHighLinkDensityBlocks to avoid nuking real article shells that happen
-// to wrap link-dense reference lists.
 func containsContentShell(n *html.Node) bool {
 	if n == nil {
 		return false
@@ -302,8 +266,6 @@ func containsContentShell(n *html.Node) bool {
 	return false
 }
 
-// linkTextLen sums the visible-text length contained inside <a> descendants
-// of n. Used by stripHighLinkDensityBlocks to estimate link-to-text ratio.
 func linkTextLen(n *html.Node) int {
 	if n == nil {
 		return 0
@@ -315,21 +277,6 @@ func linkTextLen(n *html.Node) int {
 	return total
 }
 
-// stripHighLinkDensityBlocks removes container blocks whose visible text is
-// dominated by anchor text — tag clouds, related-article widgets, footer
-// link-grids that the selector-based stripCommonChrome pass missed. Pure
-// structural heuristic, no host-specific knowledge.
-//
-// A container (div/ul/ol/aside at depth ≥ 2 from body) is removed when:
-//   - total visible text ≥ 50 chars, AND
-//   - it contains ≥ 3 anchors, AND
-//   - linkText / totalText > 0.7
-//
-// <section> is deliberately excluded from the candidate set: it is a semantic
-// content-division element, almost never structural boilerplate, and including
-// it nukes legitimate reference-style sections (e.g. MDN's "See also" or
-// "Specifications" link tables). The widgets we want to catch — tag clouds,
-// related-articles widgets, footer link grids — are virtually always div/ul/aside.
 func stripHighLinkDensityBlocks(htmlStr string) string {
 	doc, err := html.Parse(strings.NewReader(htmlStr))
 	if err != nil {
@@ -363,24 +310,10 @@ func stripHighLinkDensityBlocks(htmlStr string) string {
 					if len(anchors) >= minAnchors {
 						link := linkTextLen(n)
 						if total > 0 && float64(link)/float64(total) > ratioCutoff {
-							// Belt + braces: a container that holds the
-							// page's <main> or a lone <article> is the
-							// content shell, not boilerplate — skip it
-							// regardless of link density and let the
-							// scopeMainContent pass anchor inside it.
 							if containsContentShell(n) {
-								// fall through to descend
 							} else if bodyTotal-total < 200 {
-								// The candidate is essentially the only
-								// substantive content on the page —
-								// removing it would empty the body (this
-								// is what link-only "text-only" homepages
-								// and article-index pages look like).
-								// Let the index-fallback handle it.
-								// fall through to descend
 							} else {
 								marked = append(marked, n)
-								// Don't descend into a node we plan to remove.
 								return
 							}
 						}
@@ -405,8 +338,6 @@ func stripHighLinkDensityBlocks(htmlStr string) string {
 	return renderNode(doc)
 }
 
-// visibleTextLen sums the length of text-node content under n, skipping
-// <script>, <style>, and <noscript> subtrees.
 func visibleTextLen(n *html.Node) int {
 	if n == nil {
 		return 0

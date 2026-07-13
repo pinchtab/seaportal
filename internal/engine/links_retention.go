@@ -6,23 +6,15 @@ import (
 	"strings"
 )
 
-// LinkRetention controls how inline Markdown links `[text](url)` are rendered
-// after extraction. The default (LinkRetentionAll) leaves links untouched.
 type LinkRetention int
 
 const (
-	// LinkRetentionAll keeps inline `[text](url)` as-is (default).
 	LinkRetentionAll LinkRetention = iota
-	// LinkRetentionNone strips both link text and URL.
 	LinkRetentionNone
-	// LinkRetentionText keeps the link text, drops the URL.
 	LinkRetentionText
-	// LinkRetentionFooter delegates to ConvertLinksToCitations:
-	// inline links become `text ⟨N⟩` plus a numbered `## References` section.
 	LinkRetentionFooter
 )
 
-// String returns the canonical lowercase name of the mode.
 func (m LinkRetention) String() string {
 	switch m {
 	case LinkRetentionAll:
@@ -38,8 +30,6 @@ func (m LinkRetention) String() string {
 	}
 }
 
-// ParseLinkRetention parses a mode name. Accepts lowercase
-// "none", "text", "all", "footer". Returns an error otherwise.
 func ParseLinkRetention(s string) (LinkRetention, error) {
 	switch s {
 	case "all":
@@ -55,25 +45,10 @@ func ParseLinkRetention(s string) (LinkRetention, error) {
 	}
 }
 
-// linkInlineRE matches an inline Markdown link `[text](url)`.
-// Mirrors the pattern used by ConvertLinksToCitations.
 var linkInlineRE = regexp.MustCompile(`\[([^\]]*)\]\(([^)\s]*)\)`)
 
-// doubleSpaceRE collapses runs of 2+ spaces (within a line, not newlines).
 var doubleSpaceRE = regexp.MustCompile(`  +`)
 
-// applyLinkRetention rewrites `md` according to `mode`.
-//
-//   - LinkRetentionAll: returns input unchanged.
-//   - LinkRetentionFooter: delegates to ConvertLinksToCitations.
-//   - LinkRetentionNone: replaces each `[text](url)` with "" (collapses runs
-//     of leftover spaces to a single space).
-//   - LinkRetentionText: replaces each `[text](url)` with the bare text.
-//
-// In every non-Footer mode, image syntax `![alt](url)` is left alone (the
-// leading `!` is detected by peeking at the byte before the match), and
-// fenced code blocks / inline code spans are preserved verbatim via
-// maskCode/unmaskCode from citations.go.
 func applyLinkRetention(md string, mode LinkRetention) string {
 	if md == "" || mode == LinkRetentionAll {
 		return md
@@ -94,7 +69,6 @@ func applyLinkRetention(md string, mode LinkRetention) string {
 		start, end := m[0], m[1]
 		textStart, textEnd := m[2], m[3]
 
-		// Skip image syntax `![alt](url)`.
 		if start > 0 && masked[start-1] == '!' {
 			continue
 		}
@@ -103,7 +77,6 @@ func applyLinkRetention(md string, mode LinkRetention) string {
 
 		switch mode {
 		case LinkRetentionNone:
-			// replace with nothing
 		case LinkRetentionText:
 			b.WriteString(masked[textStart:textEnd])
 		}
@@ -120,8 +93,6 @@ func applyLinkRetention(md string, mode LinkRetention) string {
 	out := b.String()
 
 	if mode == LinkRetentionNone {
-		// Collapse runs of double spaces left where links were removed mid-line.
-		// Only collapse spaces (not tabs/newlines) to avoid touching code/poetry.
 		out = doubleSpaceRE.ReplaceAllString(out, " ")
 	}
 

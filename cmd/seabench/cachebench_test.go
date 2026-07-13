@@ -10,10 +10,6 @@ import (
 	"github.com/pinchtab/seaportal/internal/engine/leakcheck"
 )
 
-// TestCacheBench_QuickRoundTrip drives the CLI flow end-to-end with a small
-// N against an in-process fixture server. Asserts: JSON + Markdown reports
-// land on disk, all 3 modes are present with sensible numbers, hit-rate
-// invariants hold (off == 0, ttl-24h > 0, swr-10m > 0).
 func TestCacheBench_QuickRoundTrip(t *testing.T) {
 	leakcheck.CheckLeak(t)
 	reportDir := filepath.Join(t.TempDir(), "reports")
@@ -90,9 +86,6 @@ func TestCacheBench_QuickRoundTrip(t *testing.T) {
 	}
 }
 
-// TestCacheBench_DeterministicSampling asserts that the URL sequence
-// generator returns the identical sequence for two calls with the same
-// seed and hot-ratio — the cornerstone of cross-mode comparability.
 func TestCacheBench_DeterministicSampling(t *testing.T) {
 	hot := []string{"h0", "h1", "h2"}
 	cold := []string{"c0", "c1", "c2", "c3", "c4"}
@@ -103,7 +96,6 @@ func TestCacheBench_DeterministicSampling(t *testing.T) {
 			t.Fatalf("sampling not deterministic at i=%d: %q vs %q", i, a[i], b[i])
 		}
 	}
-	// Sanity: ~80% of draws should be hot.
 	hotHits := 0
 	hotSet := map[string]bool{"h0": true, "h1": true, "h2": true}
 	for _, u := range a {

@@ -12,8 +12,6 @@ import (
 	"testing"
 )
 
-// scrapeTestSite serves a small crawlable site (no sitemap, so discovery
-// falls back to the link crawl) and records every requested path.
 func scrapeTestSite(t *testing.T) (*httptest.Server, func() []string) {
 	t.Helper()
 	var mu sync.Mutex
@@ -46,9 +44,6 @@ func scrapeTestSite(t *testing.T) (*httptest.Server, func() []string) {
 func TestScrapeSiteSecurityBlocksPrivateTargets(t *testing.T) {
 	srv, requested := scrapeTestSite(t)
 
-	// The httptest server listens on 127.0.0.1, so BlockPrivateIPs must stop
-	// every crawl fetch — discovery finds nothing and the run errors out
-	// instead of silently scraping an internal host.
 	res, err := ScrapeSite(context.Background(), &ScrapeOptions{
 		BaseURL:  srv.URL,
 		MaxPages: 10,
@@ -94,8 +89,6 @@ func TestScrapeSiteSecurityURLFilterVetoesEveryFetch(t *testing.T) {
 		t.Fatalf("ScrapeSite: %v", err)
 	}
 
-	// Every fetched path must have passed through the filter first: the
-	// filter's view is a superset of what actually hit the server.
 	mu.Lock()
 	filtered := map[string]bool{}
 	for _, p := range seen {
@@ -130,14 +123,12 @@ func TestValidateURLRunsURLFilterAfterBuiltInChecks(t *testing.T) {
 			return sentinel
 		},
 	}
-	// Scheme check fails first: the filter must not run.
 	if err := p.ValidateURL(context.Background(), "http://example.com/"); err == nil || errors.Is(err, sentinel) {
 		t.Fatalf("scheme rejection expected before filter, got %v", err)
 	}
 	if calls != 0 {
 		t.Fatalf("filter ran despite scheme rejection")
 	}
-	// Passing built-in checks reaches the filter.
 	if err := p.ValidateURL(context.Background(), "https://example.com/"); !errors.Is(err, sentinel) {
 		t.Fatalf("want sentinel from filter, got %v", err)
 	}

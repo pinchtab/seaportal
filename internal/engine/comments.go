@@ -8,18 +8,12 @@ import (
 	"golang.org/x/net/html/atom"
 )
 
-// CommentRef is a single user-generated comment harvested from a recognised
-// comment-container element (Disqus, native comments, "Replies" widgets).
-// Surfaced on Result.Comments when the caller opts in via Options.WithComments.
 type CommentRef struct {
 	Author    string `json:"author,omitempty"`
 	Text      string `json:"text"`
 	Timestamp string `json:"timestamp,omitempty"`
 }
 
-// commentContainerTokens is the set of id/class tokens that mark a
-// user-comments section. Match is exact-token (whitespace + dash + dot split),
-// lowercased.
 var commentContainerTokens = map[string]bool{
 	"comments":        true,
 	"comment-list":    true,
@@ -32,9 +26,6 @@ var commentContainerTokens = map[string]bool{
 	"comment-section": true,
 }
 
-// detectCommentContainer reports whether n is a user-comments container based
-// purely on its attributes (id/class/role/data-*). Never inspects text — a
-// page about "JS comments" must not trip this.
 func detectCommentContainer(n *xhtml.Node) bool {
 	if n == nil || n.Type != xhtml.ElementNode {
 		return false
@@ -69,9 +60,6 @@ func detectCommentContainer(n *xhtml.Node) bool {
 	return false
 }
 
-// tokenizeCommentAttr splits a class/id attribute on whitespace, dashes, and
-// dots so we can match against composite tokens like "comment-list" as well as
-// the bare ones inside them.
 func tokenizeCommentAttr(s string) map[string]bool {
 	out := map[string]bool{}
 	for _, raw := range strings.Fields(s) {
@@ -80,8 +68,6 @@ func tokenizeCommentAttr(s string) map[string]bool {
 			continue
 		}
 		out[raw] = true
-		// Also expose composite tokens split by '-' and '.' so single-word
-		// tokens like "comments" inside class="post-comments" can match.
 		for _, part := range splitMany(raw, "-.") {
 			if part != "" {
 				out[part] = true
@@ -96,14 +82,6 @@ func splitMany(s, seps string) []string {
 	return strings.FieldsFunc(s, f)
 }
 
-// stripCommentContainers removes detected comment-container subtrees from the
-// DOM and returns the modified HTML. Always-on in preprocess — comments are
-// infrastructure noise we never want in main content.
-//
-// Body-emptiness guard: if removing all candidates would leave <body> with
-// less than 200 chars of visible text, the strip is aborted and the original
-// input returned unchanged. This guards the rare case where a comment widget
-// wraps the whole article.
 func stripCommentContainers(htmlStr string) string {
 	if htmlStr == "" {
 		return htmlStr
@@ -117,10 +95,6 @@ func stripCommentContainers(htmlStr string) string {
 		return htmlStr
 	}
 
-	// Walk, collecting candidates at depth ≥ 2 from body (so we never nuke
-	// the page root or a top-level wrapper that happens to be classed
-	// "comments"). Don't descend into a candidate once chosen — nested
-	// comment markup is removed wholesale with its container.
 	var marked []*xhtml.Node
 	var visit func(n *xhtml.Node, depth int)
 	visit = func(n *xhtml.Node, depth int) {
@@ -141,8 +115,6 @@ func stripCommentContainers(htmlStr string) string {
 		return htmlStr
 	}
 
-	// Body-emptiness guard: estimate what visible text would remain after
-	// removal. Sum candidate text and subtract from body total.
 	bodyTotal := visibleTextLen(body)
 	var removedText int
 	for _, n := range marked {
@@ -160,10 +132,6 @@ func stripCommentContainers(htmlStr string) string {
 	return renderNode(doc)
 }
 
-// ExtractComments walks htmlStr for comment containers and harvests one
-// CommentRef per detected comment block, best-effort. baseURL is reserved for
-// future use (resolving relative author profile links). Returns nil when no
-// containers are found.
 func ExtractComments(htmlStr string, _ string) []CommentRef {
 	if htmlStr == "" {
 		return nil
@@ -201,7 +169,6 @@ func ExtractComments(htmlStr string, _ string) []CommentRef {
 	for _, c := range containers {
 		blocks := findCommentBlocks(c)
 		if len(blocks) == 0 {
-			// Treat the whole container as one comment.
 			ref := buildCommentRef(c)
 			if ref.Text != "" {
 				out = append(out, ref)
@@ -218,9 +185,6 @@ func ExtractComments(htmlStr string, _ string) []CommentRef {
 	return out
 }
 
-// findCommentBlocks returns child sub-blocks within a comment container that
-// look like individual comments — repeating li/article/div elements whose
-// class hints at being a single comment. Best-effort.
 func findCommentBlocks(container *xhtml.Node) []*xhtml.Node {
 	var out []*xhtml.Node
 	var visit func(n *xhtml.Node)
@@ -248,7 +212,6 @@ func findCommentBlocks(container *xhtml.Node) []*xhtml.Node {
 func looksLikeCommentBlock(n *xhtml.Node) bool {
 	classes := tokenizeCommentAttr(strings.ToLower(getAttr(n, "class")))
 	id := strings.ToLower(getAttr(n, "id"))
-	// itemtype microdata is a clean structural signal.
 	if itype := getAttr(n, "itemtype"); itype != "" {
 		if strings.Contains(strings.ToLower(itype), "comment") {
 			return true
@@ -341,9 +304,6 @@ func findTimestamp(n *xhtml.Node) string {
 	return collapseWhitespace(found)
 }
 
-// findCommentText picks the longest text-bearing child as the comment body,
-// preferring an explicit .comment-body / .comment-text / [itemprop=text] child
-// when present. Falls back to the container's own visible text.
 func findCommentText(n *xhtml.Node) string {
 	var preferred *xhtml.Node
 	var visit func(c *xhtml.Node)
@@ -377,8 +337,6 @@ func findCommentText(n *xhtml.Node) string {
 	return collapseWhitespace(strings.TrimSpace(html.UnescapeString(raw)))
 }
 
-// textContent walks descendant text nodes, joining with single spaces; skips
-// script/style/noscript.
 func textContent(n *xhtml.Node) string {
 	return nodeTextOpts(n, textOptions{spaceJoin: true, skipScriptStyle: true, skipNoscript: true})
 }

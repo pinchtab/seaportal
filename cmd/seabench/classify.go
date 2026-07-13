@@ -1,18 +1,5 @@
 package main
 
-// classify is the page-classification accuracy lane of seabench. It runs
-// every corpus fixture through engine.FromHTML, compares the resulting
-// result.Profile.Class against the corpus's expect_class label, and emits
-// per-class precision/recall/F1 plus a confusion matrix.
-//
-// Why a separate command:
-//   - `eval` scores extraction quality via must_include/must_exclude.
-//   - `classify` scores the orthogonal axis: "did the classifier correctly
-//     decide whether the page is static / ssr / spa / blocked / etc.".
-//
-// No network, no LLM, no subprocess: every fixture is on disk; FromHTML is
-// pure. The synthetic baseURL is deterministic so re-runs are stable.
-
 import (
 	"encoding/csv"
 	"flag"
@@ -26,9 +13,6 @@ import (
 	"github.com/pinchtab/seaportal/internal/corpus"
 )
 
-// classOrder controls the canonical row/column order for the confusion
-// matrix and the per-class P/R/F1 table. Includes the special "EMPTY"
-// bucket for fixtures whose profile pipeline did not populate Class.
 var classOrder = []string{
 	"static",
 	"ssr",
@@ -39,7 +23,6 @@ var classOrder = []string{
 	"EMPTY",
 }
 
-// PerClassMetrics is the per-class slice of the JSON report.
 type PerClassMetrics struct {
 	Precision float64 `json:"precision"`
 	Recall    float64 `json:"recall"`
@@ -47,14 +30,12 @@ type PerClassMetrics struct {
 	Support   int     `json:"support"`
 }
 
-// ConfusionCell is one cell of the row-expected/column-predicted matrix.
 type ConfusionCell struct {
 	Expected  string `json:"expected"`
 	Predicted string `json:"predicted"`
 	Count     int    `json:"count"`
 }
 
-// FixtureRow is the per-fixture detail emitted in the JSON report.
 type FixtureRow struct {
 	Path           string   `json:"path"`
 	Expected       string   `json:"expected"`
@@ -69,8 +50,6 @@ type FixtureRow struct {
 	SPASignals     []string `json:"spa_signals,omitempty"`
 }
 
-// ClassifyReport mirrors the on-disk JSON schema (version 1). Field tags
-// use snake_case for jq / dashboard friendliness.
 type ClassifyReport struct {
 	Version    int                        `json:"version"`
 	CapturedAt string                     `json:"captured_at"`
@@ -115,15 +94,9 @@ func runClassify(args []string) {
 		report.Correct, report.Total, report.Accuracy, mdPath)
 }
 
-// classifyCorpus loads the corpus, runs every labelled fixture through
-// FromHTML, and produces a fully-populated ClassifyReport. Entries with
-// an empty expect_class are skipped with a stderr warning and excluded
-// from accuracy math. A failed fixture read aborts the run.
 func classifyCorpus(corpusPath string) (ClassifyReport, error) {
 	var empty ClassifyReport
 
-	// matrix[expected][predicted] = count. Predicted "EMPTY" is the
-	// sentinel for "profile pipeline did not populate Class".
 	matrix := make(map[string]map[string]int)
 	for _, c := range classOrder {
 		matrix[c] = make(map[string]int)
@@ -146,8 +119,6 @@ func classifyCorpus(corpusPath string) (ClassifyReport, error) {
 		}
 		expected := entry.ExpectClass
 
-		// Tolerate labels outside classOrder by lazily allocating the
-		// row/column; keeps the report honest even if the corpus drifts.
 		if _, ok := matrix[expected]; !ok {
 			matrix[expected] = make(map[string]int)
 		}
@@ -198,9 +169,6 @@ func classifyCorpus(corpusPath string) (ClassifyReport, error) {
 	return report, nil
 }
 
-// perClassMetrics walks the confusion matrix once to produce P/R/F1 and
-// support per class. Iterates over the union of row+column keys so any
-// drifted-in class still appears.
 func perClassMetrics(matrix map[string]map[string]int) map[string]PerClassMetrics {
 	keys := classKeys(matrix)
 	out := make(map[string]PerClassMetrics, len(keys))
@@ -232,9 +200,6 @@ func perClassMetrics(matrix map[string]map[string]int) map[string]PerClassMetric
 	return out
 }
 
-// classKeys returns every class that appears as either an expected row or
-// a predicted column in the matrix, ordered with classOrder first and any
-// drifted-in extras sorted alphabetically at the tail.
 func classKeys(matrix map[string]map[string]int) []string {
 	seen := make(map[string]bool)
 	for expected, row := range matrix {
@@ -264,8 +229,6 @@ func classKeys(matrix map[string]map[string]int) []string {
 	return out
 }
 
-// hasAnyExpected reports whether any fixture was labelled with `c` —
-// used so empty rows still surface in the per-class table.
 func hasAnyExpected(matrix map[string]map[string]int, c string) bool {
 	row, ok := matrix[c]
 	if !ok {
@@ -307,9 +270,6 @@ func writeClassifyCSV(path string, r ClassifyReport) error {
 	return os.Rename(tmp, path)
 }
 
-// buildCSV is split out so the file lifecycle is local — a deferred
-// Close fires on every exit path, satisfying errcheck without scattering
-// `_ = f.Close()` placebos through the writer logic.
 func buildCSV(tmp string, keys []string, r ClassifyReport) (err error) {
 	f, err := os.Create(tmp)
 	if err != nil {
@@ -325,8 +285,6 @@ func buildCSV(tmp string, keys []string, r ClassifyReport) (err error) {
 	if err = w.Write(header); err != nil {
 		return err
 	}
-	// Re-materialise the matrix from the flat cells so the CSV view stays
-	// in lockstep with the JSON view (single source of truth = report).
 	mat := make(map[string]map[string]int, len(keys))
 	for _, c := range keys {
 		mat[c] = make(map[string]int)
@@ -350,9 +308,6 @@ func buildCSV(tmp string, keys []string, r ClassifyReport) (err error) {
 	return w.Error()
 }
 
-// confusionAxes returns the axis (rows = expected, cols = predicted) used
-// by both the CSV and the Markdown matrix. Derived from the report's
-// confusion cells plus per_class keys so empty rows still render.
 func confusionAxes(r ClassifyReport) []string {
 	seen := make(map[string]bool)
 	for k := range r.PerClass {
@@ -397,9 +352,6 @@ func renderClassifyMarkdown(r ClassifyReport) string {
 	axes := confusionAxes(r)
 	for _, c := range axes {
 		m := r.PerClass[c]
-		// A class with zero support AND zero predictions has no meaningful
-		// metric; render as N/A so it doesn't drag a "0.000" through the
-		// per-class table. Support>0 cases keep numeric formatting.
 		hasPredictions := false
 		for _, cell := range r.Confusion {
 			if cell.Predicted == c {
@@ -428,7 +380,6 @@ func renderClassifyMarkdown(r ClassifyReport) string {
 		fmt.Fprint(&b, "---|")
 	}
 	fmt.Fprintln(&b)
-	// Rebuild matrix from cells for consistent rendering.
 	mat := make(map[string]map[string]int, len(axes))
 	for _, c := range axes {
 		mat[c] = make(map[string]int)

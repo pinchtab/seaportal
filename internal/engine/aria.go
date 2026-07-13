@@ -1,9 +1,5 @@
 package engine
 
-// aria.go — ARIA vocabulary for the accessibility snapshot: implicit-role
-// mapping, input-type roles, accessible-name computation, interactivity, and
-// heading levels. Moved verbatim from snapshot.go.
-
 import (
 	"strings"
 
@@ -11,16 +7,13 @@ import (
 )
 
 func getRole(n *html.Node) string {
-	// Explicit ARIA role takes precedence
 	if role := getAttr(n, "role"); role != "" {
 		return role
 	}
 
-	// Map tag to implicit role
 	tag := strings.ToLower(n.Data)
 
 	switch tag {
-	// Landmarks
 	case "header":
 		return "banner"
 	case "nav":
@@ -41,11 +34,9 @@ func getRole(n *html.Node) string {
 	case "form":
 		return "form"
 
-	// Headings
 	case "h1", "h2", "h3", "h4", "h5", "h6":
 		return "heading"
 
-	// Links and buttons
 	case "a":
 		if getAttr(n, "href") != "" {
 			return "link"
@@ -54,7 +45,6 @@ func getRole(n *html.Node) string {
 	case "button":
 		return "button"
 
-	// Form controls
 	case "input":
 		return getInputRole(n)
 	case "textarea":
@@ -64,7 +54,6 @@ func getRole(n *html.Node) string {
 	case "option":
 		return "option"
 
-	// Lists
 	case "ul", "ol":
 		return "list"
 	case "li":
@@ -76,7 +65,6 @@ func getRole(n *html.Node) string {
 	case "dd":
 		return "definition"
 
-	// Tables
 	case "table":
 		return "table"
 	case "tr":
@@ -90,18 +78,16 @@ func getRole(n *html.Node) string {
 	case "tbody":
 		return "rowgroup"
 
-	// Media
 	case "img":
 		if getAttr(n, "alt") != "" {
 			return "image"
 		}
-		return "" // decorative image
+		return ""
 	case "figure":
 		return "figure"
 	case "figcaption":
 		return "caption"
 
-	// Text structure
 	case "p":
 		return "paragraph"
 	case "blockquote":
@@ -109,7 +95,6 @@ func getRole(n *html.Node) string {
 	case "pre", "code":
 		return "code"
 
-	// Interactive
 	case "details":
 		return "group"
 	case "summary":
@@ -151,17 +136,14 @@ func getInputRole(n *html.Node) string {
 }
 
 func computeAccessibleName(n *html.Node) string {
-	// Priority 1: aria-label
 	if label := getAttr(n, "aria-label"); label != "" {
 		return truncateName(label)
 	}
 
-	// Priority 2: title attribute
 	if title := getAttr(n, "title"); title != "" {
 		return truncateName(title)
 	}
 
-	// Priority 3: Element-specific
 	tag := strings.ToLower(n.Data)
 
 	switch tag {
@@ -172,18 +154,15 @@ func computeAccessibleName(n *html.Node) string {
 			return truncateName(ph)
 		}
 	case "a":
-		// Use link text
 		return truncateName(nodeText(n, false))
 	}
 
-	// Priority 4: Text content
 	return truncateName(nodeText(n, false))
 }
 
 func isInteractive(n *html.Node) bool {
 	tag := strings.ToLower(n.Data)
 
-	// Inherently interactive elements
 	switch tag {
 	case "a":
 		return getAttr(n, "href") != ""
@@ -196,19 +175,16 @@ func isInteractive(n *html.Node) bool {
 		return true
 	}
 
-	// Check for event handlers (prefix scan — not a plain key lookup).
 	for _, attr := range n.Attr {
 		if strings.HasPrefix(attr.Key, "on") {
 			return true
 		}
 	}
 
-	// Check tabindex
 	if tabindex := getAttr(n, "tabindex"); tabindex != "" && tabindex != "-1" {
 		return true
 	}
 
-	// Check role
 	role := getAttr(n, "role")
 	switch role {
 	case "button", "link", "checkbox", "radio", "tab", "menuitem", "option":
@@ -239,7 +215,7 @@ func getHeadingLevel(tag string) int {
 
 func truncateName(s string) string {
 	s = strings.TrimSpace(s)
-	s = collapseUnicodeWhitespace(s) // normalize whitespace
+	s = collapseUnicodeWhitespace(s)
 	if len(s) > 80 {
 		return s[:77] + "..."
 	}

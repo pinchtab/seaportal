@@ -1,16 +1,5 @@
 package engine
 
-// language.go — Lightweight stopword-frequency language detector used as a
-// tail-fallback when metadata extraction (og:locale, <html lang>,
-// Content-Language, DC.language, JSON-LD) leaves Result.Language empty. The
-// script-block fast path handles CJK + Arabic deterministically; for
-// Latin-script languages we tokenise the cleaned Markdown and count hits
-// against per-language curated discriminative stopword sets.
-//
-// Design constraints: zero external deps, no allocation surprises, cheap
-// enough to run on every extracted page. Stopword tables are curated so no
-// token appears in more than two languages to keep the classifier honest.
-
 import (
 	"regexp"
 	"strings"
@@ -23,10 +12,6 @@ var (
 	langMDLinkRE     = regexp.MustCompile(`\[([^\]]*)\]\([^)]*\)`)
 )
 
-// stopwords holds discriminative high-frequency function words per language.
-// Lists are deliberately small (~25-30 words). A token must be exclusive to
-// at most two languages to avoid cross-language false matches (e.g. "a" is
-// excluded from en/es/pt/it because it appears in all four).
 var stopwords = map[string]map[string]struct{}{
 	"en": setOf(
 		"the", "and", "of", "to", "in", "that", "is", "was", "for", "with",
@@ -86,16 +71,11 @@ func setOf(words ...string) map[string]struct{} {
 	return s
 }
 
-// DetectLanguage returns a BCP-47-ish language code (e.g. "en", "es", "ja")
-// by sampling the input. Returns "" when no language scores above the
-// confidence threshold. The script-block fast path handles CJK + Arabic
-// deterministically; for Latin-script languages it counts stopword hits.
 func DetectLanguage(markdown string) string {
 	if markdown == "" {
 		return ""
 	}
 
-	// Script-block fast path: scan up to first 1000 chars (by rune).
 	var hira, kata, hangul, han, arabic int
 	count := 0
 	for _, r := range markdown {
@@ -129,7 +109,6 @@ func DetectLanguage(markdown string) string {
 		return "ar"
 	}
 
-	// Pre-clean: strip fenced code, inline code, and Markdown link URLs.
 	cleaned := langFencedCodeRE.ReplaceAllString(markdown, " ")
 	cleaned = langInlineCodeRE.ReplaceAllString(cleaned, " ")
 	cleaned = langMDLinkRE.ReplaceAllString(cleaned, "$1")

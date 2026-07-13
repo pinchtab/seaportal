@@ -6,10 +6,6 @@ import (
 	"time"
 )
 
-// extractPDF routes the fetched bytes through ExtractPDFText and reuses the
-// same post-content pipeline (link retention, truncation, chunking) as the
-// markdown path. HTML-specific stages (readability, dedupe, prune fallback,
-// JSON-LD fallback) are skipped — they don't apply to PDFs.
 func extractPDF(result *Result, targetURL string, opts Options, st *fetchState, start time.Time) {
 	md, perr := ExtractPDFText(st.bodyBytes)
 	if perr != nil {
@@ -29,7 +25,6 @@ func extractPDF(result *Result, targetURL string, opts Options, st *fetchState, 
 	result.TimeMs = time.Since(start).Milliseconds()
 	result.FetchTimeMs = time.Since(start).Milliseconds()
 
-	// Fallback title: first non-empty line that isn't a "--- page N ---" marker.
 	if result.Title == "" {
 		for _, l := range strings.Split(content, "\n") {
 			trimmed := strings.TrimSpace(l)

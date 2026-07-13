@@ -1,15 +1,5 @@
 package engine
 
-// fetch_document.go — the fetch/transport/policy stage of FromURLWithOptions.
-//
-// fetchDocument owns everything that happens before content-type dispatch:
-// the data: URL shortcut, SSRF gate, client assembly, HEAD preflight, robots
-// gate, crawl-delay, rate limit, cache lookup, retried fetch, 304 replay,
-// body read + cache write, decompress/charset restore, and the binary gate.
-// Its output is a fetchState that the per-content-type pipelines
-// (extract_pdf.go, extract_raw.go, extract_markdown.go, fromHTMLInternal)
-// and the shared finalizeTransport tail consume.
-
 import (
 	"bytes"
 	"context"
@@ -22,15 +12,8 @@ import (
 	"time"
 )
 
-// backgroundRefreshTimeout bounds one stale-while-revalidate refresh GET
-// (request context and client timeout). See spawnBackgroundRefresh for why
-// the refresh deliberately ignores the caller's Options.Context.
 const backgroundRefreshTimeout = 30 * time.Second
 
-// fetchState carries the artifacts of a completed fetch stage into the
-// per-content-type pipelines: the response and decoded body, the transport
-// pieces needed for a renegotiation refetch (client, ctx, UA, body cap), and
-// the telemetry that finalizeTransport stamps onto the Result.
 type fetchState struct {
 	resp            *http.Response
 	bodyBytes       []byte
@@ -50,7 +33,6 @@ type fetchState struct {
 	headPreflightStatus int
 }
 
-// retryConfig is the resolved retry budget for one fetch.
 type retryConfig struct {
 	maxRetries        int
 	maxRetryWait      time.Duration
@@ -58,10 +40,6 @@ type retryConfig struct {
 	backoffBase       time.Duration
 }
 
-// resolveRetryConfig resolves opts-level retry settings plus any per-domain
-// DomainRetryConfig override. This is the single defaulting site (T19) for
-// the retry budget: DefaultMaxRetryWait / DefaultTotalRetryTimeout apply when
-// the resolved values are still zero.
 func resolveRetryConfig(opts Options, domain string) retryConfig {
 	cfg := retryConfig{
 		maxRetries:        opts.MaxRetries,
@@ -91,14 +69,7 @@ func resolveRetryConfig(opts Options, domain string) retryConfig {
 	return cfg
 }
 
-// fetchDocument runs the transport/policy stage for targetURL. It returns
-// ok=false with result populated when the fetch ended early — a policy block,
-// transport error, binary body, or the data: URL shortcut (which runs the
-// full HTML pipeline itself). The caller owns closing st.resp's body.
 func fetchDocument(targetURL string, opts Options, start time.Time, result *Result) (st fetchState, ok bool) {
-	// Cancellation context for the whole fetch: bounds the request and makes
-	// crawl-delay / retry backoff waits interruptible (ALP-043). Defaults to
-	// Background so existing callers that don't set opts.Context are unchanged.
 	reqCtx := opts.Context
 	if reqCtx == nil {
 		reqCtx = context.Background()
@@ -106,10 +77,6 @@ func fetchDocument(targetURL string, opts Options, start time.Time, result *Resu
 	st.reqCtx = reqCtx
 	st.tracker = &redirectTracker{}
 
-	// data: URL short-circuit (RFC 2397). Bypasses the network entirely:
-	// decode inline body and feed it straight into the HTML pipeline. Scope
-	// is strictly text/html + text/plain; other media types (binary/image)
-	// error cleanly so we don't pipe non-text bytes through readability.
 	if strings.HasPrefix(targetURL, "data:") {
 		mime, body, derr := parseDataURL(targetURL)
 		if derr != nil {
@@ -125,10 +92,6 @@ func fetchDocument(targetURL string, opts Options, start time.Time, result *Resu
 		return st, false
 	}
 
-	// Pre-fetch security gate: validate scheme + domain + resolved IP before any
-	// socket is opened. Placed after the data: short-circuit (data: never hits
-	// the network) so the policy only governs real network fetches. The dial
-	// Control hook re-checks the resolved IP at connect to close DNS rebinding.
 	if opts.Security != nil {
 		if err := opts.Security.ValidateURL(reqCtx, targetURL); err != nil {
 			result.setError(err)
@@ -197,9 +160,6 @@ func fetchDocument(targetURL string, opts Options, start time.Time, result *Resu
 
 	req := newGETRequest(targetURL, st.userAgent, opts.RequestID, opts.SendRequestID).WithContext(reqCtx)
 
-	// On-disk content cache (opt-in via opts.CacheDir). Read-side is bypassed
-	// by opts.NoCache; the write-side still records fresh 200s so --no-cache
-	// behaves as "force refresh" rather than "disable cache entirely".
 	var cache *DiskCache
 	if opts.CacheDir != "" {
 		c, cacheErr := NewDiskCache(opts.CacheDir, opts.CacheTTL)
@@ -210,11 +170,9 @@ func fetchDocument(targetURL string, opts Options, start time.Time, result *Resu
 		}
 	}
 
-	// Cache lookup and revalidation header setup.
 	lookup := cacheLookupStage(cache, opts, targetURL, st.userAgent, req, result)
 	resp := lookup.resp
 
-	// Fetch with retry stage.
 	if !lookup.hit {
 		resp = fetchWithRetryStage(req, targetURL, opts, &st, retryCfg, result)
 		if result.Error != "" && resp == nil {
@@ -229,8 +187,6 @@ func fetchDocument(targetURL string, opts Options, start time.Time, result *Resu
 
 	st.ttfbMs = time.Since(start).Milliseconds()
 
-	// 304 Not Modified for a stale cache entry: replay the cached body and
-	// refresh FetchedAt so subsequent calls see it as fresh.
 	if lookup.pendingMeta != nil && resp.StatusCode == http.StatusNotModified {
 		_ = resp.Body.Close()
 		resp = lookup.pendingMeta.toHTTPResponse(lookup.pendingBody, req)
@@ -257,27 +213,17 @@ func fetchDocument(targetURL string, opts Options, start time.Time, result *Resu
 		return st, false
 	}
 
-	// Persist successful 200 OK responses to the on-disk cache. Cache the raw
-	// (still-encoded) wire bytes so replay flows through the same decompress
-	// path as a live fetch. Errors are non-fatal: log and continue. Skip when
-	// we just replayed a 304 (CacheRevalidated) — TouchByKey already handled it.
 	if cache != nil && !result.CacheHit && !result.CacheRevalidated && !result.CacheStale && resp.StatusCode == http.StatusOK {
 		if putErr := cache.Put(targetURL, req, resp.StatusCode, resp.Header, bodyBytes); putErr != nil {
 			st.preWarnings = append(st.preWarnings, fmt.Sprintf("cache write: %v", putErr))
 		}
 	}
 
-	// Decompress and charset recovery stage.
 	st.bodyBytes, st.preWarnings, st.respContentType = decompressAndRestoreCharsetStage(bodyBytes, resp, opts, result, st.preWarnings)
 	if result.Error != "" {
 		return st, false
 	}
 
-	// Binary gate on the DEFAULT path (ALP-038): image/audio/video/archive/
-	// octet-stream bodies must never reach readability/markdown — binary
-	// bytes parsed as HTML stall for minutes. The same guard previously ran
-	// only in the opt-in HEAD preflight. PDFs are exempt (extracted by the
-	// PDF pipeline) unless the caller opted out via --no-pdf.
 	ctLower := strings.ToLower(st.respContentType)
 	isPDF := strings.Contains(ctLower, "application/pdf")
 	if isBinaryContentType(st.respContentType) || (isPDF && opts.NoPDF) {
@@ -295,11 +241,6 @@ func fetchDocument(targetURL string, opts Options, start time.Time, result *Resu
 	return st, true
 }
 
-// renegotiateHTML retries the fetch with a plain-HTML Accept header after a
-// 404/406 suggested the server rejected `Accept: text/markdown` outright
-// (Next.js responds 404, spec-compliant servers 406). Replaces st.resp /
-// st.bodyBytes / st.respContentType in place; returns false with result
-// populated when the refetch failed.
 func renegotiateHTML(targetURL string, opts Options, st *fetchState, result *Result) bool {
 	_ = st.resp.Body.Close()
 	req := newGETRequest(targetURL, st.userAgent, opts.RequestID, opts.SendRequestID).WithContext(st.reqCtx)
@@ -323,8 +264,6 @@ func renegotiateHTML(targetURL string, opts Options, st *fetchState, result *Res
 	return result.Error == ""
 }
 
-// cacheLookup is the outcome of cacheLookupStage: a replayable response for
-// fresh/SWR hits, or the pending metadata for a synchronous revalidation.
 type cacheLookup struct {
 	resp        *http.Response
 	hit         bool
@@ -333,7 +272,6 @@ type cacheLookup struct {
 	pendingKey  string
 }
 
-// cacheLookupStage handles cache read, SWR band, and revalidation header setup.
 func cacheLookupStage(cache *DiskCache, opts Options, targetURL string, userAgent string, req *http.Request, result *Result) cacheLookup {
 	var lookup cacheLookup
 
@@ -362,9 +300,6 @@ func cacheLookupStage(cache *DiskCache, opts Options, targetURL string, userAgen
 	return lookup
 }
 
-// retryWaitOutcome reports how the shared retry tail resolved: proceed with
-// another attempt, stop because the totalRetryTimeout budget would be
-// exceeded, or stop because the context was cancelled mid-wait.
 type retryWaitOutcome int
 
 const (
@@ -373,8 +308,6 @@ const (
 	retryCanceled
 )
 
-// fetchWithRetryStage executes the fetch with exponential backoff retry
-// logic, recording retry counters into st.
 func fetchWithRetryStage(req *http.Request, targetURL string, opts Options, st *fetchState, retryCfg retryConfig, result *Result) *http.Response {
 	var resp *http.Response
 	var retryCount int
@@ -391,9 +324,6 @@ func fetchWithRetryStage(req *http.Request, targetURL string, opts Options, st *
 	totalRetryTimeout := retryCfg.totalRetryTimeout
 	backoffBase := retryCfg.backoffBase
 
-	// The request's context bounds the whole retry loop: backoff sleeps below
-	// select on it so the deadline / SIGINT can interrupt a wait, and rebuilt
-	// requests inherit it so client.Do stays cancellable across attempts.
 	ctx := req.Context()
 
 	logRetry := func(event RetryEvent) {
@@ -402,9 +332,6 @@ func fetchWithRetryStage(req *http.Request, targetURL string, opts Options, st *
 		}
 	}
 
-	// maxRetryWait is resolved by the caller (opts.MaxRetryWait plus any
-	// per-domain DomainRetryConfig override, defaulted to 60s); the stage just
-	// clamps to it (ALP-047).
 	expBackoff := func(attempt int) time.Duration {
 		backoff := time.Duration(1<<uint(attempt)) * backoffBase
 		if backoff > maxRetryWait {
@@ -413,12 +340,6 @@ func fetchWithRetryStage(req *http.Request, targetURL string, opts Options, st *
 		return addJitter(backoff)
 	}
 
-	// waitAndRetry is the shared tail of every retry branch: budget check,
-	// logging, body close, ctx-aware wait, counter increments, and request
-	// rebuild. event carries the branch's template (Attempt plus StatusCode
-	// or Error); closeBody is nil when the branch has no response to release.
-	// The body is only closed on the retrying path — on budget exhaustion the
-	// response is handed back to the caller unread.
 	waitAndRetry := func(wait time.Duration, event RetryEvent, closeBody *http.Response) retryWaitOutcome {
 		event.WaitTime = wait
 		if totalRetryWait+wait > totalRetryTimeout {
@@ -504,7 +425,6 @@ func fetchWithRetryStage(req *http.Request, targetURL string, opts Options, st *
 	return resp
 }
 
-// decompressAndRestoreCharsetStage handles decompression and charset detection.
 func decompressAndRestoreCharsetStage(bodyBytes []byte, resp *http.Response, opts Options, result *Result, preWarnings []string) ([]byte, []string, string) {
 	contentEncoding := strings.ToLower(resp.Header.Get("Content-Encoding"))
 	if contentEncoding != "" {
@@ -548,21 +468,6 @@ func decompressAndRestoreCharsetStage(bodyBytes []byte, resp *http.Response, opt
 	return bodyBytes, preWarnings, respContentType
 }
 
-// spawnBackgroundRefresh fires a conditional (or plain) GET in a goroutine to
-// refresh a stale-while-revalidate cache entry. The foreground caller has
-// already returned the stale body; this goroutine's job is to update the
-// on-disk cache so the next call sees fresh data. All errors are silent —
-// the only effect of a failure is that the entry stays stale for another
-// SWR cycle. Uses a fresh http.Client to avoid sharing transports with the
-// foreground request.
-//
-// Cancellation semantics (T14, by design): the refresh intentionally does NOT
-// inherit the caller's Options.Context — the foreground call has already
-// returned, and tying the refresh to its ctx would cancel it the moment a CLI
-// invocation exits or an MCP request returns, defeating stale-while-
-// revalidate. Instead the goroutine is bounded by its own
-// backgroundRefreshTimeout deadline (mirrored on the client), so an
-// unresponsive origin can never pin it unbounded.
 func spawnBackgroundRefresh(cache *DiskCache, cacheKey, targetURL string, cached *cachedResponse, userAgent string, opts Options) {
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), backgroundRefreshTimeout)
@@ -578,10 +483,6 @@ func spawnBackgroundRefresh(cache *DiskCache, cacheKey, targetURL string, cached
 		if opts.Transport != nil {
 			client.Transport = opts.Transport
 		}
-		// Intentional silence (V1): the foreground caller already returned a
-		// stale body; this goroutine's failures cannot be surfaced via
-		// Result.Warnings because there's no Result to attach to. Failures
-		// here merely keep the cache entry stale for another SWR cycle.
 		resp, err := client.Do(req)
 		if err != nil {
 			return

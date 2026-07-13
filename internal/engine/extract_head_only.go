@@ -1,22 +1,5 @@
 package engine
 
-// extract_head_only.go — cheap metadata-only fetch path.
-//
-// fetchHeadOnly issues a single GET with Range: bytes=0-16383 + Accept-Encoding:
-// identity to grab just enough body for `<head>` parsing. The 16 KB cap is
-// enforced with io.LimitReader regardless of whether the server honoured Range
-// (200 responses with full body still get truncated). Identity encoding avoids
-// the "partial gzip stream" failure mode where a 16 KB slice of a longer gzip
-// stream can't be decompressed.
-//
-// Only the metadata extractors run: ExtractLDJSON, applyLDJSONMetadata,
-// ExtractMetadata, applyMetadata, PickCanonical, plus a small <title> regex.
-// Readability/preprocess/sanitize/dedupe/links/images/citations are all
-// skipped — they're irrelevant for triage. Result.HeadOnly is set so callers
-// can disambiguate from a normal fetch.
-//
-// Distinct from Options.HeadPreflight which is a true HTTP HEAD (zero body).
-
 import (
 	"context"
 	"fmt"
@@ -41,9 +24,6 @@ func fetchHeadOnly(targetURL string, opts Options) (result Result) {
 		reqCtx = context.Background()
 	}
 
-	// Pre-fetch security gate (mirrors FromURLWithOptions). The 16 KB cap makes
-	// the body-size policy irrelevant here, but SSRF / scheme / domain / redirect
-	// rules still apply to a head-only triage fetch.
 	if opts.Security != nil {
 		if err := opts.Security.ValidateURL(reqCtx, targetURL); err != nil {
 			result.setError(err)
@@ -81,7 +61,6 @@ func fetchHeadOnly(targetURL string, opts Options) (result Result) {
 	req.Header.Set("User-Agent", userAgent)
 	req.Header.Set("Accept", DefaultAccept)
 	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
-	// Force identity: a partial gzip stream returned via Range is undecodable.
 	req.Header.Set("Accept-Encoding", "identity")
 	req.Header.Set("Range", fmt.Sprintf("bytes=0-%d", headOnlyByteCap-1))
 	if opts.SendRequestID && opts.RequestID != "" {
@@ -97,16 +76,12 @@ func fetchHeadOnly(targetURL string, opts Options) (result Result) {
 
 	result.Protocol = negotiatedProtocol(req, resp)
 
-	// Cap read at 16 KB even when the server ignores Range.
 	bodyBytes, err := io.ReadAll(io.LimitReader(resp.Body, headOnlyByteCap))
 	if err != nil {
 		result.setError(err)
 		return result
 	}
 
-	// Defensive: server may still send Content-Encoding despite our identity ask.
-	// Full-stream decompression of a 16 KB slice will usually fail; on failure we
-	// just continue with the raw bytes — head metadata regexes tolerate junk.
 	contentEncoding := strings.ToLower(resp.Header.Get("Content-Encoding"))
 	if contentEncoding != "" && contentEncoding != "identity" {
 		if decompressed, decompErr := decompressBody(bodyBytes, contentEncoding); decompErr == nil {
@@ -140,8 +115,6 @@ func fetchHeadOnly(targetURL string, opts Options) (result Result) {
 		result.CanonicalURL = pick
 	}
 
-	// Explicitly zeroed: even if metadata Author code path injected a byline
-	// prefix into Content, head-only must not surface body content.
 	result.Content = ""
 	result.Length = 0
 
@@ -149,7 +122,6 @@ func fetchHeadOnly(targetURL string, opts Options) (result Result) {
 	result.HeadPreflightStatus = resp.StatusCode
 	result.ResponseContentType = respContentType
 	if cl := resp.Header.Get("Content-Length"); cl != "" {
-		// best-effort, ignore parse errors
 		var n int64
 		_, _ = fmt.Sscanf(cl, "%d", &n)
 		result.ContentLength = n

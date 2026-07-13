@@ -1,49 +1,5 @@
 package main
 
-// stress is the throughput + memory-growth lane of seabench. It fires N
-// sequential FromURL calls against an in-process fixture server hosting a
-// single representative HTML page, samples runtime.MemStats.HeapInuse on
-// every iteration, and writes both a JSON and a Markdown report.
-//
-// Why a separate command instead of folding into `eval`:
-//   - `eval` is precision/recall/F1 quality bake-off, single-shot per fixture.
-//   - `stress` is sustained-throughput + memory-growth regression detection;
-//     it deliberately repeats the SAME fetch so allocation patterns and GC
-//     pressure are the dominant signal, not fixture variety.
-//
-// Why sequential (v1):
-//   - Concurrent fetches make the latency signal noisier and entangle the
-//     measurement with the http.Transport pool and Go scheduler. Sequential
-//     keeps the per-iteration cost legible. Concurrency lane is a follow-up.
-//
-// Why HeapInuse (not Sys):
-//   - HeapInuse is the live heap the engine is actually holding. Sys also
-//     counts mmap'd-but-unused regions Go has not returned to the OS yet,
-//     which makes it lag-y and not actionable for regression detection.
-//
-// Why no runtime.GC() between iterations:
-//   - We want to observe REAL-WORLD allocation rates including STW pauses,
-//     not idealised post-GC numbers.
-//
-// Report JSON schema (version 1):
-//
-//	{
-//	  "version": 1,
-//	  "captured_at": "2026-05-17T12:00:00Z",
-//	  "git_sha": "...",
-//	  "go_version": "go1.25",
-//	  "gomaxprocs": 8,
-//	  "preset": "quick",
-//	  "n": 50,
-//	  "fixture": "testdata/index/text-npr.html",
-//	  "total_elapsed_ms": 425,
-//	  "urls_per_sec": 117.6,
-//	  "latency_ms": {"p50": 7, "p95": 18, "p99": 30},
-//	  "memory_bytes": {"start_heap": ..., "end_heap": ..., "peak_heap": ..., "growth": ...},
-//	  "success_rate": 1.0,
-//	  "errors": 0
-//	}
-
 import (
 	"encoding/json"
 	"flag"
@@ -58,9 +14,6 @@ import (
 	"github.com/pinchtab/seaportal/internal/testserver/fixture"
 )
 
-// presets maps the human-facing preset name to its iteration count. Chosen
-// so `quick` runs in ~1-2s on a developer laptop (kept in the default unit
-// suite), while `large` provides enough samples for percentile stability.
 var presets = map[string]int{
 	"quick":  50,
 	"small":  200,
@@ -68,9 +21,6 @@ var presets = map[string]int{
 	"large":  2000,
 }
 
-// StressReport mirrors the on-disk JSON schema. Field tags use snake_case
-// for cross-tool readability (jq, dashboards). All fields are unconditionally
-// populated so report diffs stay column-aligned.
 type StressReport struct {
 	Version        int     `json:"version"`
 	CapturedAt     string  `json:"captured_at"`
@@ -148,9 +98,6 @@ func runStress(args []string) {
 	}
 }
 
-// executeStress runs the N-iteration fetch loop and returns a populated
-// StressReport. Extracted so tests can dial down N via the `quick` preset
-// while still exercising the real engine + httptest path end-to-end.
 func executeStress(n int, preset, fixturePath, target string) StressReport {
 	lat := make([]time.Duration, n)
 	heap := make([]uint64, n)
@@ -203,19 +150,10 @@ func executeStress(n int, preset, fixturePath, target string) StressReport {
 	r.MemoryBytes.StartHeap = startHeap
 	r.MemoryBytes.EndHeap = endHeap
 	r.MemoryBytes.PeakHeap = peak
-	// int64 cast so a heap that shrunk (negative growth) is representable.
 	r.MemoryBytes.Growth = int64(endHeap) - int64(startHeap)
 	return r
 }
 
-// evaluateGate compares a fresh report against a committed baseline and
-// returns nil on pass, an error describing every failing gate on failure.
-// Lives separately from runStress so unit tests can observe the result
-// without intercepting os.Exit.
-//
-// Tolerances:
-//   - URLs/sec must be >= 0.9 * baseline (faster is fine, no upper cap).
-//   - Peak heap must be <= 1.15 * baseline (smaller is fine).
 func evaluateGate(got, baseline StressReport) error {
 	var fails []string
 	if baseline.URLsPerSec > 0 {
@@ -287,8 +225,6 @@ func renderStressMarkdown(r StressReport) string {
 	return b.String()
 }
 
-// gitSHA returns the short git SHA of HEAD, or "unknown" outside a git tree.
-// Best-effort: stress reports without a SHA are still useful for ad-hoc runs.
 func gitSHA() string {
 	out, err := exec.Command("git", "rev-parse", "--short", "HEAD").Output()
 	if err != nil {

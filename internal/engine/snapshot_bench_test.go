@@ -5,9 +5,6 @@ import (
 	"testing"
 )
 
-// BenchmarkSnapshot_Wikipedia drives BuildSnapshot over the 1.3 MB
-// wikipedia-latin-phrases.html fixture. Baseline summary lives at
-// tests/bench/profiles/BenchmarkSnapshot_Wikipedia.pprof.txt.
 func BenchmarkSnapshot_Wikipedia(b *testing.B) {
 	htmlBytes, err := os.ReadFile("../../testdata/static/wikipedia-latin-phrases.html")
 	if err != nil {

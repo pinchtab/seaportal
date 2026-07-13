@@ -12,9 +12,6 @@ import (
 	"time"
 )
 
-// TestCLI_MCPScrapeSite exec's `seaportal mcp` and drives a JSON-RPC session
-// (initialize → tools/list → tools/call scrape_site) against a local HTTP
-// fixture, asserting scrape_site is advertised and returns a ScrapeResult.
 func TestCLI_MCPScrapeSite(t *testing.T) {
 	bin := buildBinary(t)
 
@@ -91,7 +88,6 @@ func TestCLI_MCPScrapeSite(t *testing.T) {
 		t.Fatalf("timed out waiting for MCP responses")
 	}
 
-	// tools/list advertises scrape_site with a schema.
 	listResult := responses[1]["result"].(map[string]interface{})
 	rawTools, _ := listResult["tools"].([]interface{})
 	var scrapeTool map[string]interface{}
@@ -108,7 +104,6 @@ func TestCLI_MCPScrapeSite(t *testing.T) {
 		t.Errorf("scrape_site missing input schema: %+v", scrapeTool)
 	}
 
-	// tools/call scrape_site returns a ScrapeResult for the fixture.
 	callResult, ok := responses[2]["result"].(map[string]interface{})
 	if !ok {
 		t.Fatalf("scrape_site response missing result: %+v", responses[2])

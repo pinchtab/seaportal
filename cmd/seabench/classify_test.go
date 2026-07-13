@@ -8,17 +8,9 @@ import (
 	"testing"
 )
 
-// TestClassify_TinyCorpusRoundTrip wires a synthetic 3-entry corpus
-// (1 static, 1 ssr-ish, 1 blocked) pointing at tiny inline HTML fixtures
-// in a tempdir, runs runClassify via the public entrypoint, and asserts
-// the JSON report parses and reports total=3 with at least 2 correct.
-// Realism budget: one mis-classification is tolerated so the test does
-// not break if the classifier reshapes a borderline label.
 func TestClassify_TinyCorpusRoundTrip(t *testing.T) {
 	dir := t.TempDir()
 
-	// Article-shaped static page: real headings + paragraphs so the
-	// extractor surfaces enough signal to land on `static`.
 	staticHTML := `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Static Demo Article</title></head><body>
 <h1>Static Demo Article</h1>
 <p>This is the first paragraph of a small static article with enough body text to clear the minimal length threshold used by the classifier downstream.</p>
@@ -27,7 +19,6 @@ func TestClassify_TinyCorpusRoundTrip(t *testing.T) {
 <p>Third paragraph keeps the paragraph count high enough to qualify as a static page profile.</p>
 </body></html>`
 
-	// SSR-shaped page: multiple headings, multiple paragraphs, length > 1000.
 	var ssrBody strings.Builder
 	ssrBody.WriteString(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>SSR News</title></head><body>`)
 	ssrBody.WriteString(`<h1>Top story headline</h1>`)
@@ -39,8 +30,6 @@ func TestClassify_TinyCorpusRoundTrip(t *testing.T) {
 	ssrBody.WriteString(`</body></html>`)
 	ssrHTML := ssrBody.String()
 
-	// Blocked page: Cloudflare-style challenge body. The classifier's
-	// bot-detection heuristics should flip IsBlocked → PageBlocked.
 	blockedHTML := `<!DOCTYPE html><html><head><title>Just a moment...</title></head><body>
 <h1>Checking your browser before accessing the site.</h1>
 <p>This process is automatic. Your browser will redirect to your requested content shortly.</p>
@@ -54,8 +43,6 @@ func TestClassify_TinyCorpusRoundTrip(t *testing.T) {
 	mustWrite(t, ssrPath, ssrHTML)
 	mustWrite(t, blockedPath, blockedHTML)
 
-	// Absolute paths in the corpus so resolveRepoRoot's repo-relative
-	// rebasing is bypassed (tempdir is not under a go.mod).
 	corpusYAML := "- path: " + staticPath + "\n  expect_class: static\n" +
 		"- path: " + ssrPath + "\n  expect_class: ssr\n" +
 		"- path: " + blockedPath + "\n  expect_class: blocked\n"
@@ -64,8 +51,6 @@ func TestClassify_TinyCorpusRoundTrip(t *testing.T) {
 
 	outDir := filepath.Join(dir, "out")
 
-	// Drive the full subcommand entrypoint so flag parsing + report
-	// writing are exercised end-to-end (this is the public seam).
 	runClassify([]string{"--corpus", corpusPath, "--output", outDir})
 
 	entries, err := os.ReadDir(outDir)
@@ -112,10 +97,6 @@ func TestClassify_TinyCorpusRoundTrip(t *testing.T) {
 	}
 }
 
-// TestClassify_SkipsEmptyExpectClass verifies that entries lacking an
-// expect_class label are excluded from accuracy math and counted in the
-// Skipped bucket — the classifier owner should not be punished for
-// unlabelled corpus drift.
 func TestClassify_SkipsEmptyExpectClass(t *testing.T) {
 	dir := t.TempDir()
 	staticPath := filepath.Join(dir, "s.html")
@@ -140,9 +121,6 @@ func TestClassify_SkipsEmptyExpectClass(t *testing.T) {
 	}
 }
 
-// TestClassify_MissingFixtureErrors guarantees that a typo'd fixture
-// path aborts the run with a descriptive error rather than silently
-// dropping the entry and biasing accuracy upward.
 func TestClassify_MissingFixtureErrors(t *testing.T) {
 	dir := t.TempDir()
 	corpus := "- path: " + filepath.Join(dir, "does-not-exist.html") + "\n  expect_class: static\n"
@@ -158,9 +136,6 @@ func TestClassify_MissingFixtureErrors(t *testing.T) {
 	}
 }
 
-// TestSlugify_DeterministicAndURLSafe pins the synthetic-URL contract:
-// same input → same slug, no slashes, lowercase. Re-runs of the
-// `classify` subcommand must be byte-stable.
 func TestSlugify_DeterministicAndURLSafe(t *testing.T) {
 	cases := []struct {
 		in, want string

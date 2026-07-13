@@ -6,8 +6,6 @@ import (
 	"testing"
 )
 
-// soft404Filler pads a page body past the 500-byte "very short content" line
-// so tests can isolate the text/title signals.
 var soft404Filler = strings.Repeat("<p>plenty of perfectly ordinary article prose. </p>", 20)
 
 func TestDetectSoft404(t *testing.T) {
@@ -74,9 +72,6 @@ func TestDetectSoft404(t *testing.T) {
 			wantHints: []string{"error-text:page-not-found"},
 		},
 		{
-			// The title check is a raw substring match: "terror" contains
-			// "error". Documented quirk — combined with short content this
-			// misclassifies a legitimate minimal page.
 			name:      "substring false positive: terror in title plus short content",
 			html:      `<html><head><title>Terror at the Museum</title></head><body>ok</body></html>`,
 			length:    80,

@@ -9,10 +9,6 @@ import (
 	"testing"
 )
 
-// TestSnapshotGolden is a table-driven golden-file regression test for the
-// accessibility-tree compact format. On mismatch, regenerate with:
-//
-//	UPDATE_GOLDEN=1 go test ./internal/engine/ -run TestSnapshotGolden
 func TestSnapshotGolden(t *testing.T) {
 	fixtures := []struct{ path, slug string }{
 		{"../../testdata/static/article-ldjson.html", "article-ldjson"},
@@ -61,7 +57,6 @@ func TestSnapshotGolden(t *testing.T) {
 	}
 }
 
-// firstDiffLines returns a short snippet showing where want/got first diverge.
 func firstDiffLines(want, got string, n int) string {
 	wantLines := strings.Split(want, "\n")
 	gotLines := strings.Split(got, "\n")

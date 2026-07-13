@@ -10,16 +10,10 @@ import (
 	"github.com/pinchtab/seaportal/internal/engine/leakcheck"
 )
 
-// stressFixtureHTML is a ~6KB HTML blob that's representative of a real
-// article page without dragging in any external testdata. Kept inline so the
-// test has no path-resolution dependency on the repo root — `go test
-// ./cmd/seabench/...` runs from cmd/seabench/ where relative testdata paths
-// won't resolve.
 const stressFixtureBody = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. "
 
 func writeStressFixture(t *testing.T, dir string) string {
 	t.Helper()
-	// Pad the body to ~6KB so the engine has realistic work to do per request.
 	var sb strings.Builder
 	sb.WriteString(`<!doctype html><html lang="en"><head><meta charset="utf-8">`)
 	sb.WriteString(`<title>Stress Article</title>`)
@@ -39,9 +33,6 @@ func writeStressFixture(t *testing.T, dir string) string {
 	return path
 }
 
-// TestStress_QuickPresetRoundTrip exercises the full runStress flow against
-// a tempdir-hosted fixture: 50 fetches against the in-process server, JSON +
-// Markdown reports written, JSON parses, N matches preset, success > 99%.
 func TestStress_QuickPresetRoundTrip(t *testing.T) {
 	leakcheck.CheckLeak(t)
 	dir := t.TempDir()
@@ -112,26 +103,21 @@ func TestStress_QuickPresetRoundTrip(t *testing.T) {
 	}
 }
 
-// TestStress_BaselineGate_Passes feeds the gate function a baseline the
-// current run easily beats (1 URL/sec, 1 GiB peak). Asserts nil error.
 func TestStress_BaselineGate_Passes(t *testing.T) {
 	got := StressReport{URLsPerSec: 100}
-	got.MemoryBytes.PeakHeap = 10 * 1024 * 1024 // 10 MiB
+	got.MemoryBytes.PeakHeap = 10 * 1024 * 1024
 	baseline := StressReport{URLsPerSec: 1}
-	baseline.MemoryBytes.PeakHeap = 1024 * 1024 * 1024 // 1 GiB
+	baseline.MemoryBytes.PeakHeap = 1024 * 1024 * 1024
 	if err := evaluateGate(got, baseline); err != nil {
 		t.Fatalf("gate should pass, got: %v", err)
 	}
 }
 
-// TestStress_BaselineGate_Fails feeds the gate a tiny baseline peak heap
-// (1KB) — the actual run is guaranteed to blow past it. Asserts a non-nil
-// error that mentions peak_heap.
 func TestStress_BaselineGate_Fails(t *testing.T) {
 	got := StressReport{URLsPerSec: 100}
-	got.MemoryBytes.PeakHeap = 10 * 1024 * 1024 // 10 MiB observed
+	got.MemoryBytes.PeakHeap = 10 * 1024 * 1024
 	baseline := StressReport{URLsPerSec: 100}
-	baseline.MemoryBytes.PeakHeap = 1024 // 1 KiB baseline → 1.15 KiB ceiling
+	baseline.MemoryBytes.PeakHeap = 1024
 	err := evaluateGate(got, baseline)
 	if err == nil {
 		t.Fatal("gate should fail when peak_heap exceeds 1.15x baseline, got nil")
@@ -140,7 +126,6 @@ func TestStress_BaselineGate_Fails(t *testing.T) {
 		t.Errorf("gate error should mention peak_heap, got: %v", err)
 	}
 
-	// Also: URLs/sec gate fires when we're slower than 0.9x baseline.
 	got2 := StressReport{URLsPerSec: 10}
 	baseline2 := StressReport{URLsPerSec: 100}
 	err2 := evaluateGate(got2, baseline2)

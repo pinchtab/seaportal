@@ -10,8 +10,6 @@ import (
 	"github.com/pinchtab/seaportal"
 )
 
-// requiredURLArg returns args[key] as a non-empty string, or the canonical
-// missing-argument error every URL-taking tool reports.
 func requiredURLArg(args map[string]interface{}, key string) (string, error) {
 	s, _ := args[key].(string)
 	if s == "" {
@@ -20,8 +18,6 @@ func requiredURLArg(args map[string]interface{}, key string) (string, error) {
 	return s, nil
 }
 
-// securityFromArgs returns the secure-by-default policy, with the private-IP
-// block lifted when the allow_internal argument is true.
 func securityFromArgs(args map[string]interface{}) *seaportal.SecurityPolicy {
 	sec := seaportal.DefaultSecurityPolicy()
 	if v, ok := args["allow_internal"].(bool); ok && v {
@@ -30,8 +26,6 @@ func securityFromArgs(args map[string]interface{}) *seaportal.SecurityPolicy {
 	return sec
 }
 
-// marshalResult JSON-encodes a tool result, naming the payload on failure
-// (e.g. "marshal snapshot: ...").
 func marshalResult(v interface{}, what string) (string, error) {
 	b, err := json.Marshal(v)
 	if err != nil {
@@ -40,8 +34,6 @@ func marshalResult(v interface{}, what string) (string, error) {
 	return string(b), nil
 }
 
-// argInt reads a JSON-RPC numeric argument (float64) as an int, or def when
-// absent/non-positive.
 func argInt(args map[string]interface{}, key string, def int) int {
 	if v, ok := args[key].(float64); ok && int(v) > 0 {
 		return int(v)
@@ -54,7 +46,6 @@ func argString(args map[string]interface{}, key string) string {
 	return s
 }
 
-// splitCSV splits a comma-separated argument into trimmed, non-empty items.
 func splitCSV(s string) []string {
 	if strings.TrimSpace(s) == "" {
 		return nil
@@ -69,9 +60,6 @@ func splitCSV(s string) []string {
 	return out
 }
 
-// fetchHTML retrieves url through the shared security-guarded fetch path with
-// a browser-style Accept header, bound to the handler context so client
-// cancellation stops the fetch.
 func fetchHTML(ctx context.Context, url string, sec *seaportal.SecurityPolicy) (string, error) {
 	body, _, _, err := seaportal.FetchBytes(ctx, url, seaportal.FetchBytesOptions{
 		Timeout:  30 * time.Second,

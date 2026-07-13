@@ -69,7 +69,6 @@ func TestDetectCharset_DefaultUTF8(t *testing.T) {
 }
 
 func TestDetectCharset_PriorityOrder(t *testing.T) {
-	// Header says iso-8859-1; meta says utf-8. Header must win.
 	body := []byte(`<!DOCTYPE html><html><head><meta charset="utf-8"></head></html>`)
 	if got := detectCharset(body, "text/html; charset=iso-8859-1"); got != "iso-8859-1" {
 		t.Fatalf("detectCharset = %q, want iso-8859-1 (header wins)", got)
@@ -82,7 +81,6 @@ func TestDecodeBytes_Latin1Roundtrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("encode: %v", err)
 	}
-	// Sanity: encoded bytes contain Latin-1 0xE9 for é, not the UTF-8 0xC3 0xA9.
 	if !bytes.Contains(encoded, []byte{0xE9}) {
 		t.Fatalf("expected Latin-1 byte 0xE9 in encoded input")
 	}
@@ -165,7 +163,6 @@ func TestIsCharsetSniffableContentType(t *testing.T) {
 			t.Errorf("isCharsetSniffableContentType(%q) = %v, want %v", ct, got, want)
 		}
 	}
-	// Spot check meaningful case-insensitivity.
 	if !isCharsetSniffableContentType(strings.ToUpper("Text/HTML")) {
 		t.Errorf("case folding broken")
 	}

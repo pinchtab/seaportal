@@ -9,9 +9,6 @@ import (
 	"testing"
 )
 
-// TestPrecisionRecallF1_HandlesZero covers the zero-denominator cases that
-// would otherwise NaN: no positives at all (P/R/F1 all 0), TP=0 with FN>0
-// (R=0, F1=0), TP=0 with FP>0 (P=0, F1=0), and a sanity case for TP only.
 func TestPrecisionRecallF1_HandlesZero(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -38,9 +35,6 @@ func TestPrecisionRecallF1_HandlesZero(t *testing.T) {
 
 func almostEqual(a, b float64) bool { return math.Abs(a-b) < 1e-9 }
 
-// writeMiniCorpus writes two HTML fixtures + a corpus.yaml under dir and
-// returns the corpus path. The fixtures are large enough that strip-tags
-// + readability + html-to-markdown all clear the 50-byte skip threshold.
 func writeMiniCorpus(t *testing.T, dir string) string {
 	t.Helper()
 	fixDir := filepath.Join(dir, "testdata")
@@ -81,16 +75,12 @@ func writeMiniCorpus(t *testing.T, dir string) string {
 	if err := os.WriteFile(corpusPath, []byte(corpus), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	// Provide a fake go.mod so resolveRepoRoot picks `dir`.
 	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module test\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	return corpusPath
 }
 
-// TestSeabenchEval_Smoke drives runEval against a tiny in-memory corpus and
-// asserts the report file exists, is non-trivial, and contains the headline
-// table header. Exercises the full extractor stack except subprocess exec.
 func TestSeabenchEval_Smoke(t *testing.T) {
 	dir := t.TempDir()
 	corpusPath := writeMiniCorpus(t, dir)
@@ -133,9 +123,6 @@ func TestSeabenchEval_Smoke(t *testing.T) {
 	}
 }
 
-// TestSeabenchEval_IntegrationExec builds the binary and invokes
-// `seabench eval --corpus ...` to verify the dispatch layer + exit code +
-// on-disk side-effects from an honest end-to-end run.
 func TestSeabenchEval_IntegrationExec(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration build in -short mode")

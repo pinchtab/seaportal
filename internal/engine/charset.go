@@ -9,20 +9,8 @@ import (
 	"golang.org/x/text/encoding/htmlindex"
 )
 
-// mojibakeThreshold is the fraction of suspect runes (see mojibakeRatio)
-// above which a decoded body is considered mojibake-y enough to warrant a
-// retry with the body's own <meta> charset.
-//
-// Why 5%? — measured against the canonical failure mode (latin-1 French
-// body decoded as gb2312, scored over non-ASCII runes only), the suspect
-// density lands well above 5%. Correctly-decoded prose in Latin scripts
-// has near-zero CJK / U+FFFD / control-char runes, so it stays well below.
-// The threshold is intentionally conservative: a false-positive costs one
-// extra decode pass; a false-negative ships silent CJK mojibake to the
-// user.
 const mojibakeThreshold = 0.05
 
-// Sniff window for <meta charset> / <meta http-equiv> declarations.
 const charsetSniffWindow = 1024
 
 var (
@@ -30,15 +18,11 @@ var (
 	bomUTF16BE = []byte{0xFE, 0xFF}
 	bomUTF16LE = []byte{0xFF, 0xFE}
 
-	// <meta charset="…"> — case-insensitive, attribute may be quoted or bare.
-	metaCharsetRE = regexp.MustCompile(`(?i)<meta[^>]+charset\s*=\s*["']?\s*([A-Za-z0-9_:.\-]+)`)
-	// <meta http-equiv="Content-Type" content="…; charset=…"> — pull the charset segment.
-	metaHTTPEquivRE = regexp.MustCompile(`(?i)<meta[^>]+http-equiv\s*=\s*["']?content-type["']?[^>]*content\s*=\s*["'][^"']*charset\s*=\s*([A-Za-z0-9_:.\-]+)`)
-	// charset=… inside a Content-Type header value.
+	metaCharsetRE        = regexp.MustCompile(`(?i)<meta[^>]+charset\s*=\s*["']?\s*([A-Za-z0-9_:.\-]+)`)
+	metaHTTPEquivRE      = regexp.MustCompile(`(?i)<meta[^>]+http-equiv\s*=\s*["']?content-type["']?[^>]*content\s*=\s*["'][^"']*charset\s*=\s*([A-Za-z0-9_:.\-]+)`)
 	contentTypeCharsetRE = regexp.MustCompile(`(?i)charset\s*=\s*["']?\s*([A-Za-z0-9_:.\-]+)`)
 )
 
-// normalizeCharset lowercases, trims whitespace and surrounding quotes.
 func normalizeCharset(s string) string {
 	s = strings.TrimSpace(s)
 	s = strings.Trim(s, `"'`)
@@ -46,8 +30,6 @@ func normalizeCharset(s string) string {
 	return strings.ToLower(s)
 }
 
-// detectCharset walks the priority chain: BOM → Content-Type header → <meta charset> →
-// <meta http-equiv>. Returns "" when no signal was found (caller should treat as UTF-8).
 func detectCharset(body []byte, contentType string) string {
 	if bytes.HasPrefix(body, bomUTF8) {
 		return "utf-8"
@@ -67,7 +49,6 @@ func detectCharset(body []byte, contentType string) string {
 		}
 	}
 
-	// 3 + 4. <meta charset> / <meta http-equiv> in first 1024 bytes.
 	head := body
 	if len(head) > charsetSniffWindow {
 		head = head[:charsetSniffWindow]
@@ -86,9 +67,6 @@ func detectCharset(body []byte, contentType string) string {
 	return ""
 }
 
-// decodeBytes converts body from the named charset to UTF-8. UTF-8 input is
-// returned unchanged (only BOM is stripped). On unknown/failed decode, returns
-// the input untouched with the error so the caller can decide whether to warn.
 func decodeBytes(body []byte, charset string) ([]byte, error) {
 	switch charset {
 	case "":
@@ -112,9 +90,6 @@ func decodeBytes(body []byte, charset string) ([]byte, error) {
 	return decoded, nil
 }
 
-// metaOnly returns the body's <meta charset> / <meta http-equiv> declaration
-// (or "" if absent), bypassing the Content-Type header entirely. Used by the
-// post-decode recovery path to detect header/meta disagreement.
 func metaOnly(body []byte) string {
 	head := body
 	if len(head) > charsetSniffWindow {
@@ -133,22 +108,6 @@ func metaOnly(body []byte) string {
 	return ""
 }
 
-// mojibakeRatio returns the fraction of "suspect" runes in s, scored over
-// the non-ASCII rune population only (HTML markup is overwhelmingly ASCII
-// regardless of body encoding, so including it would dilute the signal
-// below any reasonable threshold).
-//
-// A rune is "suspect" when it is:
-//   - U+FFFD (Unicode replacement char — explicit decode error), or
-//   - a stray ASCII control char (< 0x20, excluding \t \n \r — counted in
-//     the numerator AND denominator so single-byte garbage is visible), or
-//   - a CJK Unified Ideograph (U+4E00..U+9FFF). These dominate when a
-//     Latin-encoded body is forced through a CJK codec; the recovery gate
-//     (meta charset disagrees with header) keeps genuine CJK pages — where
-//     header and meta normally agree — out of the retry path.
-//
-// Returns 0 for empty input or input with no non-ASCII / non-suspect runes
-// (a pure-ASCII document is unambiguous, no need to retry).
 func mojibakeRatio(s []byte) float64 {
 	if len(s) == 0 {
 		return 0
@@ -178,17 +137,6 @@ func mojibakeRatio(s []byte) float64 {
 	return float64(bad) / float64(denom)
 }
 
-// sniffAndDecode detects the body charset and decodes it to UTF-8. Returns
-// ok=true only when a non-trivial decode actually happened (i.e. the bytes
-// changed or a non-empty charset label was detected); callers can use this to
-// decide whether to surface Result.Charset.
-//
-// Recovery: when the header-declared charset disagrees with the body's own
-// <meta> tag AND the header-driven decode produces mojibake density above
-// mojibakeThreshold, retry the decode using the meta-declared charset and
-// keep whichever output is cleaner. This rescues pages served by misconfigured
-// CMSes (Apache AddDefaultCharset, CDN-injected gb2312, etc.) without
-// hostname-specific heuristics.
 func sniffAndDecode(body []byte, contentType string) ([]byte, string, bool) {
 	cs := detectCharset(body, contentType)
 	if cs == "" {
@@ -213,8 +161,6 @@ func sniffAndDecode(body []byte, contentType string) ([]byte, string, bool) {
 	return decoded, cs, true
 }
 
-// isCharsetSniffableContentType returns true when the response body is
-// HTML/plain-text-shaped and worth running through the charset sniff.
 func isCharsetSniffableContentType(contentType string) bool {
 	ct := strings.ToLower(contentType)
 	if idx := strings.Index(ct, ";"); idx >= 0 {

@@ -147,8 +147,6 @@ func TestApplySelectorOps_NoMatchSelectWarns(t *testing.T) {
 	}
 }
 
-// --- Integration via httptest ---
-
 func selectorIntegrationHTML() string {
 	return `<!doctype html>
 <html><head><meta charset="utf-8"><title>Selector Demo</title></head>

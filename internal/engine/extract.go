@@ -27,9 +27,6 @@ var (
 	mdConverter     *converter.Converter
 )
 
-// getMarkdownConverter lazy-initialises the html-to-markdown converter so
-// short-lived invocations (--version, --help, subcommands that never extract
-// HTML) skip the plugin construction cost. First HTML extraction pays once.
 func getMarkdownConverter() *converter.Converter {
 	mdConverterOnce.Do(func() {
 		mdConverter = converter.NewConverter(
@@ -63,13 +60,8 @@ func extractDomain(rawURL string) string {
 	return u.Hostname()
 }
 
-// ErrNeedsBrowser is the sentinel wrapped into Result errors when FastMode
-// bails early because the page needs a real browser to render. Match with
-// errors.Is(result.Err(), ErrNeedsBrowser); the wrapped message carries the
-// specific reason.
 var ErrNeedsBrowser = errors.New("needs-browser")
 
-// Must match a real browser exactly — Cloudflare blocks truncated/incomplete UAs.
 const DefaultUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
 
 const DefaultAcceptEncoding = "gzip, deflate, br, zstd"
@@ -99,9 +91,6 @@ func newGETRequest(targetURL string, userAgent string, requestID string, sendReq
 	return req
 }
 
-// sleepCtx waits for d or until ctx is cancelled, returning ctx.Err() if the
-// context fired first. Retry backoff and crawl-delay waits use it so an overall
-// deadline or SIGINT can preempt an in-flight wait (ALP-043).
 func sleepCtx(ctx context.Context, d time.Duration) error {
 	if d <= 0 {
 		return ctx.Err()
@@ -116,16 +105,6 @@ func sleepCtx(ctx context.Context, d time.Duration) error {
 	}
 }
 
-// FromURLContext is the context-first primary entry point: it fetches
-// targetURL (fetchDocument: policy gates, cache, retries, decompression) and
-// dispatches on the response content type to the matching extraction
-// pipeline: PDF, raw JSON/XML passthrough, negotiated markdown, or the full
-// HTML pipeline in fromHTMLInternal.
-//
-// ctx bounds the whole fetch — the HTTP request, retry backoff waits, and
-// crawl-delay/rate-limit sleeps are all cancellable through it. A nil ctx is
-// treated as context.Background(). ctx takes precedence over any (deprecated)
-// Options.Context value.
 func FromURLContext(ctx context.Context, targetURL string, opts Options) Result {
 	if ctx == nil {
 		ctx = context.Background()
@@ -134,10 +113,6 @@ func FromURLContext(ctx context.Context, targetURL string, opts Options) Result 
 	return fromURLWithOptions(targetURL, opts)
 }
 
-// FromURLWithOptions is the historical non-ctx entry point, now a shim over
-// FromURLContext: cancellation comes from opts.Context when set (deprecated),
-// else context.Background(). Behaviour for existing callers is unchanged;
-// new code should prefer FromURLContext.
 func FromURLWithOptions(targetURL string, opts Options) Result {
 	return FromURLContext(opts.Context, targetURL, opts)
 }
@@ -173,9 +148,6 @@ func fromURLWithOptions(targetURL string, opts Options) (result Result) {
 	html := string(st.bodyBytes)
 	contentLength := int64(len(st.bodyBytes))
 	fetchTimeMs := time.Since(start).Milliseconds()
-	// Some servers reject `Accept: text/markdown` outright: Next.js etc. respond
-	// 404, spec-compliant servers respond 406. Retry HTML-only so we still get a
-	// usable body. Skip when the body actually is markdown.
 	negotiationFailed := st.resp.StatusCode == http.StatusNotFound || st.resp.StatusCode == http.StatusNotAcceptable
 	if negotiationFailed && !strings.Contains(st.respContentType, "text/markdown") {
 		if !renegotiateHTML(targetURL, opts, &st, &result) {
@@ -210,8 +182,6 @@ func fromURLWithOptions(targetURL string, opts Options) (result Result) {
 		}
 	}
 
-	// fromHTMLInternal builds a fresh Result; carry over the fetch-stage
-	// fields it can't know about before stamping the transport tail.
 	detectedCharset := result.Charset
 	cacheHit := result.CacheHit
 	cacheRevalidated := result.CacheRevalidated
@@ -239,7 +209,6 @@ func fromURLWithOptions(targetURL string, opts Options) (result Result) {
 }
 
 func applyStatusBlockedProfile(result *Result, statusCode int) {
-	// Reasons that also flip the page to `blocked` + escalate to needs-browser.
 	var blockedReason string
 	switch statusCode {
 	case http.StatusUnauthorized:
@@ -264,10 +233,6 @@ func applyStatusBlockedProfile(result *Result, statusCode int) {
 		result.PageClass = PageBlocked
 		return
 	}
-	// Honest-but-not-blocked HTTP errors: add a reason for caller observability
-	// without flipping IsBlocked. 404 = wrong URL (a browser won't help).
-	// 500-599 (non-502/503/504) = server transient — retries handled upstream;
-	// just label the final outcome.
 	switch {
 	case statusCode == http.StatusNotFound:
 		result.Profile.Reasons = append(result.Profile.Reasons, "http-404-not-found")
@@ -281,10 +246,6 @@ func FromHTML(html string, targetURL string) Result {
 	return fromHTMLInternal(html, targetURL, start, Options{})
 }
 
-// FromHTMLWithOptions runs the full extraction pipeline on pre-fetched HTML
-// with custom Options. Same as FromHTML, but flag-aware — use this when the
-// caller has already obtained the body (e.g. piped from a browser fetcher)
-// and wants links/citations/strip/etc. honoured.
 func FromHTMLWithOptions(html string, targetURL string, opts Options) Result {
 	start := time.Now()
 	return fromHTMLInternal(html, targetURL, start, opts)
@@ -309,10 +270,6 @@ func FromResponse(resp *http.Response, targetURL string, start time.Time) (resul
 func fromHTMLInternal(html string, targetURL string, start time.Time, opts Options) (result Result) {
 	defer ensureProfile(&result)
 
-	// User-supplied CSS scoping runs first so every downstream pass — canonical
-	// pick, link/image extraction, preprocess, readability — sees the
-	// already-scoped DOM. --strip is applied before --select inside
-	// applySelectorOps.
 	var selectorWarnings []string
 	if opts.SelectCSS != "" || opts.StripCSS != "" {
 		modified, warns := applySelectorOps(html, opts.SelectCSS, opts.StripCSS)
@@ -322,11 +279,6 @@ func fromHTMLInternal(html string, targetURL string, start time.Time, opts Optio
 
 	spaSignals, isSPA := DetectSPA(html)
 	isBlocked := DetectBlocked(html)
-	// 200-OK + JS-challenge: small HTML bodies that ship a CDN/anti-bot
-	// challenge instead of real content. DetectBlocked already covers most
-	// CF/captcha pages via title/JS-variable patterns, but cross-cutting
-	// signatures (cf-mitigated, datadome, perimeterx, etc.) bound by a
-	// 1500-byte cap catch the rest without hostname-specific code.
 	if !isBlocked && DetectJSChallenge(html, "text/html", len(html)) {
 		isBlocked = true
 		spaSignals = append(spaSignals, "js-challenge-200ok")
@@ -334,47 +286,28 @@ func fromHTMLInternal(html string, targetURL string, start time.Time, opts Optio
 
 	parsedURL, _ := url.Parse(targetURL)
 
-	// Capture canonical signal from the original HTML before preprocessing/
-	// sanitization can strip the <link rel="canonical"> tag.
 	canonicalPick := PickCanonical(targetURL, html)
 
-	// Capture the raw outbound-link list before chrome-stripping/sanitization
-	// nukes nav/footer anchors. Gated by opt-in flag — link-heavy pages would
-	// otherwise bloat output.
 	var extractedLinks []LinkRef
 	if opts.WithLinks {
 		extractedLinks = ExtractLinks(html, targetURL)
 	}
 
-	// Same raw-HTML hook for images: capture before sanitize strips chrome
-	// <img> (logos, social icons). Gated by opt-in flag to keep token usage
-	// tight on image-heavy pages.
 	var extractedImages []ImageRef
 	if opts.WithImages {
 		extractedImages = ExtractImages(html, targetURL)
 	}
 
-	// Same raw-HTML hook for tables: capture data-table structure before
-	// preprocess unwraps layout tables and sanitize/readability rewrites
-	// the table DOM. Gated by opt-in flag.
 	var extractedTables []TableRef
 	if opts.WithTables {
 		extractedTables = ExtractTables(html, targetURL)
 	}
 
-	// Same raw-HTML hook for comments: capture user-generated comment
-	// containers before preprocess strips them from main content. Gated by
-	// opt-in flag — the strip still runs unconditionally so Content stays
-	// clean either way.
 	var extractedComments []CommentRef
 	if opts.WithComments {
 		extractedComments = ExtractComments(html, targetURL)
 	}
 
-	// Same raw-HTML hook for the declarative CSS schema. Schema runs on the
-	// pre-preprocess DOM so caller-supplied selectors can target chrome
-	// elements (nav/sidebar/footer) that the main pipeline strips. Load
-	// failure and selector errors degrade to warnings, never crash.
 	var extractedSchema map[string]interface{}
 	var schemaWarnings []string
 	schema := opts.Schema
@@ -388,10 +321,6 @@ func fromHTMLInternal(html string, targetURL string, start time.Time, opts Optio
 	}
 	if schema != nil {
 		if len(schema.Fields) == 0 {
-			// Loaded (or supplied) but empty — usually the top-level "fields"
-			// wrapper was omitted. Warn instead of silently producing nothing,
-			// matching the warn-on-bad-input convention used for --select and a
-			// missing schema file (ALP-044).
 			schemaWarnings = append(schemaWarnings, "schema loaded but has no fields; expected a top-level 'fields' map")
 		} else {
 			extracted, err := ApplySchema(html, *schema)
@@ -403,8 +332,6 @@ func fromHTMLInternal(html string, targetURL string, start time.Time, opts Optio
 		}
 	}
 
-	// Snapshot the pre-preprocess HTML so the prune-fallback can run a
-	// tag-density heuristic against the unscoped DOM if readability fails.
 	rawHTML := html
 
 	html = PreprocessHTMLWithURL(html, parsedURL)
@@ -435,15 +362,10 @@ func fromHTMLInternal(html string, targetURL string, start time.Time, opts Optio
 	result.IsSPA = isSPA
 	result.IsBlocked = isBlocked
 
-	// JSON-LD Article metadata wins over readability + meta-tag fallbacks.
 	applyLDJSONMetadata(&result, ldBlocks)
 
-	// Unified <meta> pass fills-when-empty so JSON-LD priority is preserved.
 	applyMetadata(&result, pageMetadata)
 
-	// Tail-fallback: stopword-frequency language detection on the extracted
-	// content. Only fires when metadata produced nothing AND there's enough
-	// prose to vote on. Metadata-derived Language always wins.
 	if result.Language == "" && len(result.Content) > 200 {
 		result.Language = DetectLanguage(result.Content)
 	}
@@ -526,10 +448,6 @@ func fromHTMLInternal(html string, targetURL string, start time.Time, opts Optio
 	return result
 }
 
-// applyQueryRanking populates Result.RankedSections from Result.Content when
-// opts.Query is set. When opts.FilterByQuery is also true, Content is
-// rewritten to the concatenated top-N sections (default top-3 when TopN<=0).
-// No-op for an empty query — pure additive.
 func applyQueryRanking(result *Result, opts Options) {
 	if strings.TrimSpace(opts.Query) == "" {
 		return
@@ -555,9 +473,6 @@ func applyQueryRanking(result *Result, opts Options) {
 			sb.WriteString("\n\n")
 		}
 		if ranked[i].Heading != "" {
-			// Keep the heading prefix only when the section text itself doesn't
-			// already start with it (chunkByHeading retains the heading line for
-			// real sections; the prologue chunk has no heading).
 			if !strings.HasPrefix(ranked[i].Text, ranked[i].Heading) {
 				sb.WriteString(ranked[i].Heading)
 				sb.WriteString("\n\n")
@@ -618,10 +533,6 @@ func decompressBody(data []byte, encoding string) ([]byte, error) {
 	return decompressBodyLimited(data, encoding, 0)
 }
 
-// decompressBodyLimited decodes a Content-Encoding body, capping the
-// decompressed output at max bytes (0 = unbounded) to defuse decompression
-// bombs — a few KB of gzip can expand to gigabytes. Over-cap returns
-// ErrDecompressTooLarge instead of buffering the whole expansion.
 func decompressBodyLimited(data []byte, encoding string, max int64) ([]byte, error) {
 	switch encoding {
 	case "gzip":

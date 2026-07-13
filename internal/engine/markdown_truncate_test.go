@@ -19,17 +19,14 @@ func TestTruncate_BelowBudgetNoOp(t *testing.T) {
 }
 
 func TestTruncate_AboveBudgetCutsAtParagraph(t *testing.T) {
-	// budget = 15 * 4 = 60 chars.
-	p1 := "paragraph one." // 14
-	p2 := "paragraph two." // 14
+	p1 := "paragraph one."
+	p2 := "paragraph two."
 	p3 := strings.Repeat("x", 200)
 	md := p1 + "\n\n" + p2 + "\n\n" + p3
 	out, did := TruncateMarkdownAtParagraph(md, 15)
 	if !did {
 		t.Fatalf("expected truncation")
 	}
-	// Last "\n\n" within md[:60] is the one between p2 and p3 (starts at offset 30,
-	// fits inside 60). Cut at 30 → keep p1+\n\n+p2.
 	if !strings.HasPrefix(out, p1+"\n\n"+p2+"\n\n*[truncated]*\n") {
 		t.Fatalf("expected output to start with p1\\n\\np2 then marker, got %q", out)
 	}
@@ -39,13 +36,11 @@ func TestTruncate_AboveBudgetCutsAtParagraph(t *testing.T) {
 }
 
 func TestTruncate_NoParagraphBoundaryFallsBackToLine(t *testing.T) {
-	// budget = 5 * 4 = 20 chars; no \n\n, only \n.
 	md := "aaaaaa\nbbbbbb\ncccccc\ndddddd\neeeeee"
 	out, did := TruncateMarkdownAtParagraph(md, 5)
 	if !did {
 		t.Fatalf("expected truncation")
 	}
-	// LastIndex of "\n" within first 20 bytes: "aaaaaa\nbbbbbb\ncccccc" → last \n at 13.
 	if !strings.HasPrefix(out, "aaaaaa\nbbbbbb") {
 		t.Fatalf("expected cut at line boundary, got %q", out)
 	}
@@ -55,7 +50,6 @@ func TestTruncate_NoParagraphBoundaryFallsBackToLine(t *testing.T) {
 }
 
 func TestTruncate_NoBoundaryAtAllHardCuts(t *testing.T) {
-	// budget = 5 * 4 = 20 chars; no newlines at all.
 	md := strings.Repeat("x", 200)
 	out, did := TruncateMarkdownAtParagraph(md, 5)
 	if !did {

@@ -1,20 +1,7 @@
 package engine
 
-// html_scan.go — regex-free single-pass HTML tokenizer primitives used by the
-// sanitizer: matching-close search with depth tracking, tag-end scanning that
-// honours quoted attribute values, void-element handling, and the shared
-// remove-elements scanner. Policy (which tags/attributes count as hidden)
-// stays in sanitize.go.
-
 import "strings"
 
-// findMatchingClose returns the absolute index just past the '>' of the
-// </tagName> close that balances an opening tag at openEnd, or -1 if no
-// balanced close exists before end-of-input.
-//
-// Tracks nesting depth so `<div><div>x</div></div>` resolves to the outer
-// close. Self-closing forms (`<tag/>`) do not push depth. Quoted attribute
-// values are skipped so `>` characters inside attributes are ignored.
 func findMatchingClose(html string, openEnd int, tagName string) int {
 	depth := 1
 	i := openEnd
@@ -68,8 +55,6 @@ func findMatchingClose(html string, openEnd int, tagName string) int {
 	return -1
 }
 
-// hasTagPrefix reports whether s begins with tagName followed by an HTML
-// tag-name terminator (whitespace, '/', or '>'). Case-insensitive.
 func hasTagPrefix(s, tagName string) bool {
 	if len(s) < len(tagName) {
 		return false
@@ -83,9 +68,6 @@ func hasTagPrefix(s, tagName string) bool {
 	return isAttrTerminator(s[len(tagName)])
 }
 
-// scanTagEnd returns the absolute index just past the '>' of the tag opening
-// at i, and whether the tag is self-closing ('/>'). Skips '>' bytes inside
-// quoted attribute values.
 func scanTagEnd(html string, i int) (int, bool) {
 	j := i + 1
 	n := len(html)
@@ -107,8 +89,6 @@ func scanTagEnd(html string, i int) (int, bool) {
 	return -1, false
 }
 
-// HTML void elements have no closing tag.
-// https://html.spec.whatwg.org/multipage/syntax.html#void-elements
 var voidElements = map[string]bool{
 	"area":   true,
 	"base":   true,
@@ -130,9 +110,6 @@ func isVoidElement(tag string) bool {
 	return voidElements[tag]
 }
 
-// rawTextElements hold character data (script/style) or escapable raw text
-// (textarea/title) whose body must never be tokenised as markup.
-// https://html.spec.whatwg.org/multipage/syntax.html#raw-text-elements
 var rawTextElements = map[string]bool{
 	"script":   true,
 	"style":    true,
@@ -140,12 +117,6 @@ var rawTextElements = map[string]bool{
 	"title":    true,
 }
 
-// rawTextClose finds the closing tag of a raw-text element whose content
-// begins at contentStart. It returns the index where `</tagName` begins and
-// the index just past that close tag's `>`. The scan is case-insensitive on
-// the tag name and ignores every other byte (raw-text bodies cannot contain
-// nested elements). If no close exists, both returns are len(html) — the rest
-// of the document is treated as the element's content.
 func rawTextClose(html string, contentStart int, tagName string) (closeStart, closeEnd int) {
 	n := len(html)
 	i := contentStart
@@ -167,16 +138,12 @@ func rawTextClose(html string, contentStart int, tagName string) (closeStart, cl
 	return n, n
 }
 
-// hasHiddenBoolAttr reports whether the attribute string contains a standalone
-// `hidden` boolean attribute. Quoted values are skipped so that class names
-// like "visually-hidden" or "ssrcss-...-VisuallyHidden" are not matched.
 func hasHiddenBoolAttr(attrs string) bool {
 	i := 0
 	for i < len(attrs) {
 		c := attrs[i]
 		switch c {
 		case '"', '\'':
-			// skip over quoted value
 			j := strings.IndexByte(attrs[i+1:], c)
 			if j < 0 {
 				return false
@@ -185,7 +152,6 @@ func hasHiddenBoolAttr(attrs string) bool {
 		case ' ', '\t', '\n', '\r', '/':
 			i++
 		default:
-			// read attribute name
 			start := i
 			for i < len(attrs) && !isAttrTerminator(attrs[i]) && attrs[i] != '=' {
 				i++
@@ -224,14 +190,6 @@ func isAttrTerminator(b byte) bool {
 	return b == ' ' || b == '\t' || b == '\n' || b == '\r' || b == '/' || b == '>'
 }
 
-// removeElementsSinglePass scans the HTML once, locates every opening tag
-// `<[a-zA-Z]...>`, and removes the element (opening tag through its balanced
-// close, tracked via findMatchingClose) when shouldRemove(tagName, attrs)
-// reports true. tagName is lowercased; attrs is the raw attribute substring of
-// the opening tag (trailing '/' of a self-closing form stripped). Self-closing
-// and void forms are removed without seeking a close tag; when no balanced
-// close exists, only the opening tag is dropped. Non-tag `<` bytes, close
-// tags, comments, and doctypes are passed through untouched.
 func removeElementsSinglePass(html string, shouldRemove func(tagName, attrs string) bool) string {
 	var out strings.Builder
 	out.Grow(len(html))
@@ -245,7 +203,6 @@ func removeElementsSinglePass(html string, shouldRemove func(tagName, attrs stri
 		}
 		tagStartAbs := pos + lt
 
-		// Only consider opening tags `<[a-z]...>`. Skip `</`, `<!`, `<?`.
 		if tagStartAbs+1 >= n {
 			out.WriteString(html[pos:])
 			break
@@ -289,13 +246,6 @@ func removeElementsSinglePass(html string, shouldRemove func(tagName, attrs stri
 
 		tagName := strings.ToLower(html[nameStart:nameEnd])
 
-		// Raw-text elements (script/style/textarea/title) hold character
-		// data, not markup: their inner `<` bytes are NOT tag starts. Skip
-		// straight to the matching close instead of tokenising the body —
-		// otherwise minified JavaScript (full of `<`, `>`, and quotes) is
-		// misparsed into pathological pseudo-tags, and the hidden-attribute
-		// regexes then backtrack catastrophically over the garbage attribute
-		// strings (an O(n^2)+ hang on real-world news pages).
 		if rawTextElements[tagName] && !selfClosing {
 			_, closeEnd := rawTextClose(html, tagEnd, tagName)
 			if shouldRemove(tagName, attrs) {
@@ -321,7 +271,6 @@ func removeElementsSinglePass(html string, shouldRemove func(tagName, attrs stri
 		}
 		closeEnd := findMatchingClose(html, tagEnd, tagName)
 		if closeEnd < 0 {
-			// Unclosed: drop just the opening tag.
 			pos = tagEnd
 			continue
 		}

@@ -282,10 +282,6 @@ Paragraph two.`
 	}
 }
 
-// -----------------------------------------------------------------------------
-// simhash / near-duplicate tests
-// -----------------------------------------------------------------------------
-
 func TestSimHash_IdenticalBlocksMatch(t *testing.T) {
 	text := "The quick brown fox jumps over the lazy dog while the morning sun rises gently above the horizon today."
 	if len(text) < 80 {
@@ -301,13 +297,6 @@ func TestSimHash_IdenticalBlocksMatch(t *testing.T) {
 }
 
 func TestSimHash_OneWordDifferenceMatches(t *testing.T) {
-	// Realistic "templated boilerplate with one word swapped" — the kind of
-	// near-dup we actually need to catch. simhash distance for token-shingled
-	// text correlates with shingle-set Jaccard distance, so very short blocks
-	// (~80 chars / ~14 tokens) produce noisy distances when a mid-sentence
-	// word changes (it affects shingleSize shingles out of ~10 — a large
-	// fraction). Paragraph-length text is where simhash earns its keep, and
-	// matches the real-world target (related-article widgets, repeated CTAs).
 	a := "Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua ut enim ad minim veniam quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur excepteur sint occaecat cupidatat non proident sunt in culpa qui officia deserunt mollit anim id est laborum"
 	b := strings.Replace(a, "Lorem", "Lorum", 1)
 	if len(a) < 80 || len(b) < 80 {
@@ -331,9 +320,6 @@ func TestSimHash_DifferentBlocksDifferent(t *testing.T) {
 }
 
 func TestDedupe_NearDuplicateCollapsed(t *testing.T) {
-	// Templated related-article cards. The stable boilerplate is long enough
-	// that a single date/name swap stays within the 3-bit Hamming threshold.
-	// This mirrors real-world templates on news/blog index pages.
 	body := strings.Repeat("Discover insights about distributed systems and resilient architecture from our engineering team in this featured article from the archive. ", 4)
 	content := "# Main Article\n\n" +
 		"The main content of the article that we are reading right now today.\n\n" +
@@ -346,22 +332,18 @@ func TestDedupe_NearDuplicateCollapsed(t *testing.T) {
 	if result.NearDuplicatesFound != 2 {
 		t.Fatalf("expected 2 near-duplicates collapsed, got %d (content=%q)", result.NearDuplicatesFound, result.Content)
 	}
-	// The phrase appears 4 times within each surviving block (boilerplate
-	// repetition). With only 1 surviving block, expect exactly 4 occurrences.
 	if count := strings.Count(result.Content, "Discover insights about distributed systems"); count != 4 {
 		t.Fatalf("expected 4 phrase occurrences (one surviving block × 4 repetitions), got %d", count)
 	}
 }
 
 func TestDedupe_ShortBlocksNotComparedFuzzy(t *testing.T) {
-	// Two ~30-char labels with one-char difference. Below 40-char floor —
-	// must remain distinct.
 	content := `Subscribe to newsletter A now
 
 Subscribe to newsletter B now`
 
 	opts := DefaultDedupeOptions()
-	opts.MinBlockLen = 10 // make sure exact-dedupe would track them
+	opts.MinBlockLen = 10
 	result := DedupeWithOptions(content, opts)
 	if result.NearDuplicatesFound != 0 {
 		t.Fatalf("short blocks must not trigger near-dup, got %d", result.NearDuplicatesFound)
@@ -397,7 +379,6 @@ func TestDedupe_NearDupDisabled(t *testing.T) {
 	if result.NearDuplicatesFound != 0 {
 		t.Fatalf("near-dup disabled should yield 0 near-duplicates, got %d", result.NearDuplicatesFound)
 	}
-	// 3 surviving blocks × 4 repetitions each = 12 phrase occurrences.
 	if count := strings.Count(result.Content, "Discover insights about distributed systems"); count != 12 {
 		t.Fatalf("all three blocks should survive when near-dup disabled (3×4=12 occurrences), got %d", count)
 	}

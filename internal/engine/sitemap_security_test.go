@@ -8,7 +8,6 @@ import (
 	"testing"
 )
 
-// regression: flatten-sitemap-security-redirect-bypass
 func TestFlattenSitemap_SecurityPolicyStopsRedirects(t *testing.T) {
 	var finalHit atomic.Bool
 	mux := http.NewServeMux()

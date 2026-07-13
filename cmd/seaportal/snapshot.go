@@ -11,10 +11,6 @@ import (
 	"github.com/pinchtab/seaportal"
 )
 
-// runSnapshot implements `seaportal snapshot <url>`: fetch the page over the
-// security-guarded HTTP path and print its accessibility-tree snapshot.
-// (Previously hidden behind the extract verb's --snapshot flag, which remains
-// as a deprecated alias.)
 func runSnapshot(ctx context.Context, args []string) {
 	fs := flag.NewFlagSet("snapshot", flag.ExitOnError)
 	filter := fs.String("filter", "", "Snapshot filter: 'interactive' to show only interactive elements")
@@ -46,9 +42,6 @@ func runSnapshot(ctx context.Context, args []string) {
 	}
 }
 
-// renderSnapshot builds the accessibility tree for htmlContent and writes it
-// to w as indented JSON (default) or the compact text form. Shared by the
-// snapshot subcommand and the deprecated --snapshot extract flag.
 func renderSnapshot(w io.Writer, htmlContent, filter, format string, maxTokens int) error {
 	tree, err := seaportal.BuildSnapshotWithOptions(htmlContent, seaportal.SnapshotOptions{
 		FilterInteractive: filter == "interactive",

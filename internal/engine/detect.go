@@ -32,7 +32,7 @@ var (
 		regexp.MustCompile(`(?i)checking\s+your\s+browser`),
 		regexp.MustCompile(`(?i)too\s+many\s+requests`),
 		regexp.MustCompile(`(?i)rate\s+limit`),
-		regexp.MustCompile(`(?i)<title>\s*just\s+a\s+moment`), // Cloudflare challenge page
+		regexp.MustCompile(`(?i)<title>\s*just\s+a\s+moment`),
 	}
 )
 
@@ -51,11 +51,6 @@ func DetectSPA(html string) (signals []string, isSPA bool) {
 		}
 	}
 
-	// regression: detect-spa-non-ascii-panic — case-insensitive search via
-	// regex returns indexes into the ORIGINAL string. The prior ToLower-then-
-	// slice approach broke on multi-byte input (Turkish İ, etc.) because
-	// ToLower can shift byte offsets, and indexes from the lowered string
-	// then sliced the original out-of-bounds.
 	if loc := bodyOpenRE.FindStringIndex(html); loc != nil {
 		bodyContentStart := loc[1]
 		if closeLoc := bodyCloseRE.FindStringIndex(html[bodyContentStart:]); closeLoc != nil {
@@ -79,16 +74,6 @@ func DetectSPA(html string) (signals []string, isSPA bool) {
 	return
 }
 
-// DetectJSChallenge heuristically identifies "site returned 200 but shipped
-// a JS challenge instead of real content" — the missing complement to
-// DetectBlocked, which keys off head-level patterns (titles, well-known
-// challenge JS variables, etc.). Strategy: a small HTML response that
-// matches one of the cross-cutting CDN/anti-bot SIGNATURES (cf-mitigated,
-// challenge-platform, datadome, perimeterx, akamai-bm) is almost certainly
-// a challenge page. The 1500-byte cap is the key gatekeeper — real CDN-
-// served pages (which all mention Cloudflare in headers/scripts) are far
-// larger, so the length floor avoids "page mentions cloudflare in a
-// footer" false positives. No hostname-specific logic; signatures only.
 func DetectJSChallenge(html string, contentType string, length int) bool {
 	if !strings.Contains(strings.ToLower(contentType), "html") {
 		return false
@@ -118,36 +103,31 @@ func DetectJSChallenge(html string, contentType string, length int) bool {
 	return false
 }
 
-// DetectBlocked: triggers on challenge pages (Cloudflare, captcha, etc.)
-// Strategy: check title/head indicators first (reliable), then body text if short
 func DetectBlocked(html string) bool {
 	headPatterns := []*regexp.Regexp{
-		regexp.MustCompile(`(?i)<title>\s*just\s+a\s+moment`),               // Cloudflare challenge
-		regexp.MustCompile(`(?i)<title>[^<]*cloudflare`),                    // Cloudflare in title
-		regexp.MustCompile(`(?i)<title>[^<]*captcha`),                       // Captcha in title
-		regexp.MustCompile(`(?i)<title>[^<]*access\s+denied`),               // Access denied in title
-		regexp.MustCompile(`(?i)<title>\s*client\s+challenge`),              // Generic client challenge page
-		regexp.MustCompile(`(?i)<title>[^<]*rate\s+limit`),                  // Rate limit in title
-		regexp.MustCompile(`(?i)window\._cf_chl_opt`),                       // Cloudflare challenge JS
-		regexp.MustCompile(`(?i)/_px(Capt|vid|hc)`),                         // PerimeterX challenge
-		regexp.MustCompile(`(?i)px-captcha`),                                // PerimeterX captcha widget
-		regexp.MustCompile(`(?i)_incapsula_resource`),                       // Imperva/Incapsula challenge
-		regexp.MustCompile(`(?i)<title>[^<]*pardon\s+our\s+interruption`),   // Incapsula block page
-		regexp.MustCompile(`(?i)action="[^"]*validateCaptcha`),              // Amazon captcha form
-		regexp.MustCompile(`(?i)opfcaptcha\.amazon`),                        // Amazon captcha server
-		regexp.MustCompile(`(?i)csm-captcha-instrumentation`),               // Amazon captcha script
-		regexp.MustCompile(`(?i)AwsWafIntegration`),                         // AWS WAF JS challenge
-		regexp.MustCompile(`(?i)<div\s+id="challenge-container">\s*</div>`), // AWS WAF challenge container
-		// Akamai Bot Manager — body-only detection misses transparent _abck cookie passes.
-		regexp.MustCompile(`(?i)<script[^>]+src="/_sec/cp_challenge/`), // Akamai Bot Manager challenge script
-		regexp.MustCompile(`(?i)\bbm-verify\b`),                        // Akamai Bot Manager verify token
-		regexp.MustCompile(`(?i)Reference\s+#18\.[a-f0-9]+`),           // Akamai access-denied reference number
-		// DataDome — body-only detection misses transparent datadome cookie passes.
-		regexp.MustCompile(`(?i)src="[^"]*dd\.datadome\.co`), // DataDome challenge asset host
-		regexp.MustCompile(`(?i)\bdatadome\b\s*[:=]`),        // DataDome JS variable assignment
-		regexp.MustCompile(`(?i)gddRu\s*=`),                  // DataDome challenge token
-		// Imperva (modern) — text-based block message.
-		regexp.MustCompile(`(?i)Request\s+unsuccessful\.\s+Incapsula\s+incident\s+ID`), // Imperva modern block message
+		regexp.MustCompile(`(?i)<title>\s*just\s+a\s+moment`),
+		regexp.MustCompile(`(?i)<title>[^<]*cloudflare`),
+		regexp.MustCompile(`(?i)<title>[^<]*captcha`),
+		regexp.MustCompile(`(?i)<title>[^<]*access\s+denied`),
+		regexp.MustCompile(`(?i)<title>\s*client\s+challenge`),
+		regexp.MustCompile(`(?i)<title>[^<]*rate\s+limit`),
+		regexp.MustCompile(`(?i)window\._cf_chl_opt`),
+		regexp.MustCompile(`(?i)/_px(Capt|vid|hc)`),
+		regexp.MustCompile(`(?i)px-captcha`),
+		regexp.MustCompile(`(?i)_incapsula_resource`),
+		regexp.MustCompile(`(?i)<title>[^<]*pardon\s+our\s+interruption`),
+		regexp.MustCompile(`(?i)action="[^"]*validateCaptcha`),
+		regexp.MustCompile(`(?i)opfcaptcha\.amazon`),
+		regexp.MustCompile(`(?i)csm-captcha-instrumentation`),
+		regexp.MustCompile(`(?i)AwsWafIntegration`),
+		regexp.MustCompile(`(?i)<div\s+id="challenge-container">\s*</div>`),
+		regexp.MustCompile(`(?i)<script[^>]+src="/_sec/cp_challenge/`),
+		regexp.MustCompile(`(?i)\bbm-verify\b`),
+		regexp.MustCompile(`(?i)Reference\s+#18\.[a-f0-9]+`),
+		regexp.MustCompile(`(?i)src="[^"]*dd\.datadome\.co`),
+		regexp.MustCompile(`(?i)\bdatadome\b\s*[:=]`),
+		regexp.MustCompile(`(?i)gddRu\s*=`),
+		regexp.MustCompile(`(?i)Request\s+unsuccessful\.\s+Incapsula\s+incident\s+ID`),
 	}
 	for _, p := range headPatterns {
 		if p.MatchString(html) {
@@ -155,10 +135,6 @@ func DetectBlocked(html string) bool {
 		}
 	}
 
-	// Second: check body content for blocked indicators (only if body is short).
-	// regression: detect-spa-non-ascii-panic — use regex (indexes into the
-	// original string) instead of ToLower + slice, which panics on input
-	// where lowercasing shifts byte offsets.
 	openLoc := bodyOpenRE.FindStringIndex(html)
 	if openLoc == nil {
 		return false
@@ -168,19 +144,15 @@ func DetectBlocked(html string) bool {
 		return false
 	}
 	bodyContent := html[openLoc[0] : openLoc[0]+closeLoc[0]]
-	// Strip both tags AND script content before measuring
 	noScripts := regexp.MustCompile(`(?is)<script[^>]*>.*?</script>`).ReplaceAllString(bodyContent, "")
 	noStyles := regexp.MustCompile(`(?is)<style[^>]*>.*?</style>`).ReplaceAllString(noScripts, "")
 	textOnly := regexp.MustCompile(`<[^>]*>`).ReplaceAllString(noStyles, "")
 	textOnly = strings.TrimSpace(textOnly)
 
-	// Only check body patterns on short pages to avoid false positives
 	if len(textOnly) > 1000 {
 		return false
 	}
 
-	// Check blocked patterns against the stripped body text (not full HTML)
-	// This avoids false positives from "captcha" in scripts/configs
 	for _, p := range blockedPatterns {
 		if p.MatchString(textOnly) {
 			return true
@@ -190,10 +162,6 @@ func DetectBlocked(html string) bool {
 	return false
 }
 
-// confidenceInputs bundles the extraction signals scored by
-// computeConfidence (T28 — formerly five positional args ending in a bool).
-// Zero values are meaningful: omit spaSignalCount/isBlocked when the caller
-// deliberately scores content structure alone.
 type confidenceInputs struct {
 	length         int
 	headingCount   int
@@ -202,7 +170,6 @@ type confidenceInputs struct {
 	isBlocked      bool
 }
 
-// confidenceInputsFrom collects the full confidence signal set from a Result.
 func confidenceInputsFrom(r *Result) confidenceInputs {
 	return confidenceInputs{
 		length:         r.Length,
@@ -247,14 +214,11 @@ func CountPattern(html string, pattern string) int {
 	return len(re.FindAllString(html, -1))
 }
 
-// CountMarkdownHeadings counts lines starting with # in markdown content.
 func CountMarkdownHeadings(content string) int {
 	headingRe := regexp.MustCompile(`(?m)^#{1,6}\s`)
 	return len(headingRe.FindAllString(content, -1))
 }
 
-// extractMarkdownTitle returns the first heading or the YAML title from
-// markdown frontmatter.
 func extractMarkdownTitle(content string) string {
 	if fm, ok := readYAMLFrontmatter(content); ok {
 		for _, line := range strings.Split(fm, "\n") {
@@ -276,11 +240,6 @@ func extractMarkdownTitle(content string) string {
 	return ""
 }
 
-// readYAMLFrontmatter returns the body between a leading "---" delimiter
-// line and a subsequent closing "---" delimiter line, and reports whether
-// the block was properly closed. Walks line-by-line so a "---" substring
-// inside a quoted value (e.g. title: "Hello --- world") does not terminate
-// the block — a substring search would.
 func readYAMLFrontmatter(content string) (string, bool) {
 	switch {
 	case strings.HasPrefix(content, "---\n"):
@@ -312,7 +271,6 @@ func readYAMLFrontmatter(content string) (string, bool) {
 	return "", false
 }
 
-// countMarkdownParagraphs counts non-empty, non-heading, non-list text blocks.
 func countMarkdownParagraphs(content string) int {
 	count := 0
 	for _, line := range strings.Split(content, "\n") {
@@ -322,7 +280,7 @@ func countMarkdownParagraphs(content string) int {
 			strings.HasPrefix(line, "```") || strings.HasPrefix(line, "---") {
 			continue
 		}
-		if len(line) > 40 { // Likely a paragraph, not a short label
+		if len(line) > 40 {
 			count++
 		}
 	}
@@ -334,14 +292,6 @@ var (
 	reLinkRel = regexp.MustCompile(`(?i)\brel\s*=\s*["']?([a-zA-Z0-9_-]+)["']?`)
 )
 
-// extractLLMsTxtURL parses a Link header and returns the URL whose rel is
-// "llms-full-txt" if present, falling back to "llms-txt". The earlier
-// implementation OR'd both and returned whichever appeared first, so a
-// header listing llms-txt before llms-full-txt would yield the smaller doc
-// despite the comment claiming preference.
-//
-// Example: `</llms.txt>; rel="llms-txt", </llms-full.txt>; rel="llms-full-txt"`
-// returns `/llms-full.txt` regardless of order.
 func extractLLMsTxtURL(linkHeader string) string {
 	parts := strings.Split(linkHeader, ",")
 
@@ -365,12 +315,9 @@ func extractLLMsTxtURL(linkHeader string) string {
 	return findRel("llms-txt")
 }
 
-// CountMarkdownLinks counts Markdown-style links [text](url) in content.
-// Useful for React/SPA pages where links appear in converted markdown but not raw HTML.
 func CountMarkdownLinks(content string) int {
 	allRe := regexp.MustCompile(`\[[^\]]+\]\([^)]+\)`)
 	allCount := len(allRe.FindAllString(content, -1))
-	// Subtract images ![alt](src)
 	imgRe := regexp.MustCompile(`!\[[^\]]*\]\([^)]+\)`)
 	imgCount := len(imgRe.FindAllString(content, -1))
 	return allCount - imgCount

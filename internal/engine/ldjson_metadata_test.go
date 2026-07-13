@@ -112,7 +112,6 @@ func TestApplyLDJSONMetadata_OverridesReadabilityByline(t *testing.T) {
 
 func TestApplyLDJSONMetadata_SkipsNonArticleBlocks(t *testing.T) {
 	r := &Result{Byline: "original"}
-	// BreadcrumbList / WebSite blocks: no Headline.
 	blocks := []LDJSONBlock{
 		{Type: "BreadcrumbList"},
 		{Type: "WebSite", URL: "https://example.com"},

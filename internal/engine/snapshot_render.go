@@ -1,15 +1,11 @@
 package engine
 
-// snapshot_render.go — text rendering and token-budget truncation for
-// accessibility snapshots. Moved verbatim from snapshot.go.
-
 import (
 	"encoding/json"
 	"fmt"
 	"strings"
 )
 
-// ToCompact returns a compact text representation of the tree
 func (n *SnapshotNode) ToCompact() string {
 	var lines []string
 	n.toCompactLines(&lines, 0)
@@ -19,7 +15,6 @@ func (n *SnapshotNode) ToCompact() string {
 func (n *SnapshotNode) toCompactLines(lines *[]string, indent int) {
 	prefix := strings.Repeat("  ", indent)
 
-	// Build line: [ref] role "name" (tag) [interactive]
 	var parts []string
 	if n.Ref != "" {
 		parts = append(parts, n.Ref)
@@ -49,16 +44,13 @@ func (n *SnapshotNode) toCompactLines(lines *[]string, indent int) {
 }
 
 func truncateToTokens(root *SnapshotNode, maxTokens int) *SnapshotNode {
-	// Rough estimate: 4 chars per token
 	maxChars := maxTokens * 4
 
-	// Serialize to check size
 	data, _ := json.Marshal(root)
 	if len(data) <= maxChars {
 		return root
 	}
 
-	// Truncate by removing children from deepest levels
 	result := *root
 	result.Children = truncateChildren(root.Children, maxChars, len(data))
 	return &result
@@ -69,7 +61,6 @@ func truncateChildren(children []SnapshotNode, maxChars, currentSize int) []Snap
 		return children
 	}
 
-	// Remove children from the end
 	result := make([]SnapshotNode, 0, len(children))
 	for i, child := range children {
 		childData, _ := json.Marshal(child)
@@ -80,7 +71,6 @@ func truncateChildren(children []SnapshotNode, maxChars, currentSize int) []Snap
 			continue
 		}
 
-		// Recursively truncate this child's children
 		truncated := child
 		truncated.Children = truncateChildren(child.Children, maxChars/2, childSize)
 		result = append(result, truncated)

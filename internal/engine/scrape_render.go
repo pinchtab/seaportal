@@ -8,8 +8,6 @@ import (
 	"strings"
 )
 
-// RenderScrapeJSON marshals a ScrapeResult to indented JSON matching the spec's
-// output structure.
 func RenderScrapeJSON(res *ScrapeResult) ([]byte, error) {
 	if res == nil {
 		return nil, fmt.Errorf("seaportal: nil ScrapeResult")
@@ -17,9 +15,6 @@ func RenderScrapeJSON(res *ScrapeResult) ([]byte, error) {
 	return json.MarshalIndent(res, "", "  ")
 }
 
-// RenderScrapeMarkdown renders a ScrapeResult as a single human-readable
-// Markdown digest: a site header, per-group sections, per-page content, and a
-// summary.
 func RenderScrapeMarkdown(res *ScrapeResult) string {
 	if res == nil {
 		return ""
@@ -87,10 +82,6 @@ func RenderScrapeMarkdown(res *ScrapeResult) string {
 	return b.String()
 }
 
-// WriteScrapeDirectory writes a ScrapeResult to dir: result.json, one
-// pages/<slug>.md per page (filesystem-safe, collision-free slugs), and an
-// index.md manifest mapping each URL to its file. Returns the relative page
-// file paths in page order.
 func WriteScrapeDirectory(res *ScrapeResult, dir string) ([]string, error) {
 	if res == nil {
 		return nil, fmt.Errorf("seaportal: nil ScrapeResult")
@@ -141,8 +132,6 @@ func WriteScrapeDirectory(res *ScrapeResult, dir string) ([]string, error) {
 	return relPaths, nil
 }
 
-// slugForURL builds a filesystem-safe slug from a URL's path (falling back to
-// "index" for the root).
 func slugForURL(raw string) string {
 	p := pathOf(raw)
 	p = strings.Trim(p, "/")
@@ -174,7 +163,6 @@ func slugForURL(raw string) string {
 	return slug
 }
 
-// uniqueSlug returns slug, or slug-2, slug-3… if already used.
 func uniqueSlug(slug string, used map[string]bool) string {
 	candidate := slug
 	for i := 2; used[candidate]; i++ {

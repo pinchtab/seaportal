@@ -11,9 +11,6 @@ import (
 	"github.com/pinchtab/seaportal"
 )
 
-// runScrape implements `seaportal scrape <base-url> [flags]`: it maps the spec
-// flags onto ScrapeOptions, runs the full pipeline, and emits the result per
-// --output (json | md | directory).
 func runScrape(ctx context.Context, args []string) {
 	fs := flag.NewFlagSet("scrape", flag.ExitOnError)
 	maxPages := fs.Int("max-pages", 50, "Maximum total pages to process")
@@ -36,9 +33,6 @@ func runScrape(ctx context.Context, args []string) {
 		fmt.Fprintln(os.Stderr, "Usage: seaportal scrape <base-url> [flags]")
 		fs.PrintDefaults()
 	}
-	// Support both `scrape [flags] <url>` and the spec's `scrape <url> [flags]`:
-	// stdlib flag stops at the first positional, so pull the base URL out and
-	// parse any flags that followed it.
 	_ = fs.Parse(args)
 	rest := fs.Args()
 	if len(rest) == 0 {
@@ -56,9 +50,6 @@ func runScrape(ctx context.Context, args []string) {
 		os.Exit(2)
 	}
 
-	// Preview mode is a preset: one representative sample per URL pattern
-	// (never a full fetch) scoped to a recent window, so the per-group counts
-	// reveal the site tree cheaply. Explicit --recent-days still wins.
 	if *preview {
 		*maxPerPattern = 1
 		*full = false
@@ -95,8 +86,6 @@ func runScrape(ctx context.Context, args []string) {
 		os.Exit(2)
 	}
 
-	// Secure-by-default fetch policy, mirroring the sitemap/feed verbs:
-	// --allow-internal lifts only the private-IP block.
 	sec := seaportal.DefaultSecurityPolicy()
 	if *allowInternal {
 		sec.BlockPrivateIPs = false
@@ -126,9 +115,6 @@ func runScrape(ctx context.Context, args []string) {
 		os.Exit(1)
 	}
 	if err != nil {
-		// Interrupted mid-run (Ctrl-C / caller deadline): ScrapeSite returned
-		// the partial result alongside ctx.Err() (audit T21) — render what
-		// was scraped, warn, and exit non-zero to signal the interruption.
 		fmt.Fprintf(os.Stderr, "scrape warning: interrupted (%v); rendering partial results\n", err)
 	}
 
@@ -141,8 +127,6 @@ func runScrape(ctx context.Context, args []string) {
 	}
 }
 
-// renderScrapeResult emits res on stdout in the chosen output format
-// (markdown digest, directory of pages, or JSON — the default).
 func renderScrapeResult(res *seaportal.ScrapeResult, out seaportal.OutputFormat, outDir string) error {
 	switch out {
 	case seaportal.OutputMarkdown:
@@ -153,7 +137,7 @@ func renderScrapeResult(res *seaportal.ScrapeResult, out seaportal.OutputFormat,
 			return err
 		}
 		fmt.Printf("wrote %d pages to %s\n", len(files), outDir)
-	default: // json
+	default:
 		data, err := seaportal.RenderScrapeJSON(res)
 		if err != nil {
 			return err

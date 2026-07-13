@@ -13,8 +13,6 @@ import (
 	"testing"
 )
 
-// withTempMocksDir redirects MocksDir to a per-test tmp dir so the package's
-// own tests don't churn the committed testdata/mocks tree.
 func withTempMocksDir(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
@@ -72,9 +70,6 @@ func TestMock_ReplaySuccess(t *testing.T) {
 func TestMock_ReplayMissingFile(t *testing.T) {
 	withTempMocksDir(t)
 
-	// Exercise the missing-file branch through the same helper Replay uses,
-	// but with a stub fataler so the parent test isn't aborted by
-	// runtime.Goexit. A real *testing.T would call FailNow here.
 	stub := &stubFataler{}
 	rt := replay(stub, "does-not-exist")
 	if rt != nil {
@@ -115,7 +110,7 @@ func TestMock_RecordRoundTrip(t *testing.T) {
 	t.Cleanup(srv.Close)
 
 	t.Setenv(envRecord, "1")
-	t.Setenv(envCI, "") // explicit: not in CI
+	t.Setenv(envCI, "")
 
 	rt := Record(t, "round-trip")
 	req, _ := http.NewRequest("GET", srv.URL+"/path", nil)
@@ -129,12 +124,10 @@ func TestMock_RecordRoundTrip(t *testing.T) {
 		t.Fatalf("recorded RT returned wrong body: %q", gotBody)
 	}
 
-	// Verify the recording landed on disk.
 	if _, err := os.Stat(filepath.Join(dir, "round-trip.json")); err != nil {
 		t.Fatalf("recording file missing: %v", err)
 	}
 
-	// Replay must serve the same bytes.
 	rt2 := Replay(t, "round-trip")
 	replayReq, _ := http.NewRequest("GET", "https://ignored.test/", nil)
 	rresp, err := rt2.RoundTrip(replayReq)
@@ -152,7 +145,6 @@ func TestMock_RecordRoundTrip(t *testing.T) {
 	if rresp.StatusCode != http.StatusOK {
 		t.Errorf("replay status = %d, want 200", rresp.StatusCode)
 	}
-	// Sanity: request URL was honoured by record (server got a real call).
 	if _, err := url.Parse(srv.URL); err != nil {
 		t.Fatalf("server URL bad: %v", err)
 	}
@@ -161,7 +153,6 @@ func TestMock_RecordRoundTrip(t *testing.T) {
 func TestMock_RecordIgnoredWhenEnvUnset(t *testing.T) {
 	dir := withTempMocksDir(t)
 
-	// Pre-seed a fixture so the implicit Replay fallback succeeds.
 	const body = "fallback body"
 	writeFixture(t, "env-unset", body, http.Header{"Content-Type": []string{"text/plain"}}, http.StatusOK)
 
@@ -183,7 +174,6 @@ func TestMock_RecordIgnoredWhenEnvUnset(t *testing.T) {
 		t.Errorf("body = %q, want %q (Record should have degraded to Replay)", got, body)
 	}
 
-	// And no new file should have been written for an unrelated slug.
 	entries, _ := os.ReadDir(dir)
 	if len(entries) != 1 {
 		t.Errorf("expected only the pre-seeded fixture on disk, got %d entries", len(entries))

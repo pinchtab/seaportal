@@ -9,11 +9,6 @@ import (
 	"time"
 )
 
-// negotiationRT returns a 404 (text/html) on the first call to trigger the
-// markdown-negotiation HTML retry, then fails the retry fetch with a transport
-// error so resp is left nil. Regression guard for the nil-resp panic in the
-// deferred body close (extract.go): a transport error on the negotiation retry
-// must surface as result.Error, not crash the process.
 type negotiationRT struct{ calls int }
 
 func (rt *negotiationRT) RoundTrip(req *http.Request) (*http.Response, error) {
@@ -39,7 +34,6 @@ func TestNegotiationRetry_TransportError_NoPanic(t *testing.T) {
 		TotalRetryTimeout: 5 * time.Second,
 	}
 
-	// Must not panic; the failed retry should be reported as an error.
 	result := FromURLWithOptions("https://example.com/page", opts)
 
 	if rt.calls < 2 {

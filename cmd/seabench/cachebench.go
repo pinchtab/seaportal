@@ -1,43 +1,5 @@
 package main
 
-// cachebench is the cache hit-rate / latency lane of seabench. It drives a
-// deterministic 80/20 mixed-traffic pattern (80% requests against 5 "hot"
-// URLs, 20% against 50 "cold" URLs) through three cache modes — `off`,
-// `ttl-24h`, and `swr-10m` — and reports per-mode hit rate, p50/p95 latency,
-// and mean HeapInuse.
-//
-// Why a separate command (not folded into `stress`):
-//   - `stress` hammers a SINGLE URL to surface allocation / GC regressions;
-//     it deliberately collapses URL variety so the engine work is the signal.
-//   - `cachebench` REQUIRES URL variety (hot/cold split) so the cache earns
-//     its complexity in measurable hit-rate numbers.
-//
-// Why three modes:
-//   - `off`            (NoCache=true)            — baseline; hit-rate must be 0.
-//   - `ttl-24h`        (CacheTTL=24h)            — TTL-only behaviour.
-//   - `swr-10m`        (CacheTTL=24h + SWR=10m)  — proves the SWR knob does
-//     not regress hit-rate in a fresh-cache workload. SWR only fires on
-//     EXPIRED entries; with a fresh-tempdir cache no entry ever expires
-//     inside the run, so `swr-10m` numerically behaves like `ttl-24h`. The
-//     mode is kept in the bench so a future regression that breaks the SWR
-//     code path (e.g. always-stale classification) lights up here.
-//
-// Why a fresh tempdir per mode:
-//   - Cross-mode contamination would make hit-rate meaningless. Each mode
-//     starts from a cold cache and is responsible for warming its own hot
-//     URLs across the run.
-//
-// Why deterministic sampling (rand.NewSource(42)):
-//   - Reproducible hit-rate numbers across runs. The 80/20 weighted draw
-//     happens with the SAME seed for every mode so each mode sees the
-//     identical URL sequence.
-//
-// Expected hit-rate ceiling for `ttl-24h` / `swr-10m`:
-//   - 5 hot URLs, each first-touch is a miss (5 unavoidable cold misses).
-//     Worst case: 5/200 = 2.5% guaranteed misses, plus the 20% cold traffic
-//     (each cold URL repeats rarely so most cold draws are also misses).
-//     Realistic ceiling ≈ hot_share - 5/N ≈ 0.80 - 0.025 = ~0.775.
-
 import (
 	"flag"
 	"fmt"
@@ -52,8 +14,6 @@ import (
 	"github.com/pinchtab/seaportal/internal/testserver/fixture"
 )
 
-// CacheBenchReport is the on-disk JSON shape (version 1). snake_case keys
-// for cross-tool readability (jq, dashboards).
 type CacheBenchReport struct {
 	Version    int                       `json:"version"`
 	CapturedAt string                    `json:"captured_at"`
@@ -69,7 +29,6 @@ type CacheBenchReport struct {
 	Notes      []string                  `json:"notes,omitempty"`
 }
 
-// CacheModeStats is the per-mode aggregate written into PerMode.
 type CacheModeStats struct {
 	HitRate      float64 `json:"hit_rate"`
 	Hits         int     `json:"hits"`
@@ -81,7 +40,6 @@ type CacheModeStats struct {
 	Errors       int     `json:"errors"`
 }
 
-// cacheModeOrder fixes report column order independent of map iteration.
 var cacheModeOrder = []string{"off", "ttl-24h", "swr-10m"}
 
 func runCacheBench(args []string) {
@@ -123,10 +81,6 @@ func runCacheBench(args []string) {
 		ttl.HitRate*100, ttl.P50Ms, swr.HitRate*100, mdPath)
 }
 
-// executeCacheBench builds the fixture server, drives N requests through each
-// of the three cache modes with a fresh tempdir per mode, and returns the
-// populated report. Extracted from runCacheBench so tests can call it
-// directly without intercepting os.Exit.
 func executeCacheBench(n int, hotRatio float64, hotCount, coldCount int, seed int64) CacheBenchReport {
 	srv, hotPaths, coldPaths := newCacheBenchServer(hotCount, coldCount)
 	defer srv.Close()
@@ -134,9 +88,6 @@ func executeCacheBench(n int, hotRatio float64, hotCount, coldCount int, seed in
 	hotURLs := joinURLs(srv.URL(), hotPaths)
 	coldURLs := joinURLs(srv.URL(), coldPaths)
 
-	// Generate the URL sequence ONCE with the given seed so every mode sees
-	// the identical traffic pattern. This isolates the variable under test
-	// (cache mode) from sampling noise.
 	sequence := generateURLSequence(n, hotRatio, hotURLs, coldURLs, seed)
 
 	report := CacheBenchReport{
@@ -163,9 +114,6 @@ func executeCacheBench(n int, hotRatio float64, hotCount, coldCount int, seed in
 	return report
 }
 
-// runCacheMode executes the URL sequence against a single cache mode,
-// returning the per-mode aggregate. A fresh tempdir is created and torn
-// down per mode so hit-rate is honest.
 func runCacheMode(mode string, sequence []string) CacheModeStats {
 	dir, err := os.MkdirTemp("", "seabench-cache-"+mode+"-")
 	if err != nil {
@@ -219,9 +167,6 @@ func runCacheMode(mode string, sequence []string) CacheModeStats {
 	}
 }
 
-// optionsForMode returns the seaportal.Options for the given cache mode. The
-// `off` mode forces NoCache=true so the engine bypasses the disk cache
-// entirely; the two cached modes share a per-request CacheDir.
 func optionsForMode(mode, cacheDir string) seaportal.Options {
 	switch mode {
 	case "off":
@@ -239,11 +184,6 @@ func optionsForMode(mode, cacheDir string) seaportal.Options {
 	}
 }
 
-// newCacheBenchServer spins up a fixture server with `hot+cold` routes at
-// /page/N. Returns the server plus the two slices of route paths so the
-// caller can build URLs. Each route serves a small, distinct HTML body so
-// the engine has a real extract to perform and the cache key (URL-based)
-// never collides.
 func newCacheBenchServer(hotCount, coldCount int) (*fixture.Server, []string, []string) {
 	srv := fixture.New()
 	total := hotCount + coldCount
@@ -262,9 +202,6 @@ func newCacheBenchServer(hotCount, coldCount int) (*fixture.Server, []string, []
 	return srv, hot, cold
 }
 
-// syntheticHTML produces a small, deterministic HTML body for route id `i`.
-// Body is ~1-2KB — enough work for the extract pipeline to produce a real
-// result without dominating the cache-vs-fetch latency signal.
 func syntheticHTML(i int) []byte {
 	var b strings.Builder
 	b.WriteString(`<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Page `)
@@ -285,10 +222,6 @@ func syntheticHTML(i int) []byte {
 	return []byte(b.String())
 }
 
-// generateURLSequence draws n URLs using a deterministic 80/20 weighted
-// sampler: each draw, with probability hotRatio pick a uniform hot URL,
-// else pick a uniform cold URL. Same seed → identical sequence across
-// modes, which makes per-mode hit-rate directly comparable.
 func generateURLSequence(n int, hotRatio float64, hot, cold []string, seed int64) []string {
 	r := rand.New(rand.NewSource(seed))
 	out := make([]string, n)

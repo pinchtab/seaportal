@@ -27,8 +27,6 @@ func mustAllowed(t *testing.T, content, path string, want bool) {
 	}
 }
 
-// evaluate mirrors IsAllowed's matching loop for unit-level parser testing,
-// avoiding the network/cache path.
 func evaluate(rules []compiledRule, path string) bool {
 	bestLen := -1
 	bestAllow := true
@@ -106,8 +104,6 @@ func TestParseRobots_WildcardFallback(t *testing.T) {
 	}
 }
 
-// ---- RFC 9309 product-token matching (T08) ----
-
 func TestProductToken(t *testing.T) {
 	cases := []struct{ ua, want string }{
 		{"seaportal-test/1.0", "seaportal-test"},
@@ -124,40 +120,30 @@ func TestProductToken(t *testing.T) {
 	}
 }
 
-// A section named "bot" must not bind a UA that merely CONTAINS "bot"
-// somewhere (the old substring matching); token-prefix semantics apply.
 func TestPickRules_NoSubstringMatch(t *testing.T) {
 	body := "User-agent: bot\nDisallow: /\n\nUser-agent: *\nAllow: /\n"
 	_, rawRules := parseRobotsTxt(body)
 	rules := compileRules(rawRules)
-	// "Mozilla/5.0 ... Googlebot/2.1" contains "bot" but its product token is
-	// "mozilla" — the "bot" section must not bind.
 	picked := pickRules(rules, "Mozilla/5.0 (compatible; Googlebot/2.1)")
 	if !evaluate(picked, "/anything") {
 		t.Fatal("section 'bot' bound a UA whose product token is 'mozilla' (substring matching regression)")
 	}
 }
 
-// A `User-agent: seaportal` section must NOT bind when the configured UA
-// impersonates Chrome: self-identification must not leak through an
-// impersonated UA (T08 sanctioned behavior change).
 func TestPickRules_NoUnconditionalSelfMatch(t *testing.T) {
 	body := "User-agent: seaportal\nDisallow: /\n\nUser-agent: *\nAllow: /\n"
 	_, rawRules := parseRobotsTxt(body)
 	rules := compileRules(rawRules)
-	picked := pickRules(rules, DefaultUserAgent) // Chrome impersonation
+	picked := pickRules(rules, DefaultUserAgent)
 	if !evaluate(picked, "/anything") {
 		t.Fatal("'seaportal' section bound an impersonated Chrome UA")
 	}
-	// But it does bind when the caller identifies as seaportal.
 	picked = pickRules(rules, ResolveUserAgent("seaportal"))
 	if evaluate(picked, "/anything") {
 		t.Fatal("'seaportal' section should bind the seaportal persona UA")
 	}
 }
 
-// Longest token-prefix wins: googlebot-news picks its own section over the
-// shorter googlebot one; plain googlebot still binds googlebot.
 func TestPickRules_LongestTokenPrefixWins(t *testing.T) {
 	body := "User-agent: googlebot\nDisallow: /a\n\nUser-agent: googlebot-news\nDisallow: /b\n"
 	_, rawRules := parseRobotsTxt(body)
@@ -183,8 +169,6 @@ func TestPickDelay_TokenPrefixAndWildcard(t *testing.T) {
 	}
 }
 
-// ---- Crawl-delay clamp (T05) ----
-
 func TestClampCrawlDelay(t *testing.T) {
 	if d, clamped := clampCrawlDelay(86400 * time.Second); d != maxCrawlDelay || !clamped {
 		t.Errorf("clampCrawlDelay(86400s) = (%s, %v), want (%s, true)", d, clamped, maxCrawlDelay)
@@ -197,16 +181,12 @@ func TestClampCrawlDelay(t *testing.T) {
 	}
 }
 
-// A hostile Crawl-delay is clamped at the consumption point and surfaced as a
-// warning; the parser keeps the truthful value. The wait itself is preempted
-// with a cancelled ctx so the test never sleeps the clamped 30s.
 func TestApplyCrawlDelay_ClampsHostileDelayWithWarning(t *testing.T) {
 	srv := newRobotsServer(t, "User-agent: *\nCrawl-delay: 86400\n")
 	defer srv.Close()
 	u, _ := url.Parse(srv.URL)
 
 	cache := NewCrawlDelayCache()
-	// The parsed value stays truthful (clamp is not in the parser).
 	if got := cache.GetDelayWithScheme(context.Background(), u.Host, testUA, "http"); got != 86400*time.Second {
 		t.Fatalf("GetDelayWithScheme = %s, want the unclamped 86400s", got)
 	}
@@ -222,8 +202,6 @@ func TestApplyCrawlDelay_ClampsHostileDelayWithWarning(t *testing.T) {
 		t.Fatalf("warning = %q, want a clamped-to-30s notice", warning)
 	}
 }
-
-// ---- IsAllowed cache (integration with httptest) ----
 
 func TestIsAllowed_FetchesAndCaches(t *testing.T) {
 	var hits int32
@@ -251,17 +229,13 @@ func TestIsAllowed_FetchesAndCaches(t *testing.T) {
 	}
 }
 
-// Concurrent callers for one domain must coalesce into a single robots.txt
-// fetch (per-domain singleflight) instead of stampeding — and, since the
-// fetch now runs outside the cache lock, callers for OTHER domains must not
-// be blocked behind a slow fetch.
 func TestIsAllowed_SingleflightAcrossGoroutines(t *testing.T) {
 	var hits int32
 	release := make(chan struct{})
 	mux := http.NewServeMux()
 	mux.HandleFunc("/robots.txt", func(w http.ResponseWriter, r *http.Request) {
 		atomic.AddInt32(&hits, 1)
-		<-release // hold the fetch so every caller piles up on it
+		<-release
 		_, _ = fmt.Fprint(w, "User-agent: *\nDisallow: /private/\n")
 	})
 	slow := httptest.NewServer(mux)
@@ -289,9 +263,6 @@ func TestIsAllowed_SingleflightAcrossGoroutines(t *testing.T) {
 		}(i)
 	}
 
-	// While the slow domain's fetch is parked, another domain must be served
-	// promptly — the old implementation held the cache mutex across the
-	// network call and would deadlock this until `release` fired.
 	otherDone := make(chan bool, 1)
 	go func() {
 		otherDone <- cache.IsAllowed(ctx, fastHost, testUA, "http", "/x/secret")
@@ -333,7 +304,6 @@ func TestIsAllowed_FailsOpenOn404(t *testing.T) {
 }
 
 func TestIsAllowed_FailsOpenOnError(t *testing.T) {
-	// Bind a port then close it so the dial fails immediately.
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatalf("listen: %v", err)
@@ -346,8 +316,6 @@ func TestIsAllowed_FailsOpenOnError(t *testing.T) {
 		t.Fatal("expected fail-open on network error")
 	}
 }
-
-// ---- Integration: FromURLWithOptions honours RespectRobots ----
 
 func newRobotsServer(t *testing.T, robotsBody string) *httptest.Server {
 	t.Helper()

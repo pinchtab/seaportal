@@ -1,9 +1,7 @@
-// Package portal provides content extraction with SPA detection
 package engine
 
 import "strings"
 
-// CDN provider constants
 const (
 	CDNCloudflare  = "cloudflare"
 	CDNCloudFront  = "cloudfront"
@@ -25,30 +23,20 @@ const (
 	CDNWebflow     = "webflow"
 )
 
-// ViaHop represents a single hop in the Via header chain.
-// Format: [protocol] host [comment]
-// Example: "1.1 varnish", "HTTP/1.1 cache.example.com (squid)", "1.1 google"
 type ViaHop struct {
-	Protocol string `json:"protocol,omitempty"` // HTTP protocol version (e.g., "1.1", "HTTP/1.1", "2")
-	Host     string `json:"host,omitempty"`     // Proxy/CDN hostname or identifier
-	Comment  string `json:"comment,omitempty"`  // Optional comment (e.g., "(squid)", "(Varnish)")
+	Protocol string `json:"protocol,omitempty"`
+	Host     string `json:"host,omitempty"`
+	Comment  string `json:"comment,omitempty"`
 }
 
-// fingerprintCDN detects the CDN provider from the response-header echoes and
-// returns the provider/signals part of CDNInfo. The caller (finalizeTransport)
-// fills in the parsed Via chain (ViaHops/ProxyLayers).
 func fingerprintCDN(r *ResponseHeaders) CDNInfo {
 	provider, signals := detectCDNProvider(r)
 	return CDNInfo{CDNProvider: provider, CDNSignals: signals}
 }
 
-// detectCDNProvider returns (provider, signals) where provider is a constant
-// like CDNCloudflare and signals lists the headers/patterns that identified
-// the provider.
 func detectCDNProvider(r *ResponseHeaders) (string, []string) {
 	var signals []string
 
-	// Priority 1: Cloudflare (very distinctive headers)
 	if r.ResponseCFCacheStatus != "" {
 		signals = append(signals, "CF-Cache-Status")
 		return CDNCloudflare, signals
@@ -58,18 +46,15 @@ func detectCDNProvider(r *ResponseHeaders) (string, []string) {
 		return CDNCloudflare, signals
 	}
 
-	// Priority 2: CloudFront (Amazon)
 	if r.ResponseXAmzCfId != "" {
 		signals = append(signals, "X-Amz-Cf-Id")
 		return CDNCloudFront, signals
 	}
-	// X-Cache with "cloudfront" in value
 	if strings.Contains(strings.ToLower(r.ResponseXCache), "cloudfront") {
 		signals = append(signals, "X-Cache:cloudfront")
 		return CDNCloudFront, signals
 	}
 
-	// Priority 3: Fastly (X-Served-By + X-Fastly-Request-ID)
 	if r.ResponseXFastlyRequestID != "" {
 		signals = append(signals, "X-Fastly-Request-ID")
 		return CDNFastly, signals
@@ -79,7 +64,6 @@ func detectCDNProvider(r *ResponseHeaders) (string, []string) {
 		return CDNFastly, signals
 	}
 
-	// Priority 4: Akamai
 	if r.ResponseXAkamaiRequestID != "" {
 		signals = append(signals, "X-Akamai-Request-ID")
 		return CDNAkamai, signals
@@ -93,13 +77,11 @@ func detectCDNProvider(r *ResponseHeaders) (string, []string) {
 		return CDNAkamai, signals
 	}
 
-	// Priority 5: Varnish
 	if r.ResponseXVarnish != "" {
 		signals = append(signals, "X-Varnish")
 		return CDNVarnish, signals
 	}
 
-	// Priority 6: Platform-specific CDNs
 	if r.ResponseXNetlifyRequestId != "" {
 		signals = append(signals, "X-Netlify-Request-Id")
 		return CDNNetlify, signals
@@ -158,13 +140,11 @@ func detectCDNProvider(r *ResponseHeaders) (string, []string) {
 		return CDNWebflow, signals
 	}
 
-	// Priority 7: Generic X-CDN header
 	if r.ResponseXCDN != "" {
 		signals = append(signals, "X-CDN:"+r.ResponseXCDN)
 		return strings.ToLower(r.ResponseXCDN), signals
 	}
 
-	// Priority 8: Via header analysis for common CDNs
 	if r.ResponseVia != "" {
 		viaLower := strings.ToLower(r.ResponseVia)
 		if strings.Contains(viaLower, "cloudfront") {
@@ -184,20 +164,12 @@ func detectCDNProvider(r *ResponseHeaders) (string, []string) {
 	return "", nil
 }
 
-// parseViaHeader parses the Via header into a slice of ViaHop structs.
-// Via header format: [protocol] host [comment], [protocol] host [comment], ...
-// Examples:
-//   - "1.1 varnish"
-//   - "HTTP/1.1 cache.example.com (squid)"
-//   - "1.1 google, 1.1 varnish (Varnish/6.0)"
-//   - "1.0 fred, 1.1 p.example.net"
 func parseViaHeader(via string) []ViaHop {
 	if via == "" {
 		return nil
 	}
 
 	var hops []ViaHop
-	// Split by comma (multiple hops)
 	parts := strings.Split(via, ",")
 	for _, part := range parts {
 		part = strings.TrimSpace(part)
@@ -207,7 +179,6 @@ func parseViaHeader(via string) []ViaHop {
 
 		hop := ViaHop{}
 
-		// Check for comment at the end (in parentheses)
 		if idx := strings.Index(part, "("); idx >= 0 {
 			if endIdx := strings.LastIndex(part, ")"); endIdx > idx {
 				hop.Comment = part[idx : endIdx+1]
@@ -215,14 +186,11 @@ func parseViaHeader(via string) []ViaHop {
 			}
 		}
 
-		// Split remaining into protocol and host
-		// Format: "1.1 host" or "HTTP/1.1 host"
 		fields := strings.Fields(part)
 		if len(fields) >= 2 {
 			hop.Protocol = fields[0]
 			hop.Host = fields[1]
 		} else if len(fields) == 1 {
-			// Just a host/identifier
 			hop.Host = fields[0]
 		}
 

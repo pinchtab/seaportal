@@ -85,10 +85,6 @@ func TestChunkByHeading_BasicSplit(t *testing.T) {
 	}
 }
 
-// TestChunkByHeading_RecognisesH4 verifies that chunkByHeading splits on
-// H4 (and by extension H5/H6) boundaries, not just H2/H3. Reference-style
-// pages often nest per-entry subheadings (e.g. method descriptions, glossary
-// terms) at H4+, and BM25 ranking benefits when those become their own chunks.
 func TestChunkByHeading_RecognisesH4(t *testing.T) {
 	md := "## A\n\nA body content goes here for the first section under H2.\n\n" +
 		"#### B\n\nB body content under the H4 subheading for testing.\n"
@@ -104,8 +100,6 @@ func TestChunkByHeading_RecognisesH4(t *testing.T) {
 	}
 }
 
-// TestChunkByHeading_RecognisesH5AndH6 sanity-checks that the broadened
-// regex extends to the deepest heading levels.
 func TestChunkByHeading_RecognisesH5AndH6(t *testing.T) {
 	md := "## Top\n\nTop body content for the section is here.\n\n" +
 		"##### Five\n\nFive body content goes here for testing purposes.\n\n" +
@@ -145,12 +139,10 @@ func TestChunkBySentence_GroupsToTarget(t *testing.T) {
 		fmt.Fprintf(&b, "Sentence number %d here. ", i)
 	}
 	md := b.String()
-	// size=50 tokens = 200 chars budget. 20 short sentences should produce >1 chunk.
 	chunks := ChunkMarkdown(md, ChunkConfig{Strategy: ChunkSentence, Size: 50})
 	if len(chunks) < 2 {
 		t.Fatalf("expected multiple chunks, got %d: %#v", len(chunks), chunks)
 	}
-	// Total text should be roughly preserved (modulo trimming/whitespace).
 	var total int
 	for _, c := range chunks {
 		total += len(c.Text)
@@ -184,17 +176,13 @@ func TestChunkBySentence_HeadingInheritance(t *testing.T) {
 }
 
 func TestChunkByWindow_OverlapBackstep(t *testing.T) {
-	// 600 chars of plain text, window=200, overlap=50 → step=150.
-	md := strings.Repeat("abcdefghij ", 60) // 660 chars
+	md := strings.Repeat("abcdefghij ", 60)
 	chunks := ChunkMarkdown(md, ChunkConfig{Strategy: ChunkWindow, Size: 200, Overlap: 50})
 	if len(chunks) < 2 {
 		t.Fatalf("expected multiple windows, got %d", len(chunks))
 	}
-	// Adjacent chunks should share a tail/head suffix close to overlap chars
-	// (allowing for word-boundary snap reducing it slightly).
 	for i := 0; i+1 < len(chunks); i++ {
 		a, b := chunks[i].Text, chunks[i+1].Text
-		// Find max k <= 50 such that suffix of a == prefix of b.
 		maxK := 50
 		if len(a) < maxK {
 			maxK = len(a)
@@ -219,10 +207,6 @@ func TestChunkByWindow_OverlapBackstep(t *testing.T) {
 }
 
 func TestChunkByWindow_DoesNotBreakMidWord(t *testing.T) {
-	// All lowercase words separated by spaces; verify each chunk ends at a
-	// complete word boundary. (Chunks are trimmed, so "ends at a space" means
-	// the chunk text terminates with a complete word — the next char in the
-	// source is whitespace.)
 	md := strings.Repeat("alphabet bravo charlie delta echo foxtrot ", 30)
 	knownWords := []string{"alphabet", "bravo", "charlie", "delta", "echo", "foxtrot"}
 	chunks := ChunkMarkdown(md, ChunkConfig{Strategy: ChunkWindow, Size: 200, Overlap: 0})
@@ -230,7 +214,6 @@ func TestChunkByWindow_DoesNotBreakMidWord(t *testing.T) {
 		t.Fatalf("expected multiple chunks, got %d", len(chunks))
 	}
 	for i, c := range chunks[:len(chunks)-1] {
-		// The chunk's final word must be a complete known word (not a prefix).
 		fields := strings.Fields(c.Text)
 		if len(fields) == 0 {
 			continue
@@ -255,8 +238,6 @@ func max(a, b int) int {
 	}
 	return b
 }
-
-// ── Integration tests via httptest ──────────────────────────────────
 
 func chunkTestServer(t *testing.T, body string) *httptest.Server {
 	t.Helper()
@@ -344,11 +325,7 @@ func TestExtract_ChunkFlagOffDefault(t *testing.T) {
 	}
 }
 
-// TestSoftSplitChunk_BoldParagraphBoundaries verifies that an oversized chunk
-// containing exclusive-bold lines (e.g. "**Term**") is fragmented into one
-// sub-chunk per bold boundary, with headings of the form "<parent> · <term>".
 func TestSoftSplitChunk_BoldParagraphBoundaries(t *testing.T) {
-	// Build a >600-char chunk with two bold-prefixed entries.
 	filler := strings.Repeat("Lorem ipsum dolor sit amet consectetur adipiscing elit. ", 6)
 	body := "## Glossary\nIntro paragraph here.\n" +
 		"**Alpha**\n" + filler + "\n" +
@@ -372,11 +349,8 @@ func TestSoftSplitChunk_BoldParagraphBoundaries(t *testing.T) {
 	}
 }
 
-// TestSoftSplitChunk_TableRowBoundaries verifies that an oversized chunk
-// containing Markdown table rows is fragmented per-row, with the separator
-// row swallowed by its preceding row (NOT a sub-chunk on its own).
 func TestSoftSplitChunk_TableRowBoundaries(t *testing.T) {
-	pad := strings.Repeat("padding ", 80) // push us over threshold
+	pad := strings.Repeat("padding ", 80)
 	body := "## Methods\n" + pad + "\n" +
 		"| Method | Description |\n" +
 		"|--------|-------------|\n" +
@@ -396,7 +370,6 @@ func TestSoftSplitChunk_TableRowBoundaries(t *testing.T) {
 		if strings.Contains(c.heading, "· GET") {
 			foundGet = true
 		}
-		// Separator row must NEVER become its own boundary key.
 		if strings.Contains(c.heading, "---") {
 			t.Errorf("separator row leaked into heading: %q", c.heading)
 		}
@@ -406,8 +379,6 @@ func TestSoftSplitChunk_TableRowBoundaries(t *testing.T) {
 	}
 }
 
-// TestSoftSplitChunk_SkipsBelowThreshold verifies tiny chunks pass through
-// unchanged even if they contain boundary-shaped lines.
 func TestSoftSplitChunk_SkipsBelowThreshold(t *testing.T) {
 	body := "## Tiny\n**Alpha**\nbody\n**Beta**\nmore\n"
 	parent := rawChunk{heading: "## Tiny", text: body}
@@ -417,8 +388,6 @@ func TestSoftSplitChunk_SkipsBelowThreshold(t *testing.T) {
 	}
 }
 
-// TestSoftSplitChunk_SkipsFencedCode verifies bold-looking and table-looking
-// content inside a fenced code block does NOT trigger a soft-split.
 func TestSoftSplitChunk_SkipsFencedCode(t *testing.T) {
 	pad := strings.Repeat("padding ", 80)
 	body := "## Code\n" + pad + "\n" +

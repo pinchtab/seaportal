@@ -46,7 +46,6 @@ func TestRenderScrapeJSON(t *testing.T) {
 	if round.Site.BaseURL != "https://ex.com" || len(round.Pages) != 3 {
 		t.Errorf("round-trip mismatch: %+v", round.Site)
 	}
-	// Spec field names present.
 	for _, key := range []string{`"baseURL"`, `"pageGroups"`, `"totalInSitemap"`, `"contentTypes"`} {
 		if !strings.Contains(string(data), key) {
 			t.Errorf("json missing spec key %s", key)
@@ -79,7 +78,6 @@ func TestWriteScrapeDirectory(t *testing.T) {
 	if len(rel) != 3 {
 		t.Fatalf("got %d page files, want 3", len(rel))
 	}
-	// Slugs are unique even for the duplicate URL.
 	seen := map[string]bool{}
 	for _, r := range rel {
 		if seen[r] {

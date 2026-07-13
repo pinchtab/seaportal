@@ -34,8 +34,6 @@ func printUsage(w io.Writer) {
 }
 
 func main() {
-	// One signal-aware context for every verb: Ctrl-C / SIGTERM cancels
-	// in-flight fetches instead of leaving them to run to their timeout.
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
@@ -72,9 +70,6 @@ func main() {
 	runExtract(ctx, os.Args[1:])
 }
 
-// looksLikeBogusVerb reports whether the first CLI arg is a mistyped
-// subcommand rather than an extract target: a bare token that is not a flag,
-// has no URL scheme, and contains no dot that could make it a host.
 func looksLikeBogusVerb(arg string) bool {
 	if arg == "" || strings.HasPrefix(arg, "-") {
 		return false
@@ -82,25 +77,21 @@ func looksLikeBogusVerb(arg string) bool {
 	if strings.Contains(arg, ".") || strings.Contains(arg, "/") {
 		return false
 	}
-	if strings.Contains(arg, ":") { // scheme, e.g. https:, data:
+	if strings.Contains(arg, ":") {
 		return false
 	}
 	return true
 }
 
-// listFetchTimeout bounds the sitemap / feed fetches.
 const listFetchTimeout = 30 * time.Second
 
-// listVerb is the shared scaffold of the sitemap and feed subcommands: one
-// URL argument, --json / --allow-internal flags plus verb-specific extras, a
-// security-guarded fetch, and line-oriented default output (JSON opt-in).
 type listVerb[T any] struct {
-	name      string                 // subcommand name; also the error prefix
-	usageLine string                 // first line of the -h output
-	jsonUsage string                 // --json flag description (differs per verb)
-	addFlags  func(fs *flag.FlagSet) // registers verb-specific flags
+	name      string
+	usageLine string
+	jsonUsage string
+	addFlags  func(fs *flag.FlagSet)
 	fetch     func(ctx context.Context, url string, sec *seaportal.SecurityPolicy) ([]T, error)
-	printLine func(T) // default (non-JSON) renderer, one entry per line
+	printLine func(T)
 }
 
 func (v listVerb[T]) run(ctx context.Context, args []string) {
@@ -181,7 +172,6 @@ func runFeed(ctx context.Context, args []string) {
 	}.run(ctx, args)
 }
 
-// splitCSV splits a comma-separated flag value into trimmed, non-empty items.
 func splitCSV(s string) []string {
 	if strings.TrimSpace(s) == "" {
 		return nil
@@ -196,8 +186,6 @@ func splitCSV(s string) []string {
 	return out
 }
 
-// fetchHTML retrieves url through the shared security-guarded fetch path with
-// a browser-style Accept header, bound to ctx so Ctrl-C cancels the fetch.
 func fetchHTML(ctx context.Context, url string, sec *seaportal.SecurityPolicy) (string, error) {
 	body, _, _, err := seaportal.FetchBytes(ctx, url, seaportal.FetchBytesOptions{
 		Timeout:  30 * time.Second,

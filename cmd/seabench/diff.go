@@ -1,26 +1,5 @@
 package main
 
-// diff is the cleanup-pipeline differential lane of seabench. It runs every
-// corpus fixture under three pipeline-aggressiveness modes built from existing
-// engine.Options toggles, then diffs the per-fixture output of each non-default
-// mode against the `default` mode.
-//
-// Why a separate command:
-//   - `eval` scores extraction precision/recall against substring markers.
-//   - `classify` scores the page-class decision.
-//   - `diff` is purely observational: when you tighten dedupe (or any other
-//     cleanup knob) you want a quick visual on which fixtures shifted and by
-//     how many chars/lines — without having to commit-and-compare manually.
-//
-// Three modes (no new engine config; only existing toggles):
-//   - minimal:    Dedupe=false, NoNearDedupe=true,  NoPruneFallback=true
-//   - default:    zero-value Options (current shipped defaults)
-//   - aggressive: Dedupe=true,  NoNearDedupe=false, NoPruneFallback=false
-//
-// Two comparisons per run: default-vs-minimal and default-vs-aggressive.
-// `char_delta = len(default) - len(variant)`; negative means the variant
-// produced LESS content (more aggressive filtering).
-
 import (
 	"flag"
 	"fmt"
@@ -34,12 +13,8 @@ import (
 	"github.com/pinchtab/seaportal/internal/corpus"
 )
 
-// diffModeOrder fixes the canonical mode iteration order independent of map
-// iteration.
 var diffModeOrder = []string{"minimal", "default", "aggressive"}
 
-// diffModeOptions returns the seaportal.Options for a named diff mode.
-// Centralised so the test and the runner share a single source of truth.
 func diffModeOptions(mode string) seaportal.Options {
 	switch mode {
 	case "minimal":
@@ -53,7 +28,6 @@ func diffModeOptions(mode string) seaportal.Options {
 	}
 }
 
-// DiffPerFixture is one fixture's delta inside a comparison.
 type DiffPerFixture struct {
 	Path         string `json:"path"`
 	CharDelta    int    `json:"char_delta"`
@@ -65,8 +39,6 @@ type DiffPerFixture struct {
 	Panicked     string `json:"panicked,omitempty"`
 }
 
-// DiffComparison groups all per-fixture deltas for one (baseline, variant)
-// pair. Aggregates are pre-computed so the Markdown renderer is a pure mapper.
 type DiffComparison struct {
 	Baseline        string           `json:"baseline"`
 	Variant         string           `json:"variant"`
@@ -76,8 +48,6 @@ type DiffComparison struct {
 	PerFixture      []DiffPerFixture `json:"per_fixture"`
 }
 
-// DiffReport is the on-disk JSON shape (version 1). snake_case for
-// jq / dashboard friendliness.
 type DiffReport struct {
 	Version      int              `json:"version"`
 	CapturedAt   string           `json:"captured_at"`
@@ -115,12 +85,9 @@ func runDiff(args []string) {
 	}
 }
 
-// diffCorpus loads the corpus, runs every fixture through the three modes,
-// and builds the populated DiffReport. Pure: tests call this directly.
 func diffCorpus(corpusPath string, snippetChars int) (DiffReport, error) {
 	var empty DiffReport
 
-	// outputs[path][mode] = result.Content (or "" if the mode panicked).
 	outputs := make(map[string]map[string]string)
 	panics := make(map[string]map[string]string)
 	var order []string
@@ -159,9 +126,6 @@ func diffCorpus(corpusPath string, snippetChars int) (DiffReport, error) {
 	}, nil
 }
 
-// runOneExtract calls FromHTMLWithOptions inside a recover so a panic in one
-// mode (e.g. a regression in cleanup) does not blow up the whole bench. On
-// panic the content is treated as empty and the recovered value is recorded.
 func runOneExtract(html, baseURL string, opts seaportal.Options) (content string, panicMsg string) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -173,11 +137,6 @@ func runOneExtract(html, baseURL string, opts seaportal.Options) (content string
 	return res.Content, ""
 }
 
-// buildComparison computes per-fixture deltas for one (baseline, variant)
-// pair and rolls up aggregate stats. Snippets are populated only on the
-// top-3 fixtures by abs char-delta (sorting is done in renderDiffMarkdown
-// for the per-comparison table; here we attach the snippet straight away so
-// the JSON also surfaces it for the top-3).
 func buildComparison(baseline, variant string, order []string,
 	outputs, panics map[string]map[string]string, snippetChars int) DiffComparison {
 	rows := make([]DiffPerFixture, 0, len(order))
@@ -205,7 +164,6 @@ func buildComparison(baseline, variant string, order []string,
 		})
 	}
 
-	// Top-3 by abs char-delta get a snippet attached to the JSON row.
 	idxByAbs := make([]int, len(rows))
 	for i := range rows {
 		idxByAbs[i] = i
@@ -254,8 +212,6 @@ func buildComparison(baseline, variant string, order []string,
 	}
 }
 
-// firstDiffIndex returns the first byte index at which a and b differ,
-// or -1 if they are identical.
 func firstDiffIndex(a, b string) int {
 	n := len(a)
 	if len(b) < n {
@@ -272,11 +228,6 @@ func firstDiffIndex(a, b string) int {
 	return -1
 }
 
-// buildDiffSnippet returns a short two-sided window around the first
-// divergence: a window of width snippetChars/2 on each side, drawn from
-// both strings, separated by a marker. Indices are clamped so we never
-// slice past the end. Newlines are escaped so the snippet survives
-// Markdown table rendering.
 func buildDiffSnippet(base, variant string, idx, snippetChars int) string {
 	if snippetChars <= 0 {
 		return ""
@@ -301,8 +252,6 @@ func clampSlice(s string, lo, hi int) string {
 	return s[lo:hi]
 }
 
-// escapeForCell makes the snippet safe for a single Markdown table cell:
-// strip newlines + collapse the pipe character that would close the cell.
 func escapeForCell(s string) string {
 	r := strings.NewReplacer("\n", "\\n", "\r", "\\r", "|", "\\|", "`", "'")
 	return r.Replace(s)
@@ -343,7 +292,6 @@ func renderDiffMarkdown(r DiffReport) string {
 		fmt.Fprintf(&b, "- Mean abs char-delta: %.1f\n", mean)
 		fmt.Fprintf(&b, "- Max abs char-delta: %d\n\n", c.MaxAbsChar)
 
-		// Top-3 by abs char-delta.
 		sorted := append([]DiffPerFixture(nil), c.PerFixture...)
 		sort.SliceStable(sorted, func(i, j int) bool {
 			return absInt(sorted[i].CharDelta) > absInt(sorted[j].CharDelta)
@@ -362,7 +310,6 @@ func renderDiffMarkdown(r DiffReport) string {
 		}
 		fmt.Fprintln(&b)
 
-		// Full table — counts only, no snippets, sorted by abs char-delta desc.
 		fmt.Fprintln(&b, "### All fixtures")
 		fmt.Fprintln(&b)
 		fmt.Fprintln(&b, "| Path | char_delta | line_delta | first_diff | baseline_len | variant_len | panicked |")

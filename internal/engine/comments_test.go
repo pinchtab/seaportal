@@ -15,7 +15,6 @@ func parseFirstElement(t *testing.T, htmlStr string) *xhtml.Node {
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
-	// Find first element inside <body> that is not a text node.
 	var find func(n *xhtml.Node) *xhtml.Node
 	find = func(n *xhtml.Node) *xhtml.Node {
 		if n == nil {
@@ -74,8 +73,6 @@ func TestDetectCommentContainer_NegativeArticle(t *testing.T) {
 }
 
 func TestDetectCommentContainer_NegativeDocsPage(t *testing.T) {
-	// A docs page about "JS comments" — header text contains the word but
-	// the container element attributes do not.
 	n := parseFirstElement(t, `<section class="docs-chapter"><h2>JS comments</h2><p>About // and /* */ syntax.</p></section>`)
 	if detectCommentContainer(n) {
 		t.Fatal("docs page with 'comments' in prose should NOT be detected")
@@ -105,8 +102,6 @@ func TestStripCommentContainers_LeavesArticleAlone(t *testing.T) {
 }
 
 func TestStripCommentContainers_BodyEmptinessGuard(t *testing.T) {
-	// The only substantive content is wrapped by a comments container —
-	// removing it would empty the body. Strip should abort.
 	html := `<html><body><div class="page"><section id="disqus_thread"><p>` + strings.Repeat("Body wrapped in comments widget. ", 20) + `</p></section></div></body></html>`
 	out := stripCommentContainers(html)
 	if !strings.Contains(out, "Body wrapped in comments widget") {
@@ -177,8 +172,6 @@ func TestExtractComments_WalksMultipleContainers(t *testing.T) {
 		t.Fatalf("mismatch: %+v", c)
 	}
 }
-
-// Integration tests via httptest.
 
 func commentPageHTML() string {
 	return `<!doctype html><html><head><title>Test Article</title></head><body><main><article>` +

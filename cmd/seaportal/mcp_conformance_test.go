@@ -1,19 +1,5 @@
 //go:build integration
 
-// MCP protocol conformance test.
-//
-// Spawns `seaportal mcp` as a subprocess and drives JSON-RPC 2.0 over stdio
-// with a hand-rolled mini-client. Locks in:
-//
-//   - initialize handshake shape (protocolVersion, serverInfo, capabilities)
-//   - tools/list returns exactly 4 tools in registration order
-//   - each tool's inputSchema is well-formed and has required:[url]
-//   - no "optional" keyword leakage anywhere in tools/list
-//   - JSON-RPC framing invariants (jsonrpc:"2.0", matching id, no
-//     result+error mixing)
-//
-// Excluded from `./dev all` via the integration build tag.
-// Run with: go test -tags=integration -run TestMCPConformance ./cmd/seaportal/
 package main
 
 import (
@@ -31,7 +17,6 @@ import (
 	"time"
 )
 
-// expectedToolOrder must match the RegisterTool call order in mcp.go.
 var expectedToolOrder = []string{
 	"fetch_url",
 	"fetch_snapshot",
@@ -39,8 +24,6 @@ var expectedToolOrder = []string{
 	"parse_feed",
 	"scrape_site",
 }
-
-// ── mini JSON-RPC client ───────────────────────────────────────────────────
 
 type rpcReq struct {
 	JSONRPC string      `json:"jsonrpc"`
@@ -59,7 +42,6 @@ type rpcResp struct {
 	} `json:"error,omitempty"`
 }
 
-// mcpProc is a live subprocess + framed JSON-RPC pipes.
 type mcpProc struct {
 	cmd    *exec.Cmd
 	stdin  io.WriteCloser
@@ -80,7 +62,6 @@ func (p *mcpProc) send(t *testing.T, id int, method string, params interface{}) 
 	}
 }
 
-// recv reads one response line with a 5s timeout.
 func (p *mcpProc) recv(t *testing.T) (rpcResp, []byte) {
 	t.Helper()
 	type result struct {
@@ -108,8 +89,6 @@ func (p *mcpProc) recv(t *testing.T) (rpcResp, []byte) {
 		return rpcResp{}, nil
 	}
 }
-
-// ── per-test subprocess plumbing ───────────────────────────────────────────
 
 func startMCP(t *testing.T, binPath string) *mcpProc {
 	t.Helper()
@@ -142,8 +121,6 @@ func startMCP(t *testing.T, binPath string) *mcpProc {
 	return p
 }
 
-// buildOnce compiles the seaportal binary into a tempdir and returns its path.
-// Shared across all subtests via sync.Once.
 var (
 	buildOnceMu sync.Mutex
 	builtPath   string
@@ -173,8 +150,6 @@ func ensureBinary(t *testing.T) string {
 	builtPath = p
 	return p
 }
-
-// ── tests ──────────────────────────────────────────────────────────────────
 
 func TestMCPConformance(t *testing.T) {
 	binPath := ensureBinary(t)
@@ -222,7 +197,6 @@ func TestMCPConformance(t *testing.T) {
 		resp, raw := p.recv(t)
 		assertFraming(t, resp, raw, 2)
 
-		// Log the observed payload on first run for lock-in visibility.
 		t.Logf("tools/list payload: %s", string(raw))
 
 		var result struct {
@@ -257,8 +231,6 @@ func TestMCPConformance(t *testing.T) {
 		resp, raw := p.recv(t)
 		assertFraming(t, resp, raw, 2)
 
-		// No "optional" keyword leakage anywhere in tools/list.
-		// (Standard JSON-Schema-ish MCP uses required-array, not "optional".)
 		if bytes.Contains(bytes.ToLower(raw), []byte(`"optional"`)) {
 			t.Errorf(`"optional" keyword leaked into tools/list output: %s`, raw)
 		}
@@ -285,8 +257,6 @@ func TestMCPConformance(t *testing.T) {
 			if !ok || len(props) == 0 {
 				t.Errorf("tool %q: inputSchema.properties missing or empty", tl.Name)
 			}
-			// Every tool declares exactly one required argument: the four
-			// URL tools use "url"; scrape_site uses "base_url".
 			wantReq := "url"
 			if tl.Name == "scrape_site" {
 				wantReq = "base_url"
@@ -308,7 +278,6 @@ func TestMCPConformance(t *testing.T) {
 	t.Run("JSONRPCFraming_NoMixedResultError", func(t *testing.T) {
 		p := startMCP(t, binPath)
 
-		// initialize → success path
 		p.send(t, 1, "initialize", map[string]interface{}{"protocolVersion": "2024-11-05"})
 		respOK, rawOK := p.recv(t)
 		assertFraming(t, respOK, rawOK, 1)
@@ -319,25 +288,18 @@ func TestMCPConformance(t *testing.T) {
 			t.Errorf("unexpected error on initialize: %+v", respOK.Error)
 		}
 
-		// unknown method → error path; must still be valid JSON-RPC, id matched,
-		// and must NOT include a result alongside the error.
 		p.send(t, 42, "nonexistent/method", nil)
 		respErr, rawErr := p.recv(t)
 		assertFraming(t, respErr, rawErr, 42)
 		if respErr.Error == nil {
 			t.Errorf("expected error for unknown method, got: %s", rawErr)
 		}
-		// Verify no `"result":` key sits next to `"error":` in the raw line.
-		// (json.RawMessage would be empty if absent, but be paranoid about
-		// raw key presence — the spec forbids both at once.)
 		if respErr.Error != nil && hasResultKey(rawErr) {
 			t.Errorf("response contains both result and error: %s", rawErr)
 		}
 	})
 }
 
-// assertFraming verifies JSON-RPC 2.0 envelope invariants: jsonrpc == "2.0",
-// id matches the request id, and result/error are not both set.
 func assertFraming(t *testing.T, r rpcResp, raw []byte, wantID int) {
 	t.Helper()
 	if r.JSONRPC != "2.0" {
@@ -354,13 +316,7 @@ func assertFraming(t *testing.T, r rpcResp, raw []byte, wantID int) {
 	}
 }
 
-// hasResultKey returns true iff the raw JSON object contains a top-level
-// "result" key. Lightweight scan — sufficient for one-line responses since
-// the server never emits nested "result" strings in error payloads.
 func hasResultKey(raw []byte) bool {
-	// Tolerate either ordering. Quick string-level check is fine for tests.
 	s := string(raw)
 	return strings.Contains(s, `"result":`) && !strings.Contains(s, `"result":null`)
 }
-
-// repoRoot is defined in mcp_coldstart_test.go (same package, same build tag).

@@ -1,22 +1,3 @@
-// Package engine on-disk content cache.
-//
-// DiskCache stores successful GET responses on the local filesystem keyed by a
-// truncated SHA-256 of the request URL + a small set of representation-relevant
-// headers (Accept, Accept-Language, User-Agent). Each entry is two files:
-//
-//	<key>.body.bin     — raw response bytes (still encoded if the server sent
-//	                     Content-Encoding; replayed through the same decompress
-//	                     path as a network hit).
-//	<key>.headers.json — status + headers + fetched-at timestamp.
-//
-// Atomic write ordering: body first (rename), then headers (rename). A crashed
-// Put may leave a body file behind with no headers file — Get treats that as a
-// miss, so partial writes never surface stale or corrupt data. Errors during
-// Put are non-fatal: callers log and proceed.
-//
-// Only 200 OK responses are cached. Errors, redirects, 4xx, and 5xx are never
-// written.
-
 package engine
 
 import (
@@ -34,20 +15,13 @@ import (
 	"time"
 )
 
-// DiskCache is a simple on-disk content cache keyed by URL + representation
-// headers. Safe for concurrent use across processes (POSIX rename is atomic).
 type DiskCache struct {
 	dir string
 	ttl time.Duration
 
-	// now is the clock used for TTL math and FetchedAt stamps. Defaults to
-	// time.Now; tests substitute a fake clock so TTL/SWR boundaries can be
-	// asserted without real sleeps (same test-seam convention as
-	// retryBackoffBase in fetch_document.go).
 	now func() time.Time
 }
 
-// cachedResponse is the on-disk header/metadata sidecar for a cached body.
 type cachedResponse struct {
 	URL       string      `json:"url"`
 	Status    int         `json:"status"`
@@ -55,8 +29,6 @@ type cachedResponse struct {
 	FetchedAt time.Time   `json:"fetchedAt"`
 }
 
-// NewDiskCache creates a cache rooted at dir with the given TTL. A zero TTL
-// defaults to 24h. The directory is created if it does not exist.
 func NewDiskCache(dir string, ttl time.Duration) (*DiskCache, error) {
 	if dir == "" {
 		return nil, errors.New("cache directory is empty")
@@ -70,9 +42,6 @@ func NewDiskCache(dir string, ttl time.Duration) (*DiskCache, error) {
 	return &DiskCache{dir: dir, ttl: ttl, now: time.Now}, nil
 }
 
-// cacheKey returns the 16-byte hex prefix of the SHA-256 of url + relevant
-// request headers. Only Accept, Accept-Language and User-Agent participate —
-// other headers (Cache-Control, cookies, traces) don't change representation.
 func (c *DiskCache) cacheKey(url string, req *http.Request) string {
 	h := sha256.New()
 	h.Write([]byte(url))
@@ -93,9 +62,6 @@ func (c *DiskCache) cacheKey(url string, req *http.Request) string {
 func (c *DiskCache) headerPath(key string) string { return filepath.Join(c.dir, key+".headers.json") }
 func (c *DiskCache) bodyPath(key string) string   { return filepath.Join(c.dir, key+".body.bin") }
 
-// Get returns the cached response for (url, req) if present and still fresh.
-// A missing headers file (whether the entry was never written or only the body
-// half landed) is reported as a clean miss.
 func (c *DiskCache) Get(url string, req *http.Request) (*cachedResponse, []byte, bool) {
 	key := c.cacheKey(url, req)
 
@@ -124,32 +90,11 @@ func (c *DiskCache) Get(url string, req *http.Request) (*cachedResponse, []byte,
 	return &meta, body, true
 }
 
-// GetStale returns the cached response for (url, req) when present, either as
-// fresh (within TTL) or as stale-but-validatable (past TTL with at least one
-// of ETag/Last-Modified). Callers use the fresh bool to short-circuit the
-// network, or use the stale bool plus ConditionalHeaders to send a conditional
-// GET. A miss with neither validator returns (nil, nil, false, false).
-//
-// Equivalent to GetStaleWithTolerance(url, req, 0) where the SWR band has
-// zero width and any past-TTL entry must either revalidate or miss.
 func (c *DiskCache) GetStale(url string, req *http.Request) (*cachedResponse, []byte, bool, bool) {
 	meta, body, fresh, _, beyond := c.GetStaleWithTolerance(url, req, 0)
 	return meta, body, fresh, beyond
 }
 
-// GetStaleWithTolerance classifies a cached entry into one of three bands:
-//
-//   - fresh:           age <= TTL                            → serve directly.
-//   - stale (SWR):     TTL < age <= TTL + tolerance          → serve as stale,
-//     caller is expected to fire a background revalidate. Validators are NOT
-//     required for the SWR band — within tolerance we trust the cached body
-//     unconditionally.
-//   - beyondTolerance: age > TTL + tolerance AND has validators (ETag /
-//     Last-Modified) → caller runs a synchronous conditional GET.
-//
-// A past-TTL+tolerance entry without validators is a clean miss
-// (nil, nil, false, false, false). A zero tolerance collapses the SWR band
-// to zero width and the function behaves identically to GetStale.
 func (c *DiskCache) GetStaleWithTolerance(url string, req *http.Request, tolerance time.Duration) (*cachedResponse, []byte, bool, bool, bool) {
 	key := c.cacheKey(url, req)
 
@@ -185,9 +130,6 @@ func (c *DiskCache) GetStaleWithTolerance(url string, req *http.Request, toleran
 	return &meta, body, false, false, true
 }
 
-// TouchByKey refreshes the FetchedAt timestamp on the headers sidecar for the
-// given cache key. Called after a 304 confirms the cached body is still valid
-// so that subsequent Gets see it as fresh. The body file is untouched.
 func (c *DiskCache) TouchByKey(key string) error {
 	metaBytes, err := os.ReadFile(c.headerPath(key))
 	if err != nil {
@@ -205,9 +147,6 @@ func (c *DiskCache) TouchByKey(key string) error {
 	return atomicWrite(c.headerPath(key), out)
 }
 
-// toHTTPResponse reconstructs an http.Response from the cached metadata plus
-// the given body so cache replays (fresh hits, SWR serves, 304 revalidations)
-// flow through the same downstream path as a live fetch.
 func (r *cachedResponse) toHTTPResponse(body []byte, req *http.Request) *http.Response {
 	return &http.Response{
 		Status:     fmt.Sprintf("%d %s", r.Status, http.StatusText(r.Status)),
@@ -218,9 +157,6 @@ func (r *cachedResponse) toHTTPResponse(body []byte, req *http.Request) *http.Re
 	}
 }
 
-// ConditionalHeaders returns the conditional-GET request headers derived from
-// the cached response's validators. Empty map when neither validator is
-// present.
 func (r *cachedResponse) ConditionalHeaders() map[string]string {
 	h := map[string]string{}
 	if etag := r.Headers.Get("ETag"); etag != "" {
@@ -232,9 +168,6 @@ func (r *cachedResponse) ConditionalHeaders() map[string]string {
 	return h
 }
 
-// Put writes a cache entry atomically. Body lands first; headers second. A
-// crash between the two writes leaves a body-only orphan which Get correctly
-// treats as a miss. Callers must only Put for status == 200.
 func (c *DiskCache) Put(url string, req *http.Request, status int, headers http.Header, body []byte) error {
 	key := c.cacheKey(url, req)
 

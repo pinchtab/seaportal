@@ -2,10 +2,6 @@ package engine
 
 import "testing"
 
-// regression: authwall-content-rich-social-login-wall — shape mirrors a real
-// LinkedIn logged-out fetch (title "Log In or Sign Up", 13 paragraphs, ~2.1KB,
-// 3 auth links). Its marketing prose defeats the thin-body signals, so it
-// slipped through as usable `ssr`; title (6) + auth-link (5) now reach quorum.
 func TestDetectAuthWall_ContentRichSocialWallFires(t *testing.T) {
 	linkedIn := Result{
 		URL:            "https://www.linkedin.com/",
@@ -27,7 +23,6 @@ func TestDetectAuthWall_ContentRichSocialWallFires(t *testing.T) {
 }
 
 func TestDetectAuthWall_TitlePatterns(t *testing.T) {
-	// Pair each title with two auth links so quorum is reached via the title.
 	authLinks := " [a](https://x.test/login) [b](https://x.test/signup) "
 	fire := []string{
 		"Log In or Sign Up",
@@ -58,8 +53,6 @@ func TestDetectAuthWall_TitlePatterns(t *testing.T) {
 	}
 }
 
-// Guard: a content-rich article with auth links in nav/footer (common on SaaS)
-// must NOT be flagged — auth-link dominance alone doesn't reach quorum.
 func TestDetectAuthWall_ContentPageWithAuthNavDoesNotFire(t *testing.T) {
 	article := Result{
 		URL:            "https://blog.example.com/posts/scaling-postgres",

@@ -55,7 +55,6 @@ func TestGroupByPatternMixedCorpus(t *testing.T) {
 	if g, ok := findGroup(groups, "/products/*/detail"); !ok || g.TotalInSitemap != 2 {
 		t.Errorf("/products/*/detail group = %+v, want 2 members", g)
 	}
-	// Paginated URLs share one pattern but stay distinct members.
 	if g, ok := findGroup(groups, "/blog"); !ok || g.TotalInSitemap != 2 {
 		t.Errorf("/blog group = %+v, want 2 paginated members", g)
 	}
@@ -78,7 +77,6 @@ func TestGroupByPatternOrderIndependent(t *testing.T) {
 }
 
 func TestGroupByPatternNormalization(t *testing.T) {
-	// Trailing slash, fragment, and duplicate collapse to one member.
 	urls := []string{
 		"https://ex.com/about",
 		"https://ex.com/about/",
@@ -186,7 +184,7 @@ func TestCollapseTopLevelPagesExempt(t *testing.T) {
 
 func TestCollapseMergesIntoExistingWildcardGroup(t *testing.T) {
 	urls := []string{
-		"https://x.com/docs/getting-started", // dashed slug → /docs/* in pass one
+		"https://x.com/docs/getting-started",
 		"https://x.com/docs/install",
 		"https://x.com/docs/config",
 		"https://x.com/docs/deploy",

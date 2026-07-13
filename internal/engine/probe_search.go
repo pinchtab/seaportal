@@ -8,8 +8,6 @@ import (
 
 const probeSearchMinLength = 600
 
-// Sentinel string emitted on Profile.Reasons and Validation.Issues; downstream
-// agents grep for this exact value, do not change without a coordinated update.
 const probeSearchReason = "client-rendered-search"
 
 var (

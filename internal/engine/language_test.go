@@ -2,10 +2,6 @@ package engine
 
 import "testing"
 
-// Per-language paragraphs are short prose chunks rich in function words so
-// the stopword classifier has enough signal. They are paraphrased from
-// public-domain encyclopedic-style descriptions; no copyrighted text.
-
 func TestDetectLanguage_English(t *testing.T) {
 	in := `The quick brown fox jumps over the lazy dog. This is a sentence which has been used for many years to test fonts and keyboards. It contains every letter of the alphabet and is one of the most famous pangrams in the English language. There are other pangrams, but this one would always be the first that comes to mind for those who have ever typed on a typewriter. They have used it for decades.`
 	if got := DetectLanguage(in); got != "en" {

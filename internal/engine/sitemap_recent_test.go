@@ -10,9 +10,6 @@ import (
 	"time"
 )
 
-// A sitemap index whose children carry <lastmod> must not recurse into
-// children older than opts.Since — and the old child must never be fetched at
-// all (the whole point: a years-deep monthly archive stays cheap).
 func TestFlattenSitemap_SinceSkipsOldIndexChildren(t *testing.T) {
 	recent := time.Now().UTC().Add(-24 * time.Hour).Format(time.RFC3339)
 	old := time.Now().UTC().AddDate(0, 0, -400).Format(time.RFC3339)
@@ -73,7 +70,6 @@ func TestFlattenSitemap_SinceSkipsOldIndexChildren(t *testing.T) {
 	}
 }
 
-// Without Since, nothing is filtered (backward compatible).
 func TestFlattenSitemap_NoSinceKeepsAll(t *testing.T) {
 	old := time.Now().UTC().AddDate(0, 0, -400).Format(time.RFC3339)
 	mux := http.NewServeMux()
@@ -98,8 +94,6 @@ func TestFlattenSitemap_NoSinceKeepsAll(t *testing.T) {
 	}
 }
 
-// A <url> with no <lastmod> is kept even under Since (fail-open — we don't drop
-// content whose age we cannot determine).
 func TestFlattenSitemap_SinceKeepsUndatedURLs(t *testing.T) {
 	old := time.Now().UTC().AddDate(0, 0, -400).Format(time.RFC3339)
 	mux := http.NewServeMux()

@@ -7,8 +7,6 @@ import (
 	"time"
 )
 
-// FetchBytesOptions controls a raw network fetch with optional security
-// enforcement and size caps.
 type FetchBytesOptions struct {
 	Client    *http.Client
 	Timeout   time.Duration
@@ -17,8 +15,6 @@ type FetchBytesOptions struct {
 	UserAgent string
 }
 
-// FetchBytes fetches raw bytes for rawURL, applying SecurityPolicy redirect,
-// private-IP, and body/decompression limits when configured.
 func FetchBytes(ctx context.Context, rawURL string, opts FetchBytesOptions) ([]byte, http.Header, int, error) {
 	if opts.Security != nil {
 		if err := opts.Security.ValidateURL(ctx, rawURL); err != nil {

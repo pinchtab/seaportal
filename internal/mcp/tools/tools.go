@@ -1,17 +1,3 @@
-// Package tools registers seaportal's MCP tool surface onto an mcp.Server:
-// the five tools that wrap the root library entry points, their JSON schemas,
-// argument parsing, and server-side guardrails.
-//
-//   - fetch_url       → seaportal.FromURLWithOptions
-//   - fetch_snapshot  → seaportal.BuildSnapshotWithOptions
-//   - parse_sitemap   → seaportal.FlattenSitemap
-//   - parse_feed      → seaportal.ParseFeed
-//   - scrape_site     → seaportal.ScrapeSite
-//
-// Tool results are JSON-marshalled and returned as a single text content
-// block. The package lives outside cmd/seaportal so alternative transports
-// (HTTP/SSE, embedding in PinchTab) can reuse the same tool layer; it imports
-// only the root seaportal facade (root → engine, tools → root — no cycle).
 package tools
 
 import (
@@ -23,15 +9,12 @@ import (
 	"github.com/pinchtab/seaportal/internal/mcp"
 )
 
-// Server-side guardrails for the scrape_site MCP tool.
 const (
 	maxScrapePages          = 200
 	maxScrapePerPattern     = 50
 	maxScrapeTimeoutSeconds = 180
 )
 
-// Register wires every supported library entry point into srv. Registration
-// order is part of the wire contract: tools/list reports tools in this order.
 func Register(srv *mcp.Server) {
 	registerFetchURL(srv)
 	registerFetchSnapshot(srv)
@@ -63,9 +46,6 @@ func registerFetchURL(srv *mcp.Server) {
 			if err != nil {
 				return "", err
 			}
-			// The MCP server fetches arbitrary URLs from tool args — the most
-			// exposed entrypoint — so apply the secure-by-default policy
-			// (private-IP block on, http/https only, redirect + body caps).
 			opts := seaportal.Options{Dedupe: true, Security: seaportal.DefaultSecurityPolicy()}
 			if v, ok := args["dedupe"].(bool); ok {
 				opts.Dedupe = v
@@ -88,8 +68,6 @@ func registerFetchURL(srv *mcp.Server) {
 			if v, ok := args["max_tokens"].(float64); ok {
 				opts.MaxTokens = int(v)
 			}
-			// The handler context lets a client cancel / server shutdown
-			// interrupt an in-flight retry backoff (ALP-043).
 			return marshalResult(seaportal.FromURLContext(ctx, url, opts), "result")
 		},
 	)
@@ -247,8 +225,6 @@ func registerScrapeSite(srv *mcp.Server) {
 				}
 			}
 
-			// Server-side guardrails: cap page budget and timeout so a single
-			// MCP call can't fan out unboundedly.
 			maxPages := argInt(args, "max_pages", 50)
 			if maxPages > maxScrapePages {
 				maxPages = maxScrapePages
@@ -276,9 +252,7 @@ func registerScrapeSite(srv *mcp.Server) {
 				RespectRobots:   &respectRobots,
 				Timeout:         time.Duration(timeoutSec) * time.Second,
 				UserAgent:       argString(args, "user_agent"),
-				// Secure by default like fetch_url; allow_internal lifts only
-				// the private-IP block (size caps and redirect rules stay).
-				Security: securityFromArgs(args),
+				Security:        securityFromArgs(args),
 			}
 			if v, ok := args["full"].(bool); ok {
 				opts.Full = v
@@ -291,9 +265,6 @@ func registerScrapeSite(srv *mcp.Server) {
 			if err != nil && res == nil {
 				return "", fmt.Errorf("scrape site: %w", err)
 			}
-			// A run interrupted by the handler ctx still carries its partial
-			// result (audit T21): return what was scraped instead of dropping
-			// it on the floor.
 			return marshalResult(res, "result")
 		},
 	)

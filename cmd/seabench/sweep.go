@@ -1,27 +1,5 @@
 package main
 
-// sweep is the live, real-world capability lane of seabench. It fetches every
-// site in a list over the network through seaportal.FromURLWithOptions and
-// reports two things:
-//
-//   1. A capability + latency sweep — per-site pageClass, extraction outcome,
-//      browser-routing decision, confidence, status, block rate, and timing,
-//      aggregated into distributions + latency percentiles. No labels needed.
-//   2. Classification accuracy — only when the list carries expect_class
-//      labels (TSV form). Reuses the confusion-matrix helpers from classify.go.
-//
-// Unlike eval/classify (offline, fixture-based, deterministic) this command is
-// live: it makes real outbound requests. Concurrency and a per-site timeout
-// bound the run. The default list is the Tranco top-1000 domains.
-//
-// Supported list formats (auto-detected per line):
-//   - `rank,domain` CSV (Tranco) — header skipped, unlabelled
-//   - `category<TAB>url<TAB>expect_class<TAB>expect_marker` TSV (sites.tsv) — labelled
-//   - one bare domain or URL per line
-//
-// Lines starting with `#` and blank lines are ignored. Bare domains get the
-// `--scheme` prefix (https by default).
-
 import (
 	"flag"
 	"fmt"
@@ -36,16 +14,13 @@ import (
 	"github.com/pinchtab/seaportal"
 )
 
-// sweepTarget is one parsed list entry.
 type sweepTarget struct {
 	Rank     int
 	URL      string
 	Domain   string
-	Expected string // expect_class label, "" when unlabelled
+	Expected string
 }
 
-// SiteResult is the per-site row in the JSON report (snake_case is reserved
-// for the cross-tool report files; sweep uses camelCase to mirror Result).
 type SiteResult struct {
 	Rank               int     `json:"rank,omitempty"`
 	URL                string  `json:"url"`
@@ -67,7 +42,6 @@ type SiteResult struct {
 	Error              string  `json:"error,omitempty"`
 }
 
-// LatencyStats holds nearest-rank percentiles over successful fetches (ms).
 type LatencyStats struct {
 	N    int   `json:"n"`
 	P50  int64 `json:"p50"`
@@ -78,7 +52,6 @@ type LatencyStats struct {
 	Max  int64 `json:"max"`
 }
 
-// SweepReport mirrors the on-disk JSON schema (version 1).
 type SweepReport struct {
 	Version            int                        `json:"version"`
 	CapturedAt         string                     `json:"captured_at"`
@@ -150,8 +123,6 @@ func runSweep(args []string) {
 		report.Latency.P50, report.Latency.P95, mdPath)
 }
 
-// parseSiteList reads the list file and returns one target per data line,
-// auto-detecting CSV (rank,domain) / TSV (sites.tsv) / plain forms.
 func parseSiteList(path, scheme string) ([]sweepTarget, error) {
 	raw, err := os.ReadFile(path)
 	if err != nil {
@@ -164,7 +135,7 @@ func parseSiteList(path, scheme string) ([]sweepTarget, error) {
 			continue
 		}
 		if strings.EqualFold(line, "rank,domain") {
-			continue // Tranco header
+			continue
 		}
 
 		var rank int
@@ -172,7 +143,6 @@ func parseSiteList(path, scheme string) ([]sweepTarget, error) {
 
 		switch {
 		case strings.Contains(line, "\t"):
-			// sites.tsv: category, url, expect_class, expect_marker
 			f := strings.Split(line, "\t")
 			if len(f) < 2 {
 				continue
@@ -186,7 +156,7 @@ func parseSiteList(path, scheme string) ([]sweepTarget, error) {
 			if len(f) >= 2 {
 				if n, convErr := strconv.Atoi(strings.TrimSpace(f[0])); convErr == nil {
 					rank = n
-					raw = strings.TrimSpace(f[1]) // rank,domain
+					raw = strings.TrimSpace(f[1])
 				} else {
 					raw = strings.TrimSpace(f[0])
 				}
@@ -211,7 +181,6 @@ func parseSiteList(path, scheme string) ([]sweepTarget, error) {
 	return targets, nil
 }
 
-// normalizeLabel collapses the "don't enforce" sentinels to an empty label.
 func normalizeLabel(s string) string {
 	s = strings.TrimSpace(s)
 	if s == "-" || strings.EqualFold(s, "any") {
@@ -236,8 +205,6 @@ func domainOf(s string) string {
 	return s
 }
 
-// executeSweep fans the targets out across `concurrency` workers. Results are
-// written by index so no locking is needed on the slice.
 func executeSweep(targets []sweepTarget, concurrency int, timeout time.Duration, fast bool) []SiteResult {
 	results := make([]SiteResult, len(targets))
 	jobs := make(chan int)
@@ -264,16 +231,9 @@ func executeSweep(targets []sweepTarget, concurrency int, timeout time.Duration,
 	return results
 }
 
-// fetchSite performs one live extraction with a hard watchdog. The engine's
-// own retry budget is bounded by TotalRetryTimeout; the select adds a backstop
-// so a stalled connection is recorded as a timeout. A stalled goroutine may
-// outlive the worker until the engine timeout fires — acceptable for a one-shot
-// benchmark process.
 func fetchSite(t sweepTarget, timeout time.Duration, fast bool) SiteResult {
 	ch := make(chan seaportal.Result, 1)
 	go func() {
-		// A single hostile site must never abort the whole sweep: recover any
-		// engine panic and record it as an error result for this site.
 		defer func() {
 			if rec := recover(); rec != nil {
 				ch <- seaportal.Result{Error: fmt.Sprintf("panic: %v", rec)}
@@ -392,7 +352,6 @@ func buildSweepReport(sitesFile string, concurrency int, timeout time.Duration, 
 	return report
 }
 
-// latencyStats returns nearest-rank percentiles over the successful latencies.
 func latencyStats(xs []int64) LatencyStats {
 	stats := LatencyStats{N: len(xs)}
 	if len(xs) == 0 {
@@ -469,7 +428,6 @@ func renderSweepMarkdown(r SweepReport) string {
 		fmt.Fprintln(&b)
 	}
 
-	// Slowest successful fetches.
 	slow := make([]SiteResult, 0, len(r.Sites))
 	for _, s := range r.Sites {
 		if s.OK {
@@ -489,7 +447,6 @@ func renderSweepMarkdown(r SweepReport) string {
 	}
 	fmt.Fprintln(&b)
 
-	// Error / timeout sample.
 	fmt.Fprintln(&b, "## Errors & timeouts (sample of 20)")
 	fmt.Fprintln(&b)
 	fmt.Fprintln(&b, "| URL | Status | Error |")
@@ -512,8 +469,6 @@ func renderSweepMarkdown(r SweepReport) string {
 	return b.String()
 }
 
-// writeDist renders a count + percentage table for a distribution map, sorted
-// by count descending.
 func writeDist(b *strings.Builder, title string, dist map[string]int, total int) {
 	fmt.Fprintf(b, "## %s\n\n", title)
 	type kv struct {

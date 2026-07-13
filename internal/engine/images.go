@@ -8,10 +8,6 @@ import (
 	"golang.org/x/net/html/atom"
 )
 
-// ImageRef is a structured representation of a discovered <img> element in the
-// raw page HTML. Surfaced on Result.Images when the caller opts in via
-// Options.WithImages so agents can pick a cover image, fetch alt-text for
-// accessibility, or download referenced assets without re-parsing the HTML.
 type ImageRef struct {
 	Src    string `json:"src"`
 	Alt    string `json:"alt,omitempty"`
@@ -21,20 +17,6 @@ type ImageRef struct {
 
 const imageAltMaxLen = 200
 
-// ExtractImages walks htmlStr and returns every <img src="…"> as an ImageRef in
-// document order. Relative src values are resolved against baseURL; entries
-// are deduplicated by src (first occurrence wins — alt/srcset from the first
-// hit are kept). Images inside <script>/<style> subtrees are skipped, as are
-// empty src and data: URLs (typically noisy inline-encoded SVGs/PNGs).
-//
-// V1 scope: only the <img> element's own src/srcset/alt/title are read.
-// Known limitations (deferred to V2):
-//   - <picture><source srcset=…> siblings are NOT flattened; only the <img>
-//     fallback is captured (its own src/srcset is the agreed default).
-//   - data-src / data-srcset lazy-load attributes are NOT consulted; sites
-//     that put real URLs only in data-src will surface placeholder src values.
-//   - <img> inside <noscript> is invisible because the HTML5 parser treats
-//     <noscript> content as text.
 func ExtractImages(htmlStr string, baseURL string) []ImageRef {
 	if htmlStr == "" {
 		return nil
@@ -65,8 +47,6 @@ func ExtractImages(htmlStr string, baseURL string) []ImageRef {
 						out = append(out, ref)
 					}
 				}
-				// Fall through: <img> is a void element so there's nothing to
-				// recurse into, but stay symmetric with the links walker.
 			}
 		}
 		for c := n.FirstChild; c != nil; c = c.NextSibling {
@@ -77,8 +57,6 @@ func ExtractImages(htmlStr string, baseURL string) []ImageRef {
 	return out
 }
 
-// buildImageRef extracts src/alt/srcset/title from an <img> node. Returns
-// ok=false when the image should be skipped (no src, data: URL).
 func buildImageRef(n *html.Node, base *url.URL) (ImageRef, bool) {
 	srcRaw := strings.TrimSpace(getAttr(n, "src"))
 	if srcRaw == "" {

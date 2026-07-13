@@ -11,7 +11,6 @@ import (
 	"github.com/pinchtab/seaportal"
 )
 
-// regression: snapshot-security-redirect-bypass
 func TestFetchHTML_RespectsRedirectPolicy(t *testing.T) {
 	var finalHit atomic.Bool
 	mux := http.NewServeMux()

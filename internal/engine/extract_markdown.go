@@ -5,11 +5,6 @@ import (
 	"time"
 )
 
-// extractNegotiatedMarkdown handles a body the server delivered as
-// text/markdown (via `Accept: text/markdown` content negotiation): cleanup,
-// the full post-content pipeline (link retention, dedupe, truncate, chunk),
-// markdown-native structure counts, and the llms.txt discovery headers that
-// only apply on this path.
 func extractNegotiatedMarkdown(result *Result, opts Options, st *fetchState, html string, contentLength, fetchTimeMs int64, start time.Time) {
 	content := CleanupMarkdown(html)
 	content = applyContentPostProcessing(content, result, opts, postProcessConfig{linkRetention: true, dedupe: true})
@@ -40,8 +35,6 @@ func extractNegotiatedMarkdown(result *Result, opts Options, st *fetchState, htm
 
 	result.Validation = ValidateExtraction(result)
 
-	// llms.txt discovery: only the markdown negotiation path inspects the
-	// Link / X-LLMs-Txt response headers (kept from the pre-refactor copies).
 	linkHeader := st.resp.Header.Get("Link")
 	if linkHeader != "" {
 		result.ResponseLink = linkHeader

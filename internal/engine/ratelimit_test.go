@@ -14,7 +14,7 @@ func TestHostRateLimiter_WaitsForInterval(t *testing.T) {
 	const host = "example.com"
 	const interval = 200 * time.Millisecond
 
-	_ = l.Wait(context.Background(), host, interval) // first call records, no sleep
+	_ = l.Wait(context.Background(), host, interval)
 
 	start := time.Now()
 	_ = l.Wait(context.Background(), host, interval)
@@ -29,12 +29,9 @@ func TestHostRateLimiter_DifferentHostsIndependent(t *testing.T) {
 	l := NewHostRateLimiter()
 	const interval = 500 * time.Millisecond
 
-	// Prime both hosts.
 	_ = l.Wait(context.Background(), "a.example", interval)
 	_ = l.Wait(context.Background(), "b.example", interval)
 
-	// Now in parallel, hit a third unrelated host on each — clean state per host
-	// means neither should block. Use distinct hosts to verify independence.
 	var wg sync.WaitGroup
 	start := time.Now()
 	wg.Add(2)
@@ -74,12 +71,10 @@ func TestHostRateLimiter_EmptyHostNoOp(t *testing.T) {
 	}
 }
 
-// regression: ALP-048(a) — ctx cancellation must interrupt a pending
-// crawl-delay wait instead of blocking for the full interval.
 func TestHostRateLimiter_CtxCancelInterruptsWait(t *testing.T) {
 	l := NewHostRateLimiter()
 	const host = "slow.example"
-	_ = l.Wait(context.Background(), host, time.Millisecond) // prime
+	_ = l.Wait(context.Background(), host, time.Millisecond)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 	defer cancel()
@@ -96,12 +91,10 @@ func TestHostRateLimiter_CtxCancelInterruptsWait(t *testing.T) {
 	}
 }
 
-// regression: ALP-048(b) — the wait must happen outside the limiter mutex so
-// one host's long crawl-delay does not serialize other hosts.
 func TestHostRateLimiter_SlowHostDoesNotBlockOthers(t *testing.T) {
 	l := NewHostRateLimiter()
-	_ = l.Wait(context.Background(), "slow.example", time.Millisecond) // prime
-	_ = l.Wait(context.Background(), "fast.example", time.Millisecond) // prime
+	_ = l.Wait(context.Background(), "slow.example", time.Millisecond)
+	_ = l.Wait(context.Background(), "fast.example", time.Millisecond)
 
 	slowStarted := make(chan struct{})
 	slowDone := make(chan struct{})
@@ -112,7 +105,7 @@ func TestHostRateLimiter_SlowHostDoesNotBlockOthers(t *testing.T) {
 	}()
 
 	<-slowStarted
-	time.Sleep(50 * time.Millisecond) // let the slow waiter enter its wait
+	time.Sleep(50 * time.Millisecond)
 
 	start := time.Now()
 	if err := l.Wait(context.Background(), "fast.example", 100*time.Millisecond); err != nil {
@@ -130,13 +123,11 @@ func TestHostRateLimiter_SlowHostDoesNotBlockOthers(t *testing.T) {
 	}
 }
 
-// Concurrent same-host callers must still space out by minInterval each
-// (slot reservation), not collapse onto the same wake-up time.
 func TestHostRateLimiter_SameHostConcurrentCallersSpaced(t *testing.T) {
 	l := NewHostRateLimiter()
 	const host = "shared.example"
 	const interval = 150 * time.Millisecond
-	_ = l.Wait(context.Background(), host, interval) // prime
+	_ = l.Wait(context.Background(), host, interval)
 
 	var wg sync.WaitGroup
 	start := time.Now()
@@ -150,8 +141,6 @@ func TestHostRateLimiter_SameHostConcurrentCallersSpaced(t *testing.T) {
 	wg.Wait()
 	elapsed := time.Since(start)
 
-	// Two waiters after a fresh prime must reserve prime+1 and prime+2 slots:
-	// the later one returns no earlier than ~2×interval.
 	if elapsed < 2*interval-50*time.Millisecond {
 		t.Fatalf("concurrent same-host waiters finished in %v; expected ~%v (two spaced slots)", elapsed, 2*interval)
 	}

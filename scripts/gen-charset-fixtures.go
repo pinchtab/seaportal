@@ -1,7 +1,5 @@
 //go:build ignore
 
-// gen-charset-fixtures writes synthetic Latin-1 and Shift-JIS HTML fixtures.
-// Run from repo root: `go run scripts/gen-charset-fixtures.go`.
 package main
 
 import (
@@ -13,7 +11,6 @@ import (
 )
 
 func main() {
-	// Latin-1: accented French phrase, with HTTP-equiv meta declaration.
 	latin1HTML := `<!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -36,7 +33,6 @@ func main() {
 	}
 	log.Printf("wrote testdata/static/charset-latin1.html (%d bytes)", len(latin1Bytes))
 
-	// Shift-JIS: Japanese page with <meta charset> declaration.
 	sjisHTML := `<!DOCTYPE html>
 <html lang="ja">
 <head>

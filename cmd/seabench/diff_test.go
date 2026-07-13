@@ -8,17 +8,9 @@ import (
 	"testing"
 )
 
-// TestDiff_TinyCorpusRoundTrip wires a 2-entry tempdir corpus, runs the full
-// subcommand entrypoint, and asserts the JSON report parses with the expected
-// two comparisons (default-vs-minimal, default-vs-aggressive), each carrying
-// one per-fixture row per entry.
 func TestDiff_TinyCorpusRoundTrip(t *testing.T) {
 	dir := t.TempDir()
 
-	// Two article-shaped pages so every mode produces non-empty content
-	// (avoids the trivial all-empty case where every delta is zero by
-	// construction). The second fixture intentionally repeats a paragraph
-	// many times so `aggressive` (Dedupe=true) has something to collapse.
 	page1 := `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Tiny Page One</title></head><body>
 <h1>Tiny Page One</h1>
 <p>First paragraph of a small article. It has enough words to clear the readability minimum length threshold for static articles.</p>
@@ -98,12 +90,6 @@ func TestDiff_TinyCorpusRoundTrip(t *testing.T) {
 	}
 }
 
-// TestDiff_DetectsCharDelta builds a corpus where the variant ("aggressive")
-// is expected to produce strictly less content than the baseline ("default")
-// for at least one fixture (heavy duplication → Dedupe collapses chunks).
-// The sign convention is `char_delta = len(baseline) - len(variant)`, so a
-// positive char_delta on at least one row proves the diff lane is reporting
-// the right direction.
 func TestDiff_DetectsCharDelta(t *testing.T) {
 	dir := t.TempDir()
 
@@ -129,10 +115,6 @@ func TestDiff_DetectsCharDelta(t *testing.T) {
 		t.Fatalf("comparisons = %d, want 2", len(report.Comparisons))
 	}
 
-	// Find the default-vs-aggressive comparison; assert char_delta >= 0
-	// (aggressive should produce ≤ baseline). Strict inequality would be
-	// nicer but is too brittle to a future cleanup tweak that already
-	// dedupes everything at the default level — equality is acceptable.
 	var aggr *DiffComparison
 	for i := range report.Comparisons {
 		if report.Comparisons[i].Variant == "aggressive" {
@@ -151,9 +133,6 @@ func TestDiff_DetectsCharDelta(t *testing.T) {
 	}
 }
 
-// TestFirstDiffIndex_BasicCases pins the divergence-locator semantics so
-// the JSON `first_diff_idx` field stays honest as the snippet logic
-// evolves.
 func TestFirstDiffIndex_BasicCases(t *testing.T) {
 	cases := []struct {
 		a, b string

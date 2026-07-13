@@ -118,12 +118,10 @@ func TestServerMultipleInstances(t *testing.T) {
 	srv2 := Start(0)
 	defer srv2.Stop()
 
-	// Both servers should be on different ports
 	if srv1.URL() == srv2.URL() {
 		t.Fatal("multiple server instances should have different URLs")
 	}
 
-	// Both should be accessible
 	resp1, err := http.Get(srv1.URL() + "/static/simple.html")
 	if err != nil {
 		t.Fatalf("srv1 not accessible: %v", err)
@@ -141,17 +139,12 @@ func TestServerStopShutdown(t *testing.T) {
 	srv := Start(0)
 	url := srv.URL()
 
-	// Server should be running
 	resp, err := http.Get(url + "/static/simple.html")
 	if err != nil {
 		t.Fatalf("server should be running: %v", err)
 	}
 	_ = resp.Body.Close()
 
-	// Stop the server
 	srv.Stop()
 
-	// Server should no longer be accessible (may take a moment)
-	// We don't strictly check this since there's a timing window,
-	// but we verify Stop doesn't panic
 }

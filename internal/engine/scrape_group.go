@@ -7,16 +7,9 @@ import (
 	"strings"
 )
 
-// PatternGroup is a cluster of discovered URLs that share a path template, so a
-// horizontal site (thousands of /blog/* pages) collapses into a handful of
-// representative groups the sampler (ALP-004) can draw from.
 type PatternGroup struct {
-	// Pattern is the path template, variable segments replaced by "*"
-	// (e.g. "/products/*/detail").
-	Pattern string
-	// URLs are the de-duplicated member URLs, sorted for determinism.
-	URLs []string
-	// TotalInSitemap is how many distinct URLs fell into this group.
+	Pattern        string
+	URLs           []string
 	TotalInSitemap int
 }
 
@@ -28,32 +21,28 @@ var (
 	reHasAlpha  = regexp.MustCompile(`[a-zA-Z]`)
 )
 
-// isVariableSegment reports whether a path segment looks like a variable id,
-// date, uuid, or slug (→ wildcard) rather than a stable structural segment
-// like "detail" or "about" (→ kept verbatim).
 func isVariableSegment(seg string) bool {
 	if seg == "" {
 		return false
 	}
 	switch {
-	case reAllDigits.MatchString(seg): // numeric id, year, or date part
+	case reAllDigits.MatchString(seg):
 		return true
 	case reUUID.MatchString(seg):
 		return true
-	case reLongHex.MatchString(seg): // long hex hash
+	case reLongHex.MatchString(seg):
 		return true
-	case strings.ContainsAny(seg, "-_"): // multi-token slug (my-post, 2026-07-04)
+	case strings.ContainsAny(seg, "-_"):
 		return true
-	case len(seg) > 24: // very long single token
+	case len(seg) > 24:
 		return true
-	case reHasDigit.MatchString(seg) && reHasAlpha.MatchString(seg): // mixed alnum id (post123)
+	case reHasDigit.MatchString(seg) && reHasAlpha.MatchString(seg):
 		return true
 	default:
 		return false
 	}
 }
 
-// patternForPath builds the template for a cleaned path.
 func patternForPath(path string) string {
 	trimmed := strings.Trim(path, "/")
 	if trimmed == "" {
@@ -68,10 +57,6 @@ func patternForPath(path string) string {
 	return "/" + strings.Join(segs, "/")
 }
 
-// normalizeMember strips the fragment and normalizes the trailing slash so
-// cosmetic variants don't create spurious members, while preserving the query
-// (distinct ?page=N pages remain distinct). Returns the canonical member URL
-// and its path for templating.
 func normalizeMember(raw string) (member, path string, ok bool) {
 	u, err := url.Parse(strings.TrimSpace(raw))
 	if err != nil {
@@ -85,9 +70,6 @@ func normalizeMember(raw string) (member, path string, ok bool) {
 	return u.String(), u.Path, true
 }
 
-// groupByPattern clusters urls into PatternGroups keyed by their path template.
-// It is deterministic and order-independent: the same input set yields the same
-// groups (sorted by pattern, members sorted) regardless of input ordering.
 func groupByPattern(urls []string) []PatternGroup {
 	type acc struct {
 		urls map[string]struct{}
@@ -125,17 +107,8 @@ func groupByPattern(urls []string) []PatternGroup {
 	return collapseSiblingLeaves(out)
 }
 
-// minSiblingCollapse is how many singleton sibling leaves a parent needs before
-// they are folded into one "/parent/*" group.
 const minSiblingCollapse = 3
 
-// collapseSiblingLeaves is the second clustering pass: per-segment templating
-// keeps dashless doc slugs (archetypes, comments, emojis) verbatim, so a docs
-// tree of N leaves under one parent becomes N singleton groups and sampling is
-// defeated. When >= minSiblingCollapse singleton patterns share a parent and
-// differ only in a literal final segment, they merge into "/parent/*" (joining
-// an existing wildcard group when present). Root-level pages (/about, /pricing)
-// and multi-member patterns are never collapsed.
 func collapseSiblingLeaves(groups []PatternGroup) []PatternGroup {
 	siblings := map[string][]string{}
 	for _, g := range groups {

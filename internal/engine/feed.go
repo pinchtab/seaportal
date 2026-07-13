@@ -11,8 +11,6 @@ import (
 	"time"
 )
 
-// FeedItem is a normalised feed entry covering RSS 2.0, Atom 1.0, and
-// JSON Feed 1.x sources.
 type FeedItem struct {
 	Title     string `json:"title,omitempty"`
 	Link      string `json:"link,omitempty"`
@@ -22,17 +20,13 @@ type FeedItem struct {
 	GUID      string `json:"guid,omitempty"`
 }
 
-// ParseFeedOptions controls ParseFeed behaviour.
 type ParseFeedOptions struct {
-	MaxItems int             // default 200
-	Timeout  time.Duration   // per-fetch timeout (used when Client is nil)
-	Client   *http.Client    // optional; falls back to engine getClient()
-	Security *SecurityPolicy // optional fetch guard (SSRF, redirects, size caps)
+	MaxItems int
+	Timeout  time.Duration
+	Client   *http.Client
+	Security *SecurityPolicy
 }
 
-// ParseFeed fetches feedURL and parses it as RSS 2.0, Atom 1.0, or JSON Feed
-// 1.x, returning a unified slice of FeedItem in feed order, capped to
-// opts.MaxItems.
 func ParseFeed(ctx context.Context, feedURL string, opts ParseFeedOptions) ([]FeedItem, error) {
 	if opts.MaxItems <= 0 {
 		opts.MaxItems = DefaultFeedMaxItems
@@ -68,10 +62,7 @@ func fetchFeed(ctx context.Context, feedURL string, opts ParseFeedOptions) ([]by
 	return body, nil
 }
 
-// parseFeedBytes sniffs format from the first non-whitespace byte then
-// dispatches to the matching parser.
 func parseFeedBytes(body []byte) ([]FeedItem, error) {
-	// Skip leading whitespace + UTF-8 BOM.
 	i := 0
 	if len(body) >= 3 && body[0] == 0xEF && body[1] == 0xBB && body[2] == 0xBF {
 		i = 3
@@ -169,7 +160,6 @@ func parseAtom(body []byte) ([]FeedItem, error) {
 	items := make([]FeedItem, 0, len(doc.Entries))
 	for _, e := range doc.Entries {
 		link := ""
-		// Prefer rel="alternate" or empty rel (alternate is the spec default).
 		for _, l := range e.Links {
 			rel := strings.TrimSpace(l.Rel)
 			if rel == "alternate" || rel == "" {
