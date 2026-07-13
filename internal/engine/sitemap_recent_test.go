@@ -27,7 +27,7 @@ func TestFlattenSitemap_SinceSkipsOldIndexChildren(t *testing.T) {
 		hits["/sitemap.xml"]++
 		mu.Unlock()
 		w.Header().Set("Content-Type", "application/xml")
-		fmt.Fprintf(w, `<?xml version="1.0"?><sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+		_, _ = fmt.Fprintf(w, `<?xml version="1.0"?><sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 			<sitemap><loc>%s/recent.xml</loc><lastmod>%s</lastmod></sitemap>
 			<sitemap><loc>%s/old.xml</loc><lastmod>%s</lastmod></sitemap>
 		</sitemapindex>`, base, recent, base, old)
@@ -37,7 +37,7 @@ func TestFlattenSitemap_SinceSkipsOldIndexChildren(t *testing.T) {
 		hits["/recent.xml"]++
 		mu.Unlock()
 		w.Header().Set("Content-Type", "application/xml")
-		fmt.Fprintf(w, `<?xml version="1.0"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+		_, _ = fmt.Fprintf(w, `<?xml version="1.0"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 			<url><loc>%s/a</loc><lastmod>%s</lastmod></url>
 			<url><loc>%s/b</loc><lastmod>%s</lastmod></url>
 		</urlset>`, base, recent, base, recent)
@@ -47,7 +47,7 @@ func TestFlattenSitemap_SinceSkipsOldIndexChildren(t *testing.T) {
 		hits["/old.xml"]++
 		mu.Unlock()
 		w.Header().Set("Content-Type", "application/xml")
-		fmt.Fprintf(w, `<?xml version="1.0"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+		_, _ = fmt.Fprintf(w, `<?xml version="1.0"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 			<url><loc>%s/x</loc><lastmod>%s</lastmod></url>
 		</urlset>`, base, old)
 	})
@@ -80,7 +80,7 @@ func TestFlattenSitemap_NoSinceKeepsAll(t *testing.T) {
 	var base string
 	mux.HandleFunc("/sitemap.xml", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/xml")
-		fmt.Fprintf(w, `<?xml version="1.0"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+		_, _ = fmt.Fprintf(w, `<?xml version="1.0"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 			<url><loc>%s/a</loc><lastmod>%s</lastmod></url>
 			<url><loc>%s/b</loc></url>
 		</urlset>`, base, old, base)
@@ -106,7 +106,7 @@ func TestFlattenSitemap_SinceKeepsUndatedURLs(t *testing.T) {
 	var base string
 	mux.HandleFunc("/sitemap.xml", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/xml")
-		fmt.Fprintf(w, `<?xml version="1.0"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+		_, _ = fmt.Fprintf(w, `<?xml version="1.0"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 			<url><loc>%s/dated-old</loc><lastmod>%s</lastmod></url>
 			<url><loc>%s/undated</loc></url>
 		</urlset>`, base, old, base)
