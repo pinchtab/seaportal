@@ -26,6 +26,7 @@ COMMANDS=(
   "coverage:📊:Run tests with coverage"
   "lint:🔍:Run golangci-lint"
   "fmt:✨:Format code"
+  "strip-comments:🧹:Delete non-directive Go comments (keeps //go: + cgo), then gofmt"
   "vet:🩺:Run go vet"
   "fuzz:🎲:Run fuzz tests (30s)"
   "bench:⚡:Run seabench (./dev bench all for a full summary; help for subcommands)"
@@ -153,6 +154,18 @@ run_command() {
       echo ""
       find . \( -path './competitors' -o -path './vendor' -o -path './.git' -o -path './node_modules' \) -prune -o -name '*.go' -type f -print | xargs gofmt -w
       echo "  ${SUCCESS}✓${NC} gofmt (excluding competitors/)"
+      ;;
+    "strip-comments")
+      # Nuke non-directive Go comments in place, then gofmt. Same file domain as
+      # 'fmt', minus tests/tools (so the eraser keeps its own docs). Preserves
+      # //go: directives + the cgo preamble and skips generated files. Destructive
+      # by design — review the diff before committing.
+      echo "  ${ACCENT}${BOLD}🧹 Stripping comments${NC}  ${MUTED}(keeps //go: directives + cgo preamble)${NC}"
+      echo ""
+      files=$(find . \( -path './competitors' -o -path './vendor' -o -path './.git' -o -path './node_modules' -o -path './tests/tools' \) -prune -o -name '*.go' -type f -print)
+      go run ./tests/tools/commenteraser $files
+      echo "$files" | xargs gofmt -w
+      echo "  ${SUCCESS}✓${NC} comments stripped (excluding competitors/, tests/tools/)"
       ;;
     "vet")
       echo "  ${ACCENT}${BOLD}🩺 Vet${NC}"
