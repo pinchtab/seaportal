@@ -32,6 +32,7 @@ const (
 	DecisionStaticCaution        BrowserDecision = "static-caution"
 	DecisionBrowserNeeded        BrowserDecision = "browser-needed"
 	DecisionBlocked              BrowserDecision = "blocked"
+	DecisionAuthRequired         BrowserDecision = "auth-required"
 	DecisionUnreachable          BrowserDecision = "unreachable"
 	DecisionNotFound             BrowserDecision = "not-found"
 	DecisionUnsupported          BrowserDecision = "unsupported"
@@ -220,6 +221,12 @@ func deriveDecision(result Result, profile PageProfile) (BrowserDecision, bool) 
 	}
 	if result.StatusCode == 404 || result.IsSoft404 || reasonsContain(profile.Reasons, "http-404-not-found") {
 		return DecisionNotFound, false
+	}
+	// A 401 means credentials are required, not that a browser will help: a
+	// headless hand-off cannot supply HTTP Basic/Bearer auth. Distinguish it
+	// from a 403/bot-challenge before the blocked catch-all below.
+	if result.StatusCode == 401 || reasonsContain(profile.Reasons, "http-401-unauthorized") {
+		return DecisionAuthRequired, false
 	}
 	if result.IsBlocked || profile.Class == PageBlocked {
 		return DecisionBlocked, true

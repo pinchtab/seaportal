@@ -113,6 +113,7 @@ const (
 	DecisionStaticCaution        = engine.DecisionStaticCaution
 	DecisionBrowserNeeded        = engine.DecisionBrowserNeeded
 	DecisionBlocked              = engine.DecisionBlocked
+	DecisionAuthRequired         = engine.DecisionAuthRequired
 	DecisionUnreachable          = engine.DecisionUnreachable
 	DecisionNotFound             = engine.DecisionNotFound
 	DecisionUnsupported          = engine.DecisionUnsupported

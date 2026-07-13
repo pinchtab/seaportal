@@ -59,6 +59,18 @@ func TestDeriveDecision(t *testing.T) {
 			wantDec: DecisionBlocked, wantBrowser: true,
 		},
 		{
+			name:    "401 unauthorized -> auth-required, not browser (ALP-050)",
+			result:  Result{StatusCode: 401, IsBlocked: true},
+			profile: PageProfile{Class: PageBlocked, Outcome: OutcomeNeedsBrowser, Reasons: []string{"http-401-unauthorized"}},
+			wantDec: DecisionAuthRequired, wantBrowser: false,
+		},
+		{
+			name:    "403 forbidden -> blocked, browser (distinct from 401)",
+			result:  Result{StatusCode: 403, IsBlocked: true},
+			profile: PageProfile{Class: PageBlocked, Outcome: OutcomeNeedsBrowser, Reasons: []string{"http-403-forbidden"}},
+			wantDec: DecisionBlocked, wantBrowser: true,
+		},
+		{
 			name:    "transport failure -> unreachable",
 			result:  Result{StatusCode: 0, Error: "dial tcp: lookup nope.example: no such host"},
 			profile: PageProfile{Outcome: OutcomeFailFast},
